@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f4192e2e-dffa-47db-9772-08b85c9b5ed0" name="Changes" comment="" />
+    <list default="true" id="f4192e2e-dffa-47db-9772-08b85c9b5ed0" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/src/main/java/com/hackathon/analisis/controller/AnalisisController.java" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/src/main/java/com/hackathon/analisis/controller/AnalisisController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -21,10 +24,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "Dsx-Dev"
-  }
+  "lastFilter": {}
 }]]></component>
   <component name="GithubPullRequestsUISettings"><![CDATA[{
   "selectedUrlAndAccountId": {
@@ -42,6 +42,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Application.AnalisisFinancieroApplication.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
@@ -51,6 +52,11 @@
     "last_opened_file_path": "C:/Users/danny/IdeaProjects/equipo65AppSaludFinanciera/.idea"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\danny\IdeaProjects\equipo65AppSaludFinanciera\.idea" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
