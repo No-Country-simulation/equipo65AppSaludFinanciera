@@ -1,0 +1,153 @@
+# =============================================================
+#  EL REPOSITORIO ES PUBLICO.
+#  Un secreto commiteado aqui se considera COMPROMETIDO PARA
+#  SIEMPRE, aunque se borre en el commit siguiente: los bots de
+#  escaneo lo encuentran en minutos y el historial lo conserva.
+#  Si pasa: (1) ROTAR el secreto, (2) revocarlo, (3) recien
+#  despues limpiar el historial. Ver docs/seguridad/SEGURIDAD.md
+# =============================================================
+
+# --- SECRETOS: nada de esto entra al repo, jamas ---
+.env
+*.env
+.env.*
+!.env.ejemplo
+
+# Wallet de Oracle Autonomous Database (certificados mTLS)
+wallet*.zip
+wallet/
+Wallet_*/
+tnsnames.ora
+sqlnet.ora
+cwallet.sso
+ewallet.p12
+
+# Llaves de API de OCI
+.oci/
+oci_api_key*.pem
+
+# Claves y certificados en general
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+!**/test/**/*.pem
+
+# Terraform: el tfstate contiene la CONTRASENA DE LA BD EN CLARO
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.ejemplo
+.terraform/
+.terraform.lock.hcl
+crash.log
+
+# Ansible
+*.retry
+inventario/oci.yml
+vault_pass.txt
+
+# --- Artefactos grandes (viven en OCI Object Storage) ---
+ml/dataset/salida/
+*.joblib
+*.pkl
+!ml/tests/fixtures/*.joblib
+modelos/
+datasets/
+*.csv
+!docs/**/*.csv
+!ml/dataset/manual/validacion_manual.csv
+!ml/tests/fixtures/*.csv
+
+# Respaldos de BD
+*.dmp
+respaldos/
+
+# --- Java / Spring Boot ---
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+!**/gradle/wrapper/*.jar
+.mvn/timing.properties
+
+# --- Python / ML ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+# Los notebooks SI se commitean (son entregable), pero sin salidas pesadas.
+# Usar: jupyter nbconvert --clear-output --inplace ml/notebooks/*.ipynb
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+.vercel/
+next-env.d.ts
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# --- Expo / React Native ---
+.expo/
+expo-env.d.ts
+web-build/
+.metro-health-check*
+.kotlin/
+*.orig.*
+# carpetas nativas generadas (prebuild); si algun dia se commitean, quitar esto
+mobile/android/
+mobile/ios/
+
+# --- Docker ---
+.docker/
+
+# --- IDE / SO ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs y temporales ---
+*.log
+logs/
+tmp/
+temp/
+
+.agents/
+.codegraph/
+.claude/settings.local.json
+CLAUDE.md
+
+/docs/adr/
+/docs/arquitectura/
+/docs/contratos/
+/docs/datos/
+/docs/entrega/
+/docs/futuro/
+/docs/operacion/
+/docs/proceso/
+/docs/producto/
+/docs/rondas/
+/docs/seguridad/
+/docs/GLOSARIO.md
+/docs/PENDIENTES_AGENTE.md
+/docs/PENDIENTES_ANGEL.md
+/docs/PROPUESTAS_EQUIPO.md
+/docs/README.md
+/.env.ejemplo

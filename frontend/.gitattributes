@@ -1,0 +1,21 @@
+# Normalizacion de fin de linea — el repo se usa en Windows, Linux y macOS.
+# Git guarda LF en el repo; cada SO obtiene lo que necesita al hacer checkout.
+* text=auto
+
+# Los .sh DEBEN ser LF (bash falla con CRLF) y los scripts de Windows, CRLF.
+*.sh   text eol=lf
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+
+# Binarios (presentes o futuros): nunca normalizar
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.ttf    binary
+*.otf    binary
+*.woff   binary
+*.woff2  binary
+*.joblib binary
+*.jar    binary

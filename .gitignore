@@ -1,0 +1,4 @@
+# Raiz del repo. Por ahora se publica SOLO frontend/ (su .gitignore afina
+# que entra alli). Lo demas queda local hasta que el equipo lo tome.
+/infra/
+/CLAUDE.md
