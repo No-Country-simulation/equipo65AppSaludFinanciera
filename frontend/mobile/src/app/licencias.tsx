@@ -1,12 +1,13 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colores, Espacio, Fuentes } from '@/constants/tema';
+import { Espacio, Fuentes } from '@/constants/tema';
+import { useTheme } from '@/context/ThemeContext'; // 1. Hook de tema
 import { useI18n } from '@/i18n';
 import { Hero, Tarjeta } from '@/components/ui';
 
-/** Atribucion de dependencias directas (nombre → licencia). Sin traducir: son nombres propios. */
 const GRUPOS = [
+  // ... (tu lista de grupos se queda igual)
   {
     clave: 'licencias.grupoMovil',
     items: [
@@ -41,29 +42,40 @@ const GRUPOS = [
 export default function PantallaLicencias() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const { temaActivo } = useTheme(); // 2. Obtenemos colores dinámicos
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: temaActivo.canvas }}>
       <Hero paddingTop={insets.top + 14}>
         <Pressable onPress={() => router.back()}>
           <Text style={s.volver}>← {t('licencias.volver')}</Text>
         </Pressable>
-        <Text style={s.titulo}>{t('licencias.titulo')}</Text>
+        <Text style={[s.titulo, { color: temaActivo.blanco }]}>{t('licencias.titulo')}</Text>
       </Hero>
 
       <ScrollView contentContainerStyle={{ padding: Espacio.m, paddingBottom: 40, gap: Espacio.m }}>
         <Tarjeta>
-          <Text style={s.parrafo}>{t('licencias.intro')}</Text>
+          <Text style={[s.parrafo, { color: temaActivo.tintaSuave }]}>{t('licencias.intro')}</Text>
         </Tarjeta>
+        
         {GRUPOS.map((grupo) => (
           <Tarjeta key={grupo.clave} style={{ gap: 0 }}>
-            <Text style={s.seccionTitulo}>{t(grupo.clave)}</Text>
+            <Text style={[s.seccionTitulo, { color: temaActivo.tinta }]}>{t(grupo.clave)}</Text>
             {grupo.items.map(([nombre, licencia], indice) => (
-              <View key={nombre} style={[s.fila, indice === 0 && { borderTopWidth: 0 }]}>
-                <Text style={s.nombre} numberOfLines={1}>
+              <View 
+                key={nombre} 
+                style={[
+                  s.fila, 
+                  indice === 0 && { borderTopWidth: 0 },
+                  { borderTopColor: temaActivo.linea } // Color dinámico para la línea
+                ]}
+              >
+                <Text style={[s.nombre, { color: temaActivo.tinta }]} numberOfLines={1}>
                   {nombre}
                 </Text>
-                <Text style={s.licencia}>{licencia}</Text>
+                <Text style={[s.licencia, { color: temaActivo.apagado, backgroundColor: temaActivo.canvas2 }]}>
+                  {licencia}
+                </Text>
               </View>
             ))}
           </Tarjeta>
@@ -75,9 +87,9 @@ export default function PantallaLicencias() {
 
 const s = StyleSheet.create({
   volver: { fontFamily: Fuentes.cuerpoSemi, fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 8 },
-  titulo: { fontFamily: Fuentes.titulo, fontSize: 23, color: Colores.blanco, letterSpacing: -0.4 },
-  parrafo: { fontFamily: Fuentes.cuerpo, fontSize: 13.5, lineHeight: 20, color: Colores.tintaSuave },
-  seccionTitulo: { fontFamily: Fuentes.titulo, fontSize: 16, color: Colores.tinta, marginBottom: 8 },
+  titulo: { fontFamily: Fuentes.titulo, fontSize: 23, letterSpacing: -0.4 },
+  parrafo: { fontFamily: Fuentes.cuerpo, fontSize: 13.5, lineHeight: 20 },
+  seccionTitulo: { fontFamily: Fuentes.titulo, fontSize: 16, marginBottom: 8 },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -85,14 +97,11 @@ const s = StyleSheet.create({
     gap: 12,
     paddingVertical: 9,
     borderTopWidth: 1,
-    borderTopColor: Colores.linea,
   },
-  nombre: { flex: 1, fontFamily: Fuentes.cuerpoMedio, fontSize: 13, color: Colores.tinta },
+  nombre: { flex: 1, fontFamily: Fuentes.cuerpoMedio, fontSize: 13 },
   licencia: {
     fontFamily: Fuentes.cuerpoSemi,
     fontSize: 11,
-    color: Colores.apagado,
-    backgroundColor: 'rgba(15,42,67,0.06)',
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,

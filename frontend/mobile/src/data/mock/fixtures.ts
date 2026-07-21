@@ -27,6 +27,9 @@ export const ETIQUETAS_CATEGORIA: Record<CategoriaSlug, Record<Idioma, string>> 
   entretenimiento: { es: 'Entretenimiento', pt: 'Entretenimento', en: 'Entertainment' },
   compras: { es: 'Compras', pt: 'Compras', en: 'Shopping' },
   finanzas: { es: 'Finanzas', pt: 'Finanças', en: 'Finance' },
+  comida_rapida: { es: 'Comida rápida', pt: 'Fast food', en: 'Fast food' },
+  supermercado: { es: 'Supermercado', pt: 'Supermercado', en: 'Supermarket' },
+  taxi: { es: 'Taxi', pt: 'Táxi', en: 'Taxi' },
   ahorro_inversion: {
     es: 'Ahorro e inversión',
     pt: 'Poupança e investimento',
@@ -49,6 +52,9 @@ export const TIPO_CATEGORIA: Record<CategoriaSlug, 'gasto' | 'movimiento' | 'ing
   ahorro_inversion: 'movimiento',
   ingresos: 'ingreso',
   otros: 'gasto',
+  comida_rapida: 'gasto',
+  supermercado: 'gasto',
+  taxi: 'gasto',
 };
 
 /** TAXONOMIA §2 - etiquetas de perfil por idioma. */

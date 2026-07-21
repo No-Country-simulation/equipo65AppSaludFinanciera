@@ -54,7 +54,7 @@ scripts/     Menú, verificador de requisitos y utilidades por SO
              (windows/ .ps1 · linux/ · macos/ .sh)
 docs/        Documentación del frontend: guía desde cero, branding,
              propuestas del equipo y entregables de No Country
-INICIAR.bat  Doble clic (Windows) → menú de desarrollo
+\INICIAR.bat  Doble clic (Windows) → menú de desarrollo
 iniciar.sh   ./iniciar.sh (Linux/macOS) → el mismo menú
 ```
 

@@ -17,6 +17,9 @@ import { Colores } from '@/constants/tema';
 import { I18nProvider } from '@/i18n';
 import { SesionProvider } from '@/lib/sesion';
 
+// 1. Importamos nuestro nuevo Contexto de Tema
+import { ThemeProvider } from '@/context/ThemeContext';
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -39,13 +42,17 @@ export default function RootLayout() {
   return (
     <I18nProvider>
       <SesionProvider>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: Colores.canvas },
-          }}
-        />
+        {/* 2. Envolvemos la navegación con el ThemeProvider */}
+        <ThemeProvider>
+          <StatusBar style="auto" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // Mantenemos el color estático aquí como fondo base (fallback)
+              contentStyle: { backgroundColor: Colores.canvas }, 
+            }}
+          />
+        </ThemeProvider>
       </SesionProvider>
     </I18nProvider>
   );

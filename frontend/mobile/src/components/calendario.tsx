@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Idioma, Transaccion } from '@/data';
-import { Colores, Fuentes } from '@/constants/tema';
+import { Fuentes } from '@/constants/tema';
+import { useTheme } from '@/context/ThemeContext'; // 1. Inyectamos el sistema de temas
 
 const LOCALE: Record<Idioma, string> = { es: 'es-MX', pt: 'pt-BR', en: 'en-US' };
 
-/** Calendario del mes con un punto en los días que tienen gastos. */
+/** Calendario del mes con un diseño premium, circular y dinámico. */
 export function CalendarioPagos({
   transacciones,
   mes, // 'YYYY-MM'
@@ -15,6 +16,8 @@ export function CalendarioPagos({
   mes: string;
   idioma: Idioma;
 }) {
+  const { temaActivo } = useTheme(); // 2. Obtenemos los colores dinámicos
+
   const { dias, offset, gastoPorDia, maximo, iniciales } = useMemo(() => {
     const [anio, mesNum] = mes.split('-').map(Number);
     const dias = new Date(anio, mesNum, 0).getDate();
@@ -40,35 +43,53 @@ export function CalendarioPagos({
   const celdas = [...Array.from({ length: offset }, () => 0), ...Array.from({ length: dias }, (_, i) => i + 1)];
 
   return (
-    <View>
+    <View style={{ gap: 8 }}>
+      {/* Fila de días de la semana (L, M, X...) */}
       <View style={s.fila}>
         {iniciales.map((ini, i) => (
-          <Text key={i} style={s.inicial}>
+          <Text key={i} style={[s.inicial, { color: temaActivo.apagado }]}>
             {ini}
           </Text>
         ))}
       </View>
+      
+      {/* Grilla de números */}
       <View style={s.grilla}>
         {celdas.map((dia, i) => {
           const gasto = dia > 0 ? gastoPorDia.get(dia) : undefined;
           const intensidad = gasto ? 0.35 + 0.65 * (gasto / maximo) : 0;
+          
           return (
-            <View key={i} style={[s.celda, gasto ? s.celdaConGasto : null]}>
+            <View key={i} style={s.celdaWrapper}>
               {dia > 0 ? (
-                <>
-                  <Text style={[s.dia, gasto ? { fontFamily: Fuentes.cuerpoSemi, color: Colores.tinta } : null]}>
+                <View 
+                style={[
+             s.diaContenedor,
+                gasto ? { backgroundColor: temaActivo.canvas2 } : null
+                ]}
+                >
+                  <Text 
+                    style={[
+                      s.diaTexto, 
+                      { color: gasto ? temaActivo.tinta : temaActivo.apagado },
+                     gasto ? { fontFamily: Fuentes.cuerpoSemi } : null
+                    ]} // Énfasis si hay gasto
+
+                  >
                     {dia}
                   </Text>
+                  
+                  {/* Punto de gasto elegante */}
                   <View
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: 3,
-                      marginTop: 2,
-                      backgroundColor: gasto ? `rgba(18,86,74,${intensidad})` : 'transparent',
-                    }}
+                    style={[
+                      s.puntoGasto,
+                      { 
+                        backgroundColor: gasto ? temaActivo.menta : 'transparent',
+                        opacity: intensidad // La opacidad reacciona al monto
+                      }
+                    ]}
                   />
-                </>
+                </View>
               ) : null}
             </View>
           );
@@ -79,24 +100,39 @@ export function CalendarioPagos({
 }
 
 const s = StyleSheet.create({
-  fila: { flexDirection: 'row' },
+  fila: { flexDirection: 'row', marginBottom: 4 },
   inicial: {
     flex: 1,
     textAlign: 'center',
     fontFamily: Fuentes.cuerpoSemi,
     fontSize: 10,
-    color: Colores.apagado,
     textTransform: 'uppercase',
-    paddingBottom: 4,
   },
-  grilla: { flexDirection: 'row', flexWrap: 'wrap' },
-  celda: {
+  grilla: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    rowGap: 8 // Separación vertical limpia
+  },
+  celdaWrapper: {
     width: `${100 / 7}%`,
-    aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
   },
-  celdaConGasto: { backgroundColor: 'rgba(242,238,228,0.85)' },
-  dia: { fontFamily: Fuentes.cuerpo, fontSize: 12, color: Colores.apagado },
+  diaContenedor: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 17, // Círculo perfecto
+  },
+  diaTexto: { 
+    fontFamily: Fuentes.cuerpo, 
+    fontSize: 13 
+  },
+  puntoGasto: { 
+    width: 4, 
+    height: 4, 
+    borderRadius: 2, 
+    marginTop: 2 
+  },
 });

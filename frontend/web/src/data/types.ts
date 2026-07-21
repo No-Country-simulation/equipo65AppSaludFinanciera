@@ -17,6 +17,9 @@ export const CATEGORIAS = [
   'ahorro_inversion',
   'ingresos',
   'otros',
+  'comida_rapida',
+  'supermercado',
+  'taxi',
 ] as const;
 export type CategoriaSlug = (typeof CATEGORIAS)[number];
 

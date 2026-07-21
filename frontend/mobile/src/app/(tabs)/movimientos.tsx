@@ -13,7 +13,8 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Categoria, CategoriaSlug, PaginaTransacciones, Transaccion } from '@/data';
-import { Colores, COLOR_CATEGORIA, Espacio, Fuentes } from '@/constants/tema';
+import { COLOR_CATEGORIA, Espacio, Fuentes } from '@/constants/tema';
+import { useTheme } from '@/context/ThemeContext'; // 1. Importamos el Contexto de Tema
 import { useI18n } from '@/i18n';
 import { formatearFecha, formatearMoneda } from '@/lib/formato';
 import { useDataSource, useDatos } from '@/lib/useDatos';
@@ -28,6 +29,9 @@ export default function PantallaMovimientos() {
   const { t, idioma } = useI18n();
   const ds = useDataSource();
   const insets = useSafeAreaInsets();
+  
+  // 2. Extraemos el tema activo
+  const { temaActivo } = useTheme();
 
   const [filtro, setFiltro] = useState<CategoriaSlug | ''>('');
   const [busqueda, setBusqueda] = useState('');
@@ -35,7 +39,7 @@ export default function PantallaMovimientos() {
   const [corrigiendo, setCorrigiendo] = useState<Transaccion | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [monto, setMonto] = useState('');
-  const [nota, setNota] = useState(''); // solo interfaz (F9)
+  const [nota, setNota] = useState(''); 
   const [guardando, setGuardando] = useState(false);
 
   const { datos, cargando, error, recargar } = useDatos<DatosMovimientos>(
@@ -99,53 +103,53 @@ export default function PantallaMovimientos() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: temaActivo.canvas }}>
       <Hero paddingTop={insets.top + 14} redondeado={false}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={estilos.titulo}>{t('movimientos.titulo')}</Text>
+          <Text style={[estilos.titulo, { color: temaActivo.blanco }]}>{t('movimientos.titulo')}</Text>
           <Boton texto={`+ ${t('movimientos.nuevo')}`} variante="claro" onPress={() => setModalAlta(true)} />
         </View>
-        <Text style={estilos.subtitulo}>{t('movimientos.subtitulo')}</Text>
+        <Text style={[estilos.subtitulo, { color: temaActivo.blanco, opacity: 0.65 }]}>{t('movimientos.subtitulo')}</Text>
         <TextInput
           value={busqueda}
           onChangeText={setBusqueda}
           placeholder={t('movimientos.buscar')}
           placeholderTextColor="rgba(255,255,255,0.5)"
-          style={estilos.busqueda}
+          style={[estilos.busqueda, { color: temaActivo.blanco }]}
         />
       </Hero>
 
-      {/* Export solo-UI (F9.15) */}
+      {/* Export solo-UI */}
       <View style={estilos.exportFila}>
         {(['exportPdf', 'exportXlsx'] as const).map((clave) => (
           <Pressable
             key={clave}
             onPress={() => Alert.alert(t(`movimientos.${clave}`), t('comun.proximamente'))}
-            style={estilos.exportChip}
+            style={[estilos.exportChip, { backgroundColor: temaActivo.tarjeta, borderColor: temaActivo.linea }]}
           >
-            <Ionicons name="download-outline" size={13} color={Colores.tintaSuave} />
-            <Text style={estilos.exportTexto}>{t(`movimientos.${clave}`)}</Text>
+            <Ionicons name="download-outline" size={13} color={temaActivo.tintaSuave} />
+            <Text style={[estilos.exportTexto, { color: temaActivo.tintaSuave }]}>{t(`movimientos.${clave}`)}</Text>
           </Pressable>
         ))}
       </View>
 
       {/* Resumen entradas/salidas */}
       <View style={estilos.resumenFila}>
-        <View style={[estilos.resumenCaja, { backgroundColor: Colores.okFondo }]}>
-          <Text style={estilos.resumenEtiqueta}>{t('movimientos.entra').toUpperCase()}</Text>
-          <Text style={[estilos.resumenCifra, { color: Colores.okTexto }]}>
+        <View style={[estilos.resumenCaja, { backgroundColor: temaActivo.okFondo }]}>
+          <Text style={[estilos.resumenEtiqueta, { color: temaActivo.apagado }]}>{t('movimientos.entra').toUpperCase()}</Text>
+          <Text style={[estilos.resumenCifra, { color: temaActivo.okTexto }]}>
             +{formatearMoneda(resumen.entra, resumen.moneda, idioma)}
           </Text>
         </View>
-        <View style={[estilos.resumenCaja, { backgroundColor: Colores.riesgoFondo }]}>
-          <Text style={estilos.resumenEtiqueta}>{t('movimientos.sale').toUpperCase()}</Text>
-          <Text style={[estilos.resumenCifra, { color: Colores.riesgo }]}>
+        <View style={[estilos.resumenCaja, { backgroundColor: temaActivo.riesgoFondo }]}>
+          <Text style={[estilos.resumenEtiqueta, { color: temaActivo.apagado }]}>{t('movimientos.sale').toUpperCase()}</Text>
+          <Text style={[estilos.resumenCifra, { color: temaActivo.riesgo }]}>
             −{formatearMoneda(resumen.sale, resumen.moneda, idioma)}
           </Text>
         </View>
       </View>
 
-      {/* Filtro por categoria (altura fija: el ScrollView horizontal no colapsa) */}
+      {/* Filtro por categoria */}
       <View style={estilos.filtrosWrap}>
         <ScrollView
           horizontal
@@ -154,9 +158,13 @@ export default function PantallaMovimientos() {
         >
           <Pressable
             onPress={() => setFiltro('')}
-            style={[estilos.chipFiltro, filtro === '' && estilos.chipFiltroActivo]}
+            style={[
+              estilos.chipFiltro, 
+              { backgroundColor: temaActivo.tarjeta, borderColor: temaActivo.linea },
+              filtro === '' && { backgroundColor: temaActivo.acento, borderColor: 'transparent' }
+            ]}
           >
-            <Text style={[estilos.chipFiltroTexto, filtro === '' && { color: Colores.blanco }]}>
+            <Text style={[estilos.chipFiltroTexto, { color: filtro === '' ? temaActivo.blanco : temaActivo.tintaSuave }]}>
               {t('movimientos.todas')}
             </Text>
           </Pressable>
@@ -166,15 +174,19 @@ export default function PantallaMovimientos() {
               <Pressable
                 key={categoria.slug}
                 onPress={() => setFiltro(categoria.slug)}
-                style={[estilos.chipFiltro, activo && estilos.chipFiltroActivo]}
+                style={[
+                  estilos.chipFiltro,
+                  { backgroundColor: temaActivo.tarjeta, borderColor: temaActivo.linea },
+                  activo && { backgroundColor: temaActivo.acento, borderColor: 'transparent' }
+                ]}
               >
                 <View
                   style={[
                     estilos.chipPunto,
-                    { backgroundColor: COLOR_CATEGORIA[categoria.slug] ?? Colores.serieResto },
+                    { backgroundColor: COLOR_CATEGORIA[categoria.slug] ?? temaActivo.serieResto },
                   ]}
                 />
-                <Text style={[estilos.chipFiltroTexto, activo && { color: Colores.blanco }]}>
+                <Text style={[estilos.chipFiltroTexto, { color: activo ? temaActivo.blanco : temaActivo.tintaSuave }]}>
                   {categoria.etiqueta}
                 </Text>
               </Pressable>
@@ -189,17 +201,17 @@ export default function PantallaMovimientos() {
           keyExtractor={(transaccion) => transaccion.id}
           contentContainerStyle={{ padding: Espacio.m, gap: 10, paddingBottom: 32 }}
           ListEmptyComponent={
-            <Text style={estilos.vacio}>
+            <Text style={[estilos.vacio, { color: temaActivo.apagado }]}>
               {busqueda ? t('movimientos.sinResultados') : t('movimientos.vacio')}
             </Text>
           }
           renderItem={({ item: transaccion }) => (
-            <View style={estilos.fila}>
+            <View style={[estilos.fila, { backgroundColor: temaActivo.tarjeta, borderColor: temaActivo.linea }]}>
               <View style={{ flex: 1, gap: 3 }}>
-                <Text numberOfLines={1} style={estilos.filaDescripcion}>
+                <Text numberOfLines={1} style={[estilos.filaDescripcion, { color: temaActivo.tinta }]}>
                   {transaccion.descripcion}
                 </Text>
-                <Text style={estilos.filaMeta}>
+                <Text style={[estilos.filaMeta, { color: temaActivo.apagado }]}>
                   {formatearFecha(transaccion.fecha, idioma)} ·{' '}
                   {etiquetas.get(transaccion.categoria) ?? transaccion.categoria}
                   {transaccion.categoria_origen === 'usuario'
@@ -208,10 +220,10 @@ export default function PantallaMovimientos() {
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 14, marginTop: 3 }}>
                   <Pressable onPress={() => setCorrigiendo(transaccion)}>
-                    <Text style={estilos.accion}>{t('movimientos.corregir')}</Text>
+                    <Text style={[estilos.accion, { color: temaActivo.acento }]}>{t('movimientos.corregir')}</Text>
                   </Pressable>
                   <Pressable onPress={() => void eliminar(transaccion.id)}>
-                    <Text style={[estilos.accion, { color: Colores.riesgo }]}>
+                    <Text style={[estilos.accion, { color: temaActivo.riesgo }]}>
                       {t('movimientos.eliminar')}
                     </Text>
                   </Pressable>
@@ -220,7 +232,7 @@ export default function PantallaMovimientos() {
               <Text
                 style={[
                   estilos.filaMonto,
-                  { color: transaccion.valor > 0 ? Colores.okTexto : Colores.tinta },
+                  { color: transaccion.valor > 0 ? temaActivo.okTexto : temaActivo.tinta },
                 ]}
               >
                 {transaccion.valor > 0 ? '+' : ''}
@@ -234,8 +246,8 @@ export default function PantallaMovimientos() {
       {/* ── Modal alta manual ────────────────────────────────────────── */}
       <Modal visible={modalAlta} animationType="slide" transparent>
         <View style={estilos.fondoModal}>
-          <View style={estilos.modal}>
-            <Text style={estilos.modalTitulo}>{t('movimientos.nuevo')}</Text>
+          <View style={[estilos.modal, { backgroundColor: temaActivo.canvas }]}>
+            <Text style={[estilos.modalTitulo, { color: temaActivo.tinta }]}>{t('movimientos.nuevo')}</Text>
             <Campo
               etiqueta={t('movimientos.descripcion')}
               value={descripcion}
@@ -267,12 +279,12 @@ export default function PantallaMovimientos() {
         </View>
       </Modal>
 
-      {/* ── Modal correccion de categoria (RN3) ──────────────────────── */}
+      {/* ── Modal correccion de categoria ──────────────────────── */}
       <Modal visible={corrigiendo !== null} animationType="slide" transparent>
         <View style={estilos.fondoModal}>
-          <View style={estilos.modal}>
-            <Text style={estilos.modalTitulo}>{t('movimientos.corregir')}</Text>
-            <Text numberOfLines={1} style={estilos.filaMeta}>
+          <View style={[estilos.modal, { backgroundColor: temaActivo.canvas }]}>
+            <Text style={[estilos.modalTitulo, { color: temaActivo.tinta }]}>{t('movimientos.corregir')}</Text>
+            <Text numberOfLines={1} style={[estilos.filaMeta, { color: temaActivo.apagado }]}>
               {corrigiendo?.descripcion}
             </Text>
             <ScrollView style={{ maxHeight: 320 }}>
@@ -282,18 +294,18 @@ export default function PantallaMovimientos() {
                   <Pressable
                     key={categoria.slug}
                     onPress={() => void corregir(categoria.slug)}
-                    style={[estilos.opcionCategoria, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}
+                    style={[estilos.opcionCategoria, { borderBottomColor: temaActivo.linea, flexDirection: 'row', alignItems: 'center', gap: 8 }]}
                   >
                     <Ionicons
                       name={sel ? 'checkmark-circle' : 'ellipse-outline'}
                       size={18}
-                      color={sel ? Colores.acento : Colores.linea}
+                      color={sel ? temaActivo.acento : temaActivo.linea}
                     />
                     <Text
                       style={{
                         fontFamily: sel ? Fuentes.cuerpoSemi : Fuentes.cuerpo,
                         fontSize: 14,
-                        color: Colores.tinta,
+                        color: temaActivo.tinta,
                       }}
                     >
                       {categoria.etiqueta}
@@ -311,8 +323,8 @@ export default function PantallaMovimientos() {
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: Fuentes.titulo, fontSize: 25, color: Colores.blanco, letterSpacing: -0.4 },
-  subtitulo: { fontFamily: Fuentes.cuerpo, fontSize: 12, color: 'rgba(255,255,255,0.65)' },
+  titulo: { fontFamily: Fuentes.titulo, fontSize: 25, letterSpacing: -0.4 },
+  subtitulo: { fontFamily: Fuentes.cuerpo, fontSize: 12 },
   busqueda: {
     marginTop: 12,
     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -323,75 +335,27 @@ const estilos = StyleSheet.create({
     paddingVertical: 10,
     fontFamily: Fuentes.cuerpo,
     fontSize: 14,
-    color: Colores.blanco,
   },
   exportFila: { flexDirection: 'row', gap: 8, paddingHorizontal: Espacio.m, paddingTop: 12 },
-  exportChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colores.linea,
-    backgroundColor: Colores.tarjeta,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  exportTexto: { fontFamily: Fuentes.cuerpoMedio, fontSize: 12, color: Colores.tintaSuave },
+  exportChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7 },
+  exportTexto: { fontFamily: Fuentes.cuerpoMedio, fontSize: 12 },
   resumenFila: { flexDirection: 'row', gap: 10, paddingHorizontal: Espacio.m, paddingTop: 12 },
   resumenCaja: { flex: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
-  resumenEtiqueta: { fontFamily: Fuentes.cuerpoSemi, fontSize: 9.5, letterSpacing: 0.8, color: Colores.apagado },
+  resumenEtiqueta: { fontFamily: Fuentes.cuerpoSemi, fontSize: 9.5, letterSpacing: 0.8 },
   resumenCifra: { fontFamily: Fuentes.titulo, fontSize: 17, marginTop: 2 },
   filtrosWrap: { height: 56, justifyContent: 'center' },
   filtros: { gap: 8, paddingHorizontal: Espacio.m, alignItems: 'center' },
-  chipFiltro: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colores.linea,
-    backgroundColor: Colores.tarjeta,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-  },
-  chipFiltroActivo: { backgroundColor: Colores.acento, borderColor: 'transparent' },
+  chipFiltro: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 999, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 8 },
   chipPunto: { width: 8, height: 8, borderRadius: 4 },
-  chipFiltroTexto: { fontFamily: Fuentes.cuerpoMedio, fontSize: 13, color: Colores.tintaSuave },
-  fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: Colores.tarjeta,
-    borderWidth: 1,
-    borderColor: Colores.linea,
-    borderRadius: 16,
-    padding: 14,
-  },
-  filaDescripcion: { fontFamily: Fuentes.cuerpoMedio, fontSize: 14, color: Colores.tinta },
-  filaMeta: { fontFamily: Fuentes.cuerpo, fontSize: 11.5, color: Colores.apagado },
+  chipFiltroTexto: { fontFamily: Fuentes.cuerpoMedio, fontSize: 13 },
+  fila: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
+  filaDescripcion: { fontFamily: Fuentes.cuerpoMedio, fontSize: 14 },
+  filaMeta: { fontFamily: Fuentes.cuerpo, fontSize: 11.5 },
   filaMonto: { fontFamily: Fuentes.titulo, fontSize: 16 },
-  accion: { fontFamily: Fuentes.cuerpoSemi, fontSize: 12, color: Colores.acento },
-  vacio: {
-    fontFamily: Fuentes.cuerpo,
-    fontSize: 13,
-    color: Colores.apagado,
-    textAlign: 'center',
-    paddingVertical: 48,
-  },
+  accion: { fontFamily: Fuentes.cuerpoSemi, fontSize: 12 },
+  vacio: { fontFamily: Fuentes.cuerpo, fontSize: 13, textAlign: 'center', paddingVertical: 48 },
   fondoModal: { flex: 1, backgroundColor: 'rgba(9,26,22,0.55)', justifyContent: 'flex-end' },
-  modal: {
-    backgroundColor: Colores.canvas,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: Espacio.l,
-    gap: Espacio.m,
-    paddingBottom: 36,
-  },
-  modalTitulo: { fontFamily: Fuentes.titulo, fontSize: 20, color: Colores.tinta },
-  opcionCategoria: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colores.linea,
-  },
+  modal: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: Espacio.l, gap: Espacio.m, paddingBottom: 36 },
+  modalTitulo: { fontFamily: Fuentes.titulo, fontSize: 20 },
+  opcionCategoria: { paddingVertical: 12, borderBottomWidth: 1 },
 });

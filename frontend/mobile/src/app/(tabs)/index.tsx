@@ -7,6 +7,7 @@ import type { Analisis, Categoria, CategoriaSlug, ComparacionMensual, MetaAhorro
 import { CalendarioPagos } from '@/components/calendario';
 import { Colores, Espacio, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
+import { useTheme } from '@/context/ThemeContext';
 import { formatearFecha, formatearMoneda, formatearPct } from '@/lib/formato';
 import { useSesion } from '@/lib/sesion';
 import { useDataSource, useDatos } from '@/lib/useDatos';
@@ -34,6 +35,7 @@ export default function PantallaInicio() {
   const { usuario } = useSesion();
   const ds = useDataSource();
   const insets = useSafeAreaInsets();
+  const { temaActivo } = useTheme();
   const [analizando, setAnalizando] = useState(false);
 
   const [buscador, setBuscador] = useState(false); // solo interfaz (F9)
@@ -131,28 +133,33 @@ export default function PantallaInicio() {
             </View>
 
             <View style={estilos.filaCifras}>
-              <View style={{ flex: 1 }}>
+              {/* Columna 1: Le damos flex 1.3 para que sea más ancha */}
+              <View style={{ flex: 1.3 }}>
                 <Text style={estilos.cifraEtiqueta}>{t('panel.ingresoMensual').toUpperCase()}</Text>
                 <CifraAnimada
                   valor={usuario?.ingreso_mensual ?? 0}
                   formato={(n) => formatearMoneda(n, datos.analisis!.moneda, idioma)}
-                  style={estilos.cifra}
+                  style={[estilos.cifra, { color: temaActivo.blanco }]}
                 />
               </View>
-              <View style={{ flex: 1 }}>
+
+              {/* Columna 2: Le damos flex 1.3 también */}
+              <View style={{ flex: 1.3 }}>
                 <Text style={estilos.cifraEtiqueta}>{t('panel.gastoTotal').toUpperCase()}</Text>
                 <CifraAnimada
                   valor={gastoTotal}
                   formato={(n) => formatearMoneda(n, datos.analisis!.moneda, idioma)}
-                  style={[estilos.cifra, { color: Colores.alertaFondo }]}
+                  style={[estilos.cifra, { color: temaActivo.alertaFondo }]}
                 />
               </View>
-              <View style={{ flex: 1 }}>
+
+              {/* Columna 3: Le damos flex 0.8 porque los porcentajes son cortos */}
+              <View style={{ flex: 0.8 }}>
                 <Text style={estilos.cifraEtiqueta}>{t('panel.evolucionEje').toUpperCase()}</Text>
                 <CifraAnimada
                   valor={datos.analisis.indicadores.tasa_ahorro}
                   formato={(n) => formatearPct(n, idioma)}
-                  style={[estilos.cifra, { color: Colores.menta }]}
+                  style={[estilos.cifra, { color: temaActivo.menta }]}
                 />
               </View>
             </View>
@@ -347,14 +354,14 @@ const estilos = StyleSheet.create({
   logo: { fontFamily: Fuentes.titulo, fontSize: 22, color: Colores.blanco },
   saludo: { fontFamily: Fuentes.titulo, fontSize: 27, color: Colores.blanco, marginTop: 14, letterSpacing: -0.5 },
   subtexto: { fontFamily: Fuentes.cuerpo, fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 8 },
-  filaCifras: { flexDirection: 'row', gap: 12, marginTop: 18 },
+  filaCifras: { flexDirection: 'row', gap: 6, marginTop: 18 },
   cifraEtiqueta: {
     fontFamily: Fuentes.cuerpoMedio,
     fontSize: 9,
     letterSpacing: 1,
     color: 'rgba(255,255,255,0.55)',
   },
-  cifra: { fontFamily: Fuentes.titulo, fontSize: 19, color: Colores.blanco, marginTop: 3 },
+  cifra: { fontFamily: Fuentes.titulo, fontSize: 16, color: Colores.blanco, marginTop: 3 },
   contenido: { padding: Espacio.m, gap: Espacio.m },
   widgetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   verTodo: { fontFamily: Fuentes.cuerpoSemi, fontSize: 12, color: Colores.acento },

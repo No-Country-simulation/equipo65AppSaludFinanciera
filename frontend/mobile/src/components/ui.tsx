@@ -13,10 +13,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { PerfilSlug } from '@/data';
-import { Colores, Espacio, Fuentes, Radio, sombra } from '@/constants/tema';
+import { Espacio, Fuentes, Radio, sombra } from '@/constants/tema';
 import { useI18n } from '@/i18n';
+// 1. Importamos el contexto
+import { useTheme } from '@/context/ThemeContext';
 
-/** Envuelve hijos en una entrada fade+rise escalonada (respeta reduce-motion vía duración corta). */
+/** Envuelve hijos en una entrada fade+rise escalonada */
 export function Aparece({
   children,
   delay = 0,
@@ -54,19 +56,28 @@ export function Aparece({
 }
 
 export function Tarjeta({ children, style }: { children: React.ReactNode; style?: object }) {
-  return <View style={[estilos.tarjeta, style]}>{children}</View>;
-}
-
-export function TituloTarjeta({ children }: { children: string }) {
+  const { temaActivo } = useTheme(); // Inyectamos el tema
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: Colores.menta }} />
-      <Text style={estilos.tituloTarjeta}>{children.toUpperCase()}</Text>
+    <View style={[
+      estilos.tarjeta, 
+      { backgroundColor: temaActivo.tarjeta, borderColor: temaActivo.linea },
+      style
+    ]}>
+      {children}
     </View>
   );
 }
 
-/** Header con gradiente pino (estilo banca) - reutilizado por todas las pantallas. */
+export function TituloTarjeta({ children }: { children: string }) {
+  const { temaActivo } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: temaActivo.menta }} />
+      <Text style={[estilos.tituloTarjeta, { color: temaActivo.apagado }]}>{children.toUpperCase()}</Text>
+    </View>
+  );
+}
+
 export function Hero({
   children,
   paddingTop,
@@ -76,9 +87,11 @@ export function Hero({
   paddingTop: number;
   redondeado?: boolean;
 }) {
+  const { temaActivo } = useTheme();
   return (
     <LinearGradient
-      colors={[Colores.heroB, Colores.heroA, '#071a16']}
+      // Usamos los colores dinámicos para el gradiente
+      colors={[temaActivo.heroB, temaActivo.heroA, temaActivo.canvas2]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[
@@ -109,18 +122,22 @@ export function Boton({
   cargando?: boolean;
   deshabilitado?: boolean;
 }) {
+  const { temaActivo } = useTheme();
+  
   const fondo = {
-    primario: Colores.acento,
+    primario: temaActivo.acento,
     fantasma: 'transparent',
-    peligro: Colores.riesgoFondo,
+    peligro: temaActivo.riesgoFondo,
     claro: 'rgba(255,255,255,0.16)',
   }[variante];
+  
   const color = {
-    primario: Colores.blanco,
-    fantasma: Colores.tinta,
-    peligro: Colores.riesgo,
-    claro: Colores.blanco,
+    primario: temaActivo.blanco,
+    fantasma: temaActivo.tinta,
+    peligro: temaActivo.riesgo,
+    claro: temaActivo.blanco,
   }[variante];
+
   return (
     <Pressable
       onPress={onPress}
@@ -128,7 +145,7 @@ export function Boton({
       style={({ pressed }) => [
         estilos.boton,
         { backgroundColor: fondo, transform: [{ scale: pressed ? 0.97 : 1 }] },
-        variante === 'fantasma' && { borderWidth: 1, borderColor: Colores.linea },
+        variante === 'fantasma' && { borderWidth: 1, borderColor: temaActivo.linea },
         variante === 'claro' && { borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
         (deshabilitado || cargando) && { opacity: 0.5 },
       ]}
@@ -144,23 +161,28 @@ export function Campo({
   ayuda,
   ...props
 }: TextInputProps & { etiqueta: string; ayuda?: string }) {
+  const { temaActivo } = useTheme();
   const [enfoque, setEnfoque] = useState(false);
+  
   return (
     <View style={{ gap: 6 }}>
-      <Text style={estilos.etiquetaCampo}>{etiqueta}</Text>
+      <Text style={[estilos.etiquetaCampo, { color: temaActivo.tintaSuave }]}>{etiqueta}</Text>
       <TextInput
-        placeholderTextColor={`${Colores.apagado}99`}
-        style={[estilos.entrada, enfoque && { borderColor: Colores.acento }]}
+        placeholderTextColor={`${temaActivo.apagado}99`}
+        style={[
+          estilos.entrada, 
+          { backgroundColor: temaActivo.blanco, borderColor: temaActivo.linea, color: temaActivo.tinta },
+          enfoque && { borderColor: temaActivo.acento }
+        ]}
         onFocus={() => setEnfoque(true)}
         onBlur={() => setEnfoque(false)}
         {...props}
       />
-      {ayuda ? <Text style={estilos.ayudaCampo}>{ayuda}</Text> : null}
+      {ayuda ? <Text style={[estilos.ayudaCampo, { color: temaActivo.apagado }]}>{ayuda}</Text> : null}
     </View>
   );
 }
 
-/** Perfil SIEMPRE con icono + etiqueta, nunca solo color. */
 export function ChipPerfil({
   perfil,
   etiqueta,
@@ -170,11 +192,13 @@ export function ChipPerfil({
   etiqueta: string;
   grande?: boolean;
 }) {
+  const { temaActivo } = useTheme();
   const estilo = {
-    saludable: { fondo: Colores.okFondo, texto: Colores.okTexto, icono: 'trending-up' as const },
-    en_observacion: { fondo: Colores.alertaSuave, texto: Colores.alerta, icono: 'eye-outline' as const },
-    en_riesgo: { fondo: Colores.riesgoFondo, texto: Colores.riesgo, icono: 'trending-down' as const },
+    saludable: { fondo: temaActivo.okFondo, texto: temaActivo.okTexto, icono: 'trending-up' as const },
+    en_observacion: { fondo: temaActivo.alertaSuave, texto: temaActivo.alerta, icono: 'eye-outline' as const },
+    en_riesgo: { fondo: temaActivo.riesgoFondo, texto: temaActivo.riesgo, icono: 'trending-down' as const },
   }[perfil];
+  
   return (
     <View
       style={[
@@ -190,7 +214,6 @@ export function ChipPerfil({
   );
 }
 
-/** Cifra con conteo animado. */
 export function CifraAnimada({
   valor,
   formato,
@@ -224,7 +247,6 @@ export function CifraAnimada({
   return <Text style={style}>{formato(mostrado)}</Text>;
 }
 
-/** Estado cargando / error+Reintentar - el patron F6.7 desde el dia 1. */
 export function EstadoCarga({
   cargando,
   error,
@@ -237,22 +259,24 @@ export function EstadoCarga({
   children: React.ReactNode;
 }) {
   const { t } = useI18n();
+  const { temaActivo } = useTheme();
+  
   if (cargando) {
     return (
       <View style={estilos.centrado}>
-        <ActivityIndicator size="large" color={Colores.acento} />
-        <Text style={estilos.textoApagado}>{t('comun.cargando')}</Text>
+        <ActivityIndicator size="large" color={temaActivo.acento} />
+        <Text style={[estilos.textoApagado, { color: temaActivo.apagado }]}>{t('comun.cargando')}</Text>
       </View>
     );
   }
   if (error) {
     return (
       <View style={estilos.centrado}>
-        <View style={estilos.iconoError}>
-          <Text style={{ color: Colores.riesgo, fontFamily: Fuentes.cuerpoNegrita, fontSize: 18 }}>!</Text>
+        <View style={[estilos.iconoError, { backgroundColor: temaActivo.riesgoFondo }]}>
+          <Text style={{ color: temaActivo.riesgo, fontFamily: Fuentes.cuerpoNegrita, fontSize: 18 }}>!</Text>
         </View>
-        <Text style={estilos.textoApagado}>{t('comun.errorApi')}</Text>
-        <Text style={[estilos.textoApagado, { fontSize: 12, opacity: 0.7 }]}>{error}</Text>
+        <Text style={[estilos.textoApagado, { color: temaActivo.apagado }]}>{t('comun.errorApi')}</Text>
+        <Text style={[estilos.textoApagado, { fontSize: 12, opacity: 0.7, color: temaActivo.apagado }]}>{error}</Text>
         <Boton texto={t('comun.reintentar')} variante="fantasma" onPress={recargar} />
       </View>
     );
@@ -260,12 +284,11 @@ export function EstadoCarga({
   return <>{children}</>;
 }
 
+// Los estilos se quedan como fallback de estructura, los colores se inyectan dinámicamente arriba
 const estilos = StyleSheet.create({
   tarjeta: {
-    backgroundColor: Colores.tarjeta,
     borderRadius: Radio.l,
     borderWidth: 1,
-    borderColor: Colores.linea,
     padding: Espacio.m,
     gap: Espacio.s,
     ...sombra,
@@ -274,7 +297,6 @@ const estilos = StyleSheet.create({
     fontFamily: Fuentes.cuerpoSemi,
     fontSize: 11,
     letterSpacing: 1.5,
-    color: Colores.apagado,
   },
   boton: {
     flexDirection: 'row',
@@ -286,18 +308,15 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 18,
   },
   botonTexto: { fontFamily: Fuentes.cuerpoSemi, fontSize: 14 },
-  etiquetaCampo: { fontFamily: Fuentes.cuerpoMedio, fontSize: 13, color: Colores.tintaSuave },
-  ayudaCampo: { fontFamily: Fuentes.cuerpo, fontSize: 11, color: Colores.apagado },
+  etiquetaCampo: { fontFamily: Fuentes.cuerpoMedio, fontSize: 13 },
+  ayudaCampo: { fontFamily: Fuentes.cuerpo, fontSize: 11 },
   entrada: {
     borderWidth: 1,
-    borderColor: Colores.linea,
     borderRadius: Radio.m,
-    backgroundColor: Colores.blanco,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontFamily: Fuentes.cuerpo,
     fontSize: 15,
-    color: Colores.tinta,
   },
   chip: {
     flexDirection: 'row',
@@ -307,12 +326,11 @@ const estilos = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   centrado: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 56 },
-  textoApagado: { fontFamily: Fuentes.cuerpo, color: Colores.apagado, fontSize: 14, textAlign: 'center' },
+  textoApagado: { fontFamily: Fuentes.cuerpo, fontSize: 14, textAlign: 'center' },
   iconoError: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colores.riesgoFondo,
     alignItems: 'center',
     justifyContent: 'center',
   },

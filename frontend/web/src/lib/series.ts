@@ -35,11 +35,11 @@ export interface PorcionGasto {
 export type GrupoGasto = 'esencial' | 'discrecional' | 'financiero' | 'educacion' | 'otros';
 
 const MIEMBROS_GRUPO: Record<GrupoGasto, CategoriaSlug[]> = {
-  esencial: ['alimentacion', 'vivienda', 'servicios', 'salud', 'transporte'],
-  discrecional: ['entretenimiento', 'compras'],
+ esencial: ['alimentacion', 'supermercado', 'vivienda', 'servicios', 'salud', 'transporte'],
+  discrecional: ['entretenimiento', 'compras', 'comida_rapida', 'taxi'],
   financiero: ['finanzas'],
   educacion: ['educacion'],
-  otros: ['otros'],
+   otros: ['otros'],
 };
 
 export const COLOR_GRUPO: Record<GrupoGasto, string> = {

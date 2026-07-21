@@ -5,6 +5,7 @@ import { Colores, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
 import { useSesion } from '@/lib/sesion';
 
+
 export default function TabsLayout() {
   const { usuario, listo } = useSesion();
   const { t } = useI18n();

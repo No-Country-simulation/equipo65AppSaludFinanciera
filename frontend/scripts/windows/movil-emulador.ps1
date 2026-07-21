@@ -7,7 +7,7 @@
 # ASCII y PowerShell 5.1 por convencion del repo.
 
 param(
-    [string]$Avd = 'Pixel_9'
+    [string]$Avd = 'Small_Phone'
 )
 
 $ErrorActionPreference = 'Stop'

@@ -2,7 +2,8 @@ import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { MetaAhorro } from '@/data';
-import { Colores, Fuentes, ICONO_META, Radio } from '@/constants/tema';
+import { Fuentes, ICONO_META, Radio } from '@/constants/tema';
+import { useTheme } from '@/context/ThemeContext'; // 1. Hook de tema
 import { useI18n } from '@/i18n';
 import { formatearFecha, formatearMoneda } from '@/lib/formato';
 
@@ -39,34 +40,35 @@ export function TarjetaMeta({
   compacta?: boolean;
 }) {
   const { t, idioma } = useI18n();
+  const { temaActivo } = useTheme(); // 2. Tema inyectado
   const progreso = progresoMeta(meta);
   const completada = progreso >= 1;
   const restante = Math.max(0, meta.objetivo - meta.ahorrado);
   const mensual = mensualNecesario(meta);
 
   return (
-    <View style={[e.tarjeta, compacta && { padding: 0, borderWidth: 0, backgroundColor: 'transparent' }]}>
+    <View style={[e.tarjeta, { backgroundColor: temaActivo.tarjeta, borderColor: temaActivo.linea }, compacta && { padding: 0, borderWidth: 0, backgroundColor: 'transparent' }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View style={[e.icono, { backgroundColor: `${meta.color}22` }]}>
           <Ionicons name={iconoMeta(meta.icono)} size={20} color={meta.color} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <Text numberOfLines={1} style={e.nombre}>{meta.nombre}</Text>
+            <Text numberOfLines={1} style={[e.nombre, { color: temaActivo.tinta }]}>{meta.nombre}</Text>
             <Text style={[e.pct, { color: meta.color }]}>{Math.round(progreso * 100)}%</Text>
           </View>
-          <Text style={e.montos}>
+          <Text style={[e.montos, { color: temaActivo.apagado }]}>
             {formatearMoneda(meta.ahorrado, meta.moneda, idioma)} / {formatearMoneda(meta.objetivo, meta.moneda, idioma)}
           </Text>
         </View>
       </View>
 
-      <View style={e.pista}>
+      <View style={[e.pista, { backgroundColor: temaActivo.canvas2 }]}>
         <View style={{ width: `${Math.max(3, progreso * 100)}%`, height: '100%', borderRadius: 999, backgroundColor: meta.color }} />
       </View>
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        <Text style={[e.nota, completada && { color: Colores.okTexto, fontFamily: Fuentes.cuerpoSemi }]}>
+        <Text style={[e.nota, { color: temaActivo.apagado }, completada && { color: temaActivo.okTexto, fontFamily: Fuentes.cuerpoSemi }]}>
           {completada
             ? t('metas.completada')
             : mensual
@@ -74,22 +76,22 @@ export function TarjetaMeta({
               : t('metas.restante', { monto: formatearMoneda(restante, meta.moneda, idioma) })}
         </Text>
         {meta.fecha_limite && !compacta ? (
-          <Text style={e.nota}>{formatearFecha(meta.fecha_limite, idioma)}</Text>
+          <Text style={[e.nota, { color: temaActivo.apagado }]}>{formatearFecha(meta.fecha_limite, idioma)}</Text>
         ) : null}
       </View>
 
       {!compacta && (onAportar || onEliminar) ? (
-        <View style={e.acciones}>
+        <View style={[e.acciones, { borderTopColor: temaActivo.linea }]}>
           {onAportar ? (
-            <Pressable onPress={onAportar} style={[e.chipAccion, { backgroundColor: `${Colores.acento}1a` }]}>
-              <Text style={{ color: Colores.acento, fontFamily: Fuentes.cuerpoSemi, fontSize: 12 }}>
+            <Pressable onPress={onAportar} style={[e.chipAccion, { backgroundColor: `${temaActivo.acento}1a` }]}>
+              <Text style={{ color: temaActivo.acento, fontFamily: Fuentes.cuerpoSemi, fontSize: 12 }}>
                 + {t('metas.aportar')}
               </Text>
             </Pressable>
           ) : null}
           {onEliminar ? (
             <Pressable onPress={onEliminar} style={e.chipAccion}>
-              <Text style={{ color: Colores.riesgo, fontFamily: Fuentes.cuerpoSemi, fontSize: 12 }}>
+              <Text style={{ color: temaActivo.riesgo, fontFamily: Fuentes.cuerpoSemi, fontSize: 12 }}>
                 {t('metas.eliminar')}
               </Text>
             </Pressable>
@@ -101,32 +103,13 @@ export function TarjetaMeta({
 }
 
 const e = StyleSheet.create({
-  tarjeta: {
-    borderWidth: 1,
-    borderColor: Colores.linea,
-    borderRadius: Radio.l,
-    backgroundColor: 'rgba(242,238,228,0.5)',
-    padding: 14,
-  },
+  tarjeta: { borderWidth: 1, borderRadius: Radio.l, padding: 14 },
   icono: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  nombre: { flex: 1, fontFamily: Fuentes.cuerpoSemi, fontSize: 14.5, color: Colores.tinta },
+  nombre: { flex: 1, fontFamily: Fuentes.cuerpoSemi, fontSize: 14.5 },
   pct: { fontFamily: Fuentes.titulo, fontSize: 14 },
-  montos: { fontFamily: Fuentes.cuerpo, fontSize: 11.5, color: Colores.apagado, marginTop: 1 },
-  pista: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(25,21,9,0.06)',
-    overflow: 'hidden',
-    marginTop: 12,
-  },
-  nota: { fontFamily: Fuentes.cuerpo, fontSize: 11.5, color: Colores.apagado },
-  acciones: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colores.linea,
-  },
+  montos: { fontFamily: Fuentes.cuerpo, fontSize: 11.5, marginTop: 1 },
+  pista: { height: 10, borderRadius: 999, overflow: 'hidden', marginTop: 12 },
+  nota: { fontFamily: Fuentes.cuerpo, fontSize: 11.5 },
+  acciones: { flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
   chipAccion: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 },
 });

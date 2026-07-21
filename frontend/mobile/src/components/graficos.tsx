@@ -24,6 +24,8 @@ import {
   Fuentes,
   MIEMBROS_GRUPO,
 } from '@/constants/tema';
+import { useTheme } from '@/context/ThemeContext';
+import { useI18n } from '@/i18n';
 import { formatearMes, formatearMoneda, formatearPct } from '@/lib/formato';
 
 export interface Porcion {
@@ -92,24 +94,13 @@ function calcularArcos(
 }
 
 /** Dona de composicion: anillo fino, hueco grande, cifra heroe al centro. */
-export function DonaGastos({
-  porciones,
-  total,
-  moneda,
-  idioma,
-  etiquetaTotal,
-}: {
-  porciones: Porcion[];
-  total: number;
-  moneda: Moneda;
-  idioma: Idioma;
-  etiquetaTotal: string;
-}) {
+export function DonaGastos({ porciones, total, moneda, idioma, etiquetaTotal }: { porciones: Porcion[]; total: number; moneda: Moneda; idioma: Idioma; etiquetaTotal: string }) {
+  const { temaActivo } = useTheme(); // 2. Obtenemos el tema
   const tamano = 200;
   const centro = tamano / 2;
   const radio = 86;
   const grosor = 26;
-  const separacion = 3; // grados ≈ hueco de 2px contra la superficie
+  const separacion = 3;
 
   const arcos = calcularArcos(porciones, total, separacion);
 
@@ -117,33 +108,13 @@ export function DonaGastos({
     <View style={{ alignItems: 'center', gap: 16 }}>
       <View style={{ width: tamano, height: tamano }}>
         <Svg width={tamano} height={tamano}>
-          <G>
-            {arcos.map((segmento) => (
-              <Path
-                key={segmento.slug}
-                d={arco(centro, radio, segmento.inicio, segmento.fin)}
-                stroke={segmento.color}
-                strokeWidth={grosor}
-                strokeLinecap="butt"
-                fill="none"
-              />
-            ))}
-          </G>
+          <G>{arcos.map((segmento) => (<Path key={segmento.slug} d={arco(centro, radio, segmento.inicio, segmento.fin)} stroke={segmento.color} strokeWidth={grosor} strokeLinecap="butt" fill="none" />))}</G>
         </Svg>
-        <View
-          style={{
-            position: 'absolute',
-            inset: 0,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <TextoNativo
-            style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 10, letterSpacing: 1.2, color: Colores.apagado }}
-          >
+        <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <TextoNativo style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 10, letterSpacing: 1.2, color: temaActivo.apagado }}>
             {etiquetaTotal.toUpperCase()}
           </TextoNativo>
-          <TextoNativo style={{ fontFamily: Fuentes.titulo, fontSize: 22, color: Colores.tinta }}>
+          <TextoNativo style={{ fontFamily: Fuentes.titulo, fontSize: 22, color: temaActivo.tinta }}>
             {formatearMoneda(total, moneda, idioma)}
           </TextoNativo>
         </View>
@@ -153,16 +124,13 @@ export function DonaGastos({
         {porciones.map((porcion) => (
           <View key={porcion.slug} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: porcion.color }} />
-            <TextoNativo
-              numberOfLines={1}
-              style={{ flex: 1, fontFamily: Fuentes.cuerpo, fontSize: 13, color: Colores.tinta }}
-            >
+            <TextoNativo numberOfLines={1} style={{ flex: 1, fontFamily: Fuentes.cuerpo, fontSize: 13, color: temaActivo.tinta }}>
               {porcion.etiqueta}
             </TextoNativo>
-            <TextoNativo style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 13, color: Colores.tinta }}>
+            <TextoNativo style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 13, color: temaActivo.tinta }}>
               {formatearMoneda(porcion.monto, moneda, idioma)}
             </TextoNativo>
-            <TextoNativo style={{ width: 38, textAlign: 'right', fontFamily: Fuentes.cuerpo, fontSize: 11, color: Colores.apagado }}>
+            <TextoNativo style={{ width: 38, textAlign: 'right', fontFamily: Fuentes.cuerpo, fontSize: 11, color: temaActivo.apagado }}>
               {total > 0 ? `${Math.round((porcion.monto / total) * 100)}%` : '-'}
             </TextoNativo>
           </View>
@@ -319,51 +287,24 @@ export function tramosEstructura(
 }
 
 /** Barra apilada de la estructura del gasto + leyenda. */
-export function EstructuraGasto({
-  tramos,
-  moneda,
-  idioma,
-}: {
-  tramos: TramoEstructura[];
-  moneda: Moneda;
-  idioma: Idioma;
-}) {
+export function EstructuraGasto({ tramos, moneda, idioma }: { tramos: TramoEstructura[]; moneda: Moneda; idioma: Idioma }) {
+  const { temaActivo } = useTheme(); // 3. Obtenemos el tema
   return (
     <View style={{ gap: 14 }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          height: 34,
-          borderRadius: 10,
-          overflow: 'hidden',
-          gap: 2,
-        }}
-      >
+      <View style={{ flexDirection: 'row', height: 34, borderRadius: 10, overflow: 'hidden', gap: 2 }}>
         {tramos.map((tramo) => (
-          <View
-            key={tramo.grupo}
-            style={{ flex: Math.max(0.04, tramo.fraccion), backgroundColor: tramo.color }}
-          />
+          <View key={tramo.grupo} style={{ flex: Math.max(0.04, tramo.fraccion), backgroundColor: tramo.color }} />
         ))}
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
         {tramos.map((tramo) => (
-          <View
-            key={tramo.grupo}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: '44%' }}
-          >
+          <View key={tramo.grupo} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: '44%' }}>
             <View style={{ width: 9, height: 9, borderRadius: 3, backgroundColor: tramo.color }} />
             <View style={{ flex: 1 }}>
-              <TextoNativo style={{ fontFamily: Fuentes.cuerpoMedio, fontSize: 12.5, color: Colores.tinta }}>
-                {tramo.etiqueta}
-              </TextoNativo>
-              <TextoNativo style={{ fontFamily: Fuentes.cuerpo, fontSize: 11, color: Colores.apagado }}>
-                {formatearMoneda(tramo.monto, moneda, idioma)}
-              </TextoNativo>
+              <TextoNativo style={{ fontFamily: Fuentes.cuerpoMedio, fontSize: 12.5, color: temaActivo.tinta }}>{tramo.etiqueta}</TextoNativo>
+              <TextoNativo style={{ fontFamily: Fuentes.cuerpo, fontSize: 11, color: temaActivo.apagado }}>{formatearMoneda(tramo.monto, moneda, idioma)}</TextoNativo>
             </View>
-            <TextoNativo style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 13, color: Colores.tinta }}>
-              {Math.round(tramo.fraccion * 100)}%
-            </TextoNativo>
+            <TextoNativo style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 13, color: temaActivo.tinta }}>{Math.round(tramo.fraccion * 100)}%</TextoNativo>
           </View>
         ))}
       </View>

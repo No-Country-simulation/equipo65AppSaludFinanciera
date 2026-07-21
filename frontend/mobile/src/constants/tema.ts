@@ -3,38 +3,63 @@
  * verde pino profundo + arena cálida + menta viva. Paleta de series validada.
  * Tipos: Bricolage Grotesque (display/cifras) · Hanken Grotesk (UI).
  */
-export const Colores = {
-  // Neutrales cálidos
+
+// 1. Guardamos el tema original (Claro) por si el usuario lo quiere después
+export const TemaClaro = {
   canvas: '#e9e3d7',
   canvas2: '#f2eee4',
   tarjeta: '#fffefb',
-  tinta: '#191509',
-  tintaSuave: '#4b463a',
-  apagado: '#8b8571',
-  linea: '#e2dccb',
+  tinta: '#0F0D06',        // Aumentamos la oscuridad para mayor contraste
+  tintaSuave: '#3D382B',   // Más oscuro para que no se pierda
+  apagado: '#756E5A',      // Más oscuro para visibilidad
+  linea: '#D1C9B3',        // Un poco más marcada
   blanco: '#ffffff',
-
-  // Marca - pino + menta
-  acento: '#12564a',
-  acentoFuerte: '#0c3c33',
-  menta: '#16b98a',
+  acento: '#0E453B',       // Pino más oscuro para mejor lectura
+  acentoFuerte: '#082E26',
+  menta: '#129670',        // Un poco más saturado
   heroA: '#0c2a24',
   heroB: '#14453a',
-
-  // Estatus de perfil (icono + etiqueta SIEMPRE, nunca solo color)
   ok: '#12a566',
-  okTexto: '#0a6b41',
+  okTexto: '#085735',      // Más oscuro
   okFondo: 'rgba(18,165,102,0.13)',
-  alerta: '#a06a00',
+  alerta: '#855800',       // Más oscuro
   alertaFondo: '#f2a30d',
   alertaSuave: 'rgba(242,163,13,0.16)',
-  riesgo: '#d1483a',
+  riesgo: '#B33C30',       // Más saturado
   riesgoFondo: 'rgba(209,72,58,0.12)',
-
-  // Series categóricas (orden fijo, validado CVD)
+  series: ['#1E62B5', '#007000', '#D66B92', '#D18F00', '#16966A', '#D1582E', '#3D2F8A', '#C73D3D'],
+  serieResto: '#7A7464',
+} as const;
+// 2. Guardamos el tema nuevo (Oscuro / Fintech)
+export const TemaOscuro = {
+  canvas: '#0B1519',      
+  canvas2: '#112026',     
+  tarjeta: '#16282E',     
+  tinta: '#E6E9EA',       
+  tintaSuave: '#8B9DA5',  
+  apagado: '#546A76',     
+  linea: '#2A3C44',       
+  blanco: '#F0F2F3',
+  acento: '#16b98a',      
+  acentoFuerte: '#0c3c33',
+  menta: '#16b98a',
+  heroA: '#0B1519',
+  heroB: '#112026',
+  ok: '#12a566',
+  okTexto: '#20D68A',     
+  okFondo: 'rgba(18,165,102,0.2)',
+  alerta: '#F2A30D',
+  alertaFondo: 'rgba(242,163,13,0.2)',
+  alertaSuave: 'rgba(242,163,13,0.1)',
+  riesgo: '#E55C4F',
+  riesgoFondo: 'rgba(209,72,58,0.2)',
   series: ['#2a78d6', '#008300', '#e87ba4', '#eda100', '#1baf7a', '#eb6834', '#4a3aa7', '#e34948'],
   serieResto: '#98917d',
 } as const;
+
+// 3. EL TRUCO ARQUITECTÓNICO: 
+// Exportamos "Colores" apuntando al tema oscuro para evitar que la app colapse.
+export const Colores = TemaOscuro;
 
 export const Fuentes = {
   titulo: 'Bricolage_700Bold',
@@ -122,4 +147,3 @@ export const ICONO_META: Record<string, string> = {
 };
 
 export const ICONOS_META = Object.keys(ICONO_META);
-
