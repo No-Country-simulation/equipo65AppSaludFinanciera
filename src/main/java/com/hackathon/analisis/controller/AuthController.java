@@ -2,11 +2,10 @@ package com.hackathon.analisis.controller;
 
 import com.hackathon.analisis.dto.LoginRequestDTO;
 import com.hackathon.analisis.dto.RegisterRequestDTO;
-import org.springframework.http.HttpStatus;
+import com.hackathon.analisis.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -14,41 +13,29 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class AuthController {
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequestDTO request) {
-        Map<String, Object> response = new HashMap<>();
+    private final AuthService authService;
 
-        if (request.getEmail() == null || request.getPassword() == null) {
-            response.put("error", "Email y contraseña son requeridos");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-
-        // Simulación de sesión
-        Map<String, Object> usuario = new HashMap<>();
-        usuario.put("email", request.getEmail());
-
-        Map<String, Object> sesion = new HashMap<>();
-        sesion.put("requiero_2fa", false);
-        sesion.put("access_token", "jwt-token-de-prueba");
-        sesion.put("refresh_token", "refresh-token-de-prueba");
-        sesion.put("usuario", usuario);
-
-        return ResponseEntity.ok(sesion);
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 
-    @PostMapping("/registro")
-    public ResponseEntity<?> registrar(@RequestBody RegisterRequestDTO request) {
-        Map<String, Object> response = new HashMap<>();
-
-        if (request.getEmail() == null || request.getPassword() == null) {
-            response.put("error", "Email y contraseña son requeridos");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequestDTO request) {
+        try {
+            Map<String, Object> response = authService.loginUsuario(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
 
-        response.put("mensaje", "Usuario registrado exitosamente");
-        response.put("email", request.getEmail());
-        response.put("moneda", request.getMoneda());
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequestDTO request) {
+        try {
+            Map<String, Object> response = authService.registrarUsuario(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }
