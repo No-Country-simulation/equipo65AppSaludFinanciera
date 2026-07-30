@@ -1,0 +1,17 @@
+com\hackathon\analisis\model\UsuarioSeguridad.class
+com\hackathon\analisis\repository\CategoriaRepository.class
+com\hackathon\analisis\controller\AuthController.class
+com\hackathon\analisis\model\PlanAhorro.class
+com\hackathon\analisis\model\Transaccion.class
+com\hackathon\analisis\model\Transaccion$TipoMovimiento.class
+com\hackathon\analisis\repository\PlanAhorroRepository.class
+com\hackathon\analisis\model\Usuario.class
+com\hackathon\analisis\model\Transaccion$MedioOperacion.class
+com\hackathon\analisis\model\PlanAhorro$EstadoPlan.class
+com\hackathon\analisis\model\Transaccion$EstadoTransaccion.class
+com\hackathon\analisis\model\Categoria.class
+com\hackathon\analisis\service\AuthService.class
+com\hackathon\analisis\repository\TransaccionRepository.class
+com\hackathon\analisis\repository\UsuarioRepository.class
+com\hackathon\analisis\model\Categoria$TipoCategoria.class
+com\hackathon\analisis\repository\UsuarioSeguridadRepository.class
