@@ -9,11 +9,17 @@ import { useTheme } from '@/context/ThemeContext'; // 1. Importamos el contexto
 import { useI18n } from '@/i18n';
 import { useSesion } from '@/lib/sesion';
 import { useDataSource } from '@/lib/useDatos';
+import { BotonTema } from '@/components/BotonTema';
 import { SelectorIdioma } from '@/components/SelectorIdioma';
 import { Aparece, Boton, Campo, Hero, Tarjeta, TituloTarjeta } from '@/components/ui';
 
 const MONEDAS: Moneda[] = ['USD', 'MXN', 'ARS', 'COP', 'CLP', 'PEN', 'BRL', 'EUR'];
 const FRECUENCIAS: FrecuenciaAhorro[] = ['nula', 'baja', 'media', 'alta'];
+
+/** Edad a partir de la fecha de nacimiento (fuera del render: usa la hora actual). */
+function calcularEdad(fechaIso: string): number {
+  return Math.floor((Date.now() - new Date(fechaIso).getTime()) / 31_557_600_000);
+}
 
 export default function PantallaPerfil() {
   const { t, idioma } = useI18n();
@@ -22,7 +28,7 @@ export default function PantallaPerfil() {
   const insets = useSafeAreaInsets();
   
   // 2. Extraemos temaActivo además de esModoOscuro y toggleTema
-  const { esModoOscuro, toggleTema, temaActivo } = useTheme();
+  const { esModoOscuro, temaActivo } = useTheme();
 
   const [ingreso, setIngreso] = useState(String(usuario?.ingreso_mensual ?? 0));
   const [deuda, setDeuda] = useState(String(usuario?.nivel_endeudamiento ?? 0));
@@ -33,12 +39,12 @@ export default function PantallaPerfil() {
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
-  const [paso2fa, setPaso2fa] = useState<'inactivo' | 'secreto' | 'respaldo'>('inactivo');
-  const [secreto, setSecreto] = useState('');
-  const [codigo, setCodigo] = useState('');
+  // Endeudamiento y frecuencia se derivaran (pendiente formula de DS): solo lectura
+  // con fallback de ajuste manual mientras tanto.
+  const [ajustarDerivados, setAjustarDerivados] = useState(false);
+  // 2FA obligatorio: no se desactiva; solo se regeneran los codigos de respaldo.
   const [respaldo, setRespaldo] = useState<string[]>([]);
-  const [passwordBaja, setPasswordBaja] = useState('');
-  const [error2fa, setError2fa] = useState<string | null>(null);
+  const [regenerando, setRegenerando] = useState(false);
 
   const [exportando, setExportando] = useState(false);
   const [confirmandoBaja, setConfirmandoBaja] = useState(false);
@@ -65,35 +71,13 @@ export default function PantallaPerfil() {
     }
   };
 
-  const iniciar2fa = async () => {
-    setError2fa(null);
-    const datos = await ds.iniciar2fa();
-    setSecreto(datos.secreto);
-    setPaso2fa('secreto');
-  };
-
-  const confirmar2fa = async () => {
-    setError2fa(null);
+  const regenerarCodigos = async () => {
+    setRegenerando(true);
     try {
-      const resultado = await ds.activar2fa(codigo);
+      const resultado = await ds.regenerarCodigos2fa();
       setRespaldo(resultado.codigos_respaldo);
-      setPaso2fa('respaldo');
-      actualizarUsuario({ ...usuario, totp_activo: true });
-    } catch (causa) {
-      setError2fa(causa instanceof Error ? causa.message : String(causa));
-    }
-  };
-
-  const desactivar2fa = async () => {
-    setError2fa(null);
-    try {
-      await ds.desactivar2fa(passwordBaja);
-      actualizarUsuario({ ...usuario, totp_activo: false });
-      setPasswordBaja('');
-      setPaso2fa('inactivo');
-      setRespaldo([]);
-    } catch (causa) {
-      setError2fa(causa instanceof Error ? causa.message : String(causa));
+    } finally {
+      setRegenerando(false);
     }
   };
 
@@ -107,7 +91,7 @@ export default function PantallaPerfil() {
     try {
       const datos = await ds.exportarDatos();
       await Share.share({
-        title: `financeai-datos-${datos.generado_en.slice(0, 10)}.json`,
+        title: `fintechvital-datos-${datos.generado_en.slice(0, 10)}.json`,
         message: JSON.stringify(datos, null, 2),
       });
     } finally {
@@ -134,6 +118,20 @@ export default function PantallaPerfil() {
       )
     : null;
 
+  const edad = usuario.fecha_nacimiento ? calcularEdad(usuario.fecha_nacimiento) : null;
+
+  const personales: [string, string][] = [];
+  if (usuario.apellido) personales.push([t('perfilUsuario.apellido'), usuario.apellido]);
+  if (edad !== null) personales.push([t('perfilUsuario.edad'), t('perfilUsuario.anios', { n: edad })]);
+  if (usuario.genero) personales.push([t('perfilUsuario.genero'), t(`perfilUsuario.generos.${usuario.genero}`)]);
+  if (usuario.telefono) personales.push([t('perfilUsuario.telefono'), usuario.telefono]);
+  if (usuario.ciudad) {
+    personales.push([
+      t('perfilUsuario.ciudad'),
+      [usuario.ciudad, usuario.estado_region, usuario.pais].filter(Boolean).join(', '),
+    ]);
+  }
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: temaActivo.canvas }} contentContainerStyle={{ paddingBottom: 32 }}>
       <Hero paddingTop={insets.top + 14}>
@@ -150,16 +148,12 @@ export default function PantallaPerfil() {
 
         {/* --- TARJETA DE APARIENCIA --- */}
         <Tarjeta>
-          <TituloTarjeta>Apariencia</TituloTarjeta>
+          <TituloTarjeta>{t('comun.apariencia')}</TituloTarjeta>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={[estilos.etiqueta, { color: temaActivo.tinta }]}>
-              {esModoOscuro ? 'Modo Oscuro (Activado)' : 'Modo Claro (Activado)'}
+              {esModoOscuro ? t('comun.temaOscuro') : t('comun.temaClaro')}
             </Text>
-            <Boton
-              texto={esModoOscuro ? '☀️ Cambiar a Claro' : '🌙 Cambiar a Oscuro'}
-              variante="fantasma"
-              onPress={toggleTema}
-            />
+            <BotonTema />
           </View>
         </Tarjeta>
 
@@ -171,36 +165,72 @@ export default function PantallaPerfil() {
             onChangeText={setIngreso}
             keyboardType="numeric"
           />
-          <Campo
-            etiqueta={t('perfilUsuario.endeudamiento')}
-            value={deuda}
-            onChangeText={setDeuda}
-            keyboardType="numeric"
-          />
-
-          <Text style={[estilos.etiqueta, { color: temaActivo.tinta }]}>{t('perfilUsuario.frecuencia')}</Text>
-          <View style={estilos.filaChips}>
-            {FRECUENCIAS.map((valor) => (
-              <Pressable
-                key={valor}
-                onPress={() => setFrecuencia(valor)}
-                style={[
-                  estilos.chip,
-                  { borderColor: temaActivo.linea },
-                  frecuencia === valor && { backgroundColor: temaActivo.acento, borderColor: 'transparent' }
-                ]}
-              >
-                <Text
-                  style={[
-                    estilos.chipTexto,
-                    { color: temaActivo.apagado },
-                    frecuencia === valor && { color: temaActivo.blanco }
-                  ]}
-                >
-                  {t(`perfilUsuario.frecuencias.${valor}`)}
+          {/* Endeudamiento y frecuencia: se DERIVARAN (pendiente formula de DS) */}
+          <View style={[estilos.derivado, { borderColor: temaActivo.linea, backgroundColor: temaActivo.canvas2 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[estilos.derivadoTitulo, { color: temaActivo.tinta }]}>
+                {t('perfilUsuario.derivadoEtiqueta')}
+              </Text>
+              <Pressable onPress={() => setAjustarDerivados((v) => !v)}>
+                <Text style={[estilos.enlaceMini, { color: temaActivo.acento }]}>
+                  {t('perfilUsuario.ajustarManual')}
                 </Text>
               </Pressable>
-            ))}
+            </View>
+            <Text style={[estilos.derivadoAyuda, { color: temaActivo.apagado }]}>
+              {t('perfilUsuario.derivadoAyuda')}
+            </Text>
+            {ajustarDerivados ? (
+              <View style={{ gap: 8, marginTop: 8 }}>
+                <Campo
+                  etiqueta={t('perfilUsuario.endeudamiento')}
+                  value={deuda}
+                  onChangeText={setDeuda}
+                  keyboardType="numeric"
+                />
+                <Text style={[estilos.etiqueta, { color: temaActivo.tinta }]}>{t('perfilUsuario.frecuencia')}</Text>
+                <View style={estilos.filaChips}>
+                  {FRECUENCIAS.map((valor) => (
+                    <Pressable
+                      key={valor}
+                      onPress={() => setFrecuencia(valor)}
+                      style={[
+                        estilos.chip,
+                        { borderColor: temaActivo.linea },
+                        frecuencia === valor && { backgroundColor: temaActivo.acento, borderColor: 'transparent' },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          estilos.chipTexto,
+                          { color: temaActivo.apagado },
+                          frecuencia === valor && { color: temaActivo.sobreAcento },
+                        ]}
+                      >
+                        {t(`perfilUsuario.frecuencias.${valor}`)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                <View style={[estilos.derivadoCaja, { backgroundColor: temaActivo.tarjeta }]}>
+                  <Text style={[estilos.derivadoLabel, { color: temaActivo.apagado }]}>
+                    {t('perfilUsuario.endeudamiento')}
+                  </Text>
+                  <Text style={[estilos.derivadoValor, { color: temaActivo.tinta }]}>{deuda}/100</Text>
+                </View>
+                <View style={[estilos.derivadoCaja, { backgroundColor: temaActivo.tarjeta }]}>
+                  <Text style={[estilos.derivadoLabel, { color: temaActivo.apagado }]}>
+                    {t('perfilUsuario.frecuencia')}
+                  </Text>
+                  <Text style={[estilos.derivadoValor, { color: temaActivo.tinta }]}>
+                    {t(`perfilUsuario.frecuencias.${frecuencia}`)}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
 
           <Text style={[estilos.etiqueta, { color: temaActivo.tinta }]}>{t('perfilUsuario.moneda')}</Text>
@@ -215,7 +245,7 @@ export default function PantallaPerfil() {
                   moneda === codigo && { backgroundColor: temaActivo.acento, borderColor: 'transparent' }
                 ]}
               >
-                <Text style={[estilos.chipTexto, { color: temaActivo.apagado }, moneda === codigo && { color: temaActivo.blanco }]}>
+                <Text style={[estilos.chipTexto, { color: temaActivo.apagado }, moneda === codigo && { color: temaActivo.sobreAcento }]}>
                   {codigo}
                 </Text>
               </Pressable>
@@ -226,54 +256,61 @@ export default function PantallaPerfil() {
           {guardado ? <Text style={[estilos.avisoOk, { color: temaActivo.okTexto }]}>{t('perfilUsuario.guardado')}</Text> : null}
         </Tarjeta>
 
+        {personales.length > 0 ? (
+          <Tarjeta>
+            <TituloTarjeta>{t('perfilUsuario.datosPersonales')}</TituloTarjeta>
+            <Text style={[estilos.textoApagado, { color: temaActivo.apagado }]}>
+              {t('perfilUsuario.datosPersonalesAyuda')}
+            </Text>
+            <View style={{ gap: 10, marginTop: 4 }}>
+              {personales.map(([etiqueta, valor]) => (
+                <View key={etiqueta} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+                  <Text style={[estilos.datoLabel, { color: temaActivo.apagado }]}>{etiqueta}</Text>
+                  <Text style={[estilos.datoValor, { color: temaActivo.tinta }]} numberOfLines={1}>
+                    {valor}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </Tarjeta>
+        ) : null}
+
         <Tarjeta>
           <TituloTarjeta>{t('perfilUsuario.seguridad')}</TituloTarjeta>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 14, color: temaActivo.tinta }}>
                 {t('perfilUsuario.dosfa')}
               </Text>
-              <Text style={{ fontFamily: Fuentes.cuerpoMedio, fontSize: 12, color: usuario.totp_activo ? temaActivo.okTexto : temaActivo.apagado }}>
-                {usuario.totp_activo ? t('perfilUsuario.dosfaActiva') : t('perfilUsuario.dosfaInactiva')}
+              <Text style={{ fontFamily: Fuentes.cuerpoMedio, fontSize: 12, color: temaActivo.okTexto }}>
+                {t('perfilUsuario.dosfaObligatoria')}
               </Text>
             </View>
-            {!usuario.totp_activo && paso2fa === 'inactivo' ? (
-              <Boton texto={t('perfilUsuario.activar')} variante="fantasma" onPress={() => void iniciar2fa()} />
-            ) : null}
+            <Boton
+              texto={regenerando ? t('perfilUsuario.regenerando') : t('perfilUsuario.regenerar')}
+              variante="fantasma"
+              onPress={() => void regenerarCodigos()}
+              cargando={regenerando}
+            />
           </View>
+          <Text style={[estilos.textoApagado, { color: temaActivo.apagado }]}>{t('perfilUsuario.dosfaSiempre')}</Text>
 
-          {paso2fa === 'secreto' ? (
-            <View style={{ gap: 10 }}>
-              <Text style={[estilos.textoApagado, { color: temaActivo.apagado }]}>{t('perfilUsuario.escaneaQr')}</Text>
-              <Text selectable style={[estilos.secreto, { color: temaActivo.tinta, backgroundColor: temaActivo.canvas2 }]}>
-                {secreto}
-              </Text>
-              <Campo etiqueta={t('auth.codigo')} value={codigo} onChangeText={(texto) => setCodigo(texto.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" />
-              <Boton texto={t('perfilUsuario.activar')} onPress={() => void confirmar2fa()} />
-            </View>
-          ) : null}
-
-          {paso2fa === 'respaldo' && respaldo.length > 0 ? (
+          {respaldo.length > 0 ? (
             <View style={{ gap: 8 }}>
-              <Text style={[estilos.avisoOk, { color: temaActivo.okTexto }]}>{t('perfilUsuario.codigosRespaldo')}</Text>
+              <Text style={[estilos.avisoOk, { color: temaActivo.okTexto }]}>{t('perfilUsuario.codigosNuevos')}</Text>
               <View style={estilos.filaChips}>
                 {respaldo.map((codigoRespaldo) => (
-                  <Text key={codigoRespaldo} selectable style={[estilos.codigoRespaldo, { color: temaActivo.tinta, backgroundColor: temaActivo.canvas, borderColor: temaActivo.linea }]}>
+                  <Text
+                    key={codigoRespaldo}
+                    selectable
+                    style={[estilos.codigoRespaldo, { color: temaActivo.tinta, backgroundColor: temaActivo.canvas, borderColor: temaActivo.linea }]}
+                  >
                     {codigoRespaldo}
                   </Text>
                 ))}
               </View>
             </View>
           ) : null}
-
-          {usuario.totp_activo ? (
-            <View style={{ gap: 10 }}>
-              <Campo etiqueta={t('perfilUsuario.passwordConfirmar')} value={passwordBaja} onChangeText={setPasswordBaja} secureTextEntry />
-              <Boton texto={t('perfilUsuario.desactivar')} variante="peligro" onPress={() => void desactivar2fa()} />
-            </View>
-          ) : null}
-
-          {error2fa ? <Text style={[estilos.error, { color: temaActivo.riesgo }]}>{error2fa}</Text> : null}
         </Tarjeta>
 
         {/* Tus datos (derechos ARCO/LGPD) */}
@@ -350,4 +387,13 @@ const estilos = StyleSheet.create({
   legalesTitulo: { flex: 1, fontFamily: Fuentes.cuerpoSemi, fontSize: 14.5 },
   legalFila: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1 },
   terminosInfo: { fontFamily: Fuentes.cuerpoMedio, fontSize: 11.5 },
+  derivado: { borderWidth: 1, borderRadius: 14, padding: 12 },
+  derivadoTitulo: { fontFamily: Fuentes.cuerpoSemi, fontSize: 13 },
+  enlaceMini: { fontFamily: Fuentes.cuerpoSemi, fontSize: 12 },
+  derivadoAyuda: { fontFamily: Fuentes.cuerpo, fontSize: 11.5, marginTop: 2 },
+  derivadoCaja: { flex: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
+  derivadoLabel: { fontFamily: Fuentes.cuerpo, fontSize: 11 },
+  derivadoValor: { fontFamily: Fuentes.titulo, fontSize: 18, marginTop: 2 },
+  datoLabel: { fontFamily: Fuentes.cuerpo, fontSize: 13 },
+  datoValor: { fontFamily: Fuentes.cuerpoMedio, fontSize: 13, flexShrink: 1, textAlign: 'right' },
 });

@@ -2,10 +2,28 @@ import { Pressable, Text, View } from 'react-native';
 import type { Idioma } from '@/data';
 import { Colores, Fuentes } from '@/constants/tema';
 import { IDIOMAS_DISPONIBLES, useI18n } from '@/i18n';
+import { useSesion } from '@/lib/sesion';
+import { useDataSource } from '@/lib/useDatos';
 
 /** Chips ES · PT · EN. `claro` para usarlo sobre fondos de tinta. */
 export function SelectorIdioma({ claro = false }: { claro?: boolean }) {
   const { idioma, setIdioma } = useI18n();
+  const { usuario, actualizarUsuario } = useSesion();
+  const ds = useDataSource();
+
+  const cambiar = (nuevo: Idioma) => {
+    setIdioma(nuevo);
+    // Con sesion, la preferencia se persiste en BD para que viaje entre dispositivos
+    // (movil <-> web). Optimista + PATCH en segundo plano. Ver CAMBIOS_INTERFACES.md 4.
+    if (usuario && usuario.idioma !== nuevo) {
+      actualizarUsuario({ ...usuario, idioma: nuevo });
+      void ds
+        .actualizarPerfil({ idioma: nuevo })
+        .then(actualizarUsuario)
+        .catch(() => {});
+    }
+  };
+
   return (
     <View style={{ flexDirection: 'row', gap: 6 }}>
       {IDIOMAS_DISPONIBLES.map((codigo: Idioma) => {
@@ -13,7 +31,7 @@ export function SelectorIdioma({ claro = false }: { claro?: boolean }) {
         return (
           <Pressable
             key={codigo}
-            onPress={() => setIdioma(codigo)}
+            onPress={() => cambiar(codigo)}
             style={{
               borderRadius: 999,
               paddingHorizontal: 10,
