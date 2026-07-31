@@ -11,8 +11,16 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { Categoria, CategoriaSlug, PaginaTransacciones, Transaccion } from '@/data';
+import type {
+  Categoria,
+  CategoriaSlug,
+  MedioOperacion,
+  PaginaTransacciones,
+  Tarjeta as TarjetaBanco,
+  Transaccion,
+} from '@/data';
 import { COLOR_CATEGORIA, Espacio, Fuentes } from '@/constants/tema';
 import { useTheme } from '@/context/ThemeContext'; // 1. Importamos el Contexto de Tema
 import { useI18n } from '@/i18n';
@@ -23,7 +31,16 @@ import { Boton, Campo, EstadoCarga, Hero } from '@/components/ui';
 interface DatosMovimientos {
   pagina: PaginaTransacciones;
   categorias: Categoria[];
+  tarjetas: TarjetaBanco[];
 }
+
+const MEDIO_ICONO: Record<MedioOperacion, React.ComponentProps<typeof Ionicons>['name']> = {
+  app_movil: 'phone-portrait-outline',
+  portal_web: 'globe-outline',
+  cajero: 'cash-outline',
+  sucursal: 'business-outline',
+  pos: 'card-outline',
+};
 
 export default function PantallaMovimientos() {
   const { t, idioma } = useI18n();
@@ -34,28 +51,44 @@ export default function PantallaMovimientos() {
   const { temaActivo } = useTheme();
 
   const [filtro, setFiltro] = useState<CategoriaSlug | ''>('');
+  const [filtroTarjeta, setFiltroTarjeta] = useState<string>('');
+  const [selector, setSelector] = useState<'categoria' | 'tarjeta' | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [modalAlta, setModalAlta] = useState(false);
   const [corrigiendo, setCorrigiendo] = useState<Transaccion | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [monto, setMonto] = useState('');
-  const [nota, setNota] = useState(''); 
+  const [nota, setNota] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [importando, setImportando] = useState(false);
 
   const { datos, cargando, error, recargar } = useDatos<DatosMovimientos>(
     async (fuente) => {
-      const [pagina, categorias] = await Promise.all([
-        fuente.transacciones({ categoria: filtro || undefined, tam: 100 }),
+      const [pagina, categorias, tarjetas] = await Promise.all([
+        fuente.transacciones({
+          categoria: filtro || undefined,
+          tarjeta: filtroTarjeta || undefined,
+          tam: 100,
+        }),
         fuente.categorias(),
+        fuente.tarjetas(),
       ]);
-      return { pagina, categorias };
+      return { pagina, categorias, tarjetas };
     },
-    [filtro],
+    [filtro, filtroTarjeta],
   );
 
   const etiquetas = useMemo(
     () => new Map(datos?.categorias.map((categoria) => [categoria.slug, categoria.etiqueta]) ?? []),
     [datos?.categorias],
+  );
+
+  const nombreTarjeta = useMemo(
+    () =>
+      new Map(
+        (datos?.tarjetas ?? []).map((tarjeta) => [tarjeta.id, tarjeta.etiqueta ?? `•••• ${tarjeta.ultimos4}`]),
+      ),
+    [datos?.tarjetas],
   );
 
   const visibles = useMemo(
@@ -102,6 +135,42 @@ export default function PantallaMovimientos() {
     recargar();
   };
 
+  const limpiarFiltros = () => {
+    setFiltro('');
+    setFiltroTarjeta('');
+  };
+
+  const importarCsv = async () => {
+    const elegido = await DocumentPicker.getDocumentAsync({
+      type: ['text/csv', 'text/comma-separated-values', 'text/plain', '*/*'],
+      copyToCacheDirectory: true,
+    });
+    const archivoElegido = elegido.assets?.[0];
+    if (elegido.canceled || !archivoElegido) return;
+
+    setImportando(true);
+    try {
+      const respuesta = await fetch(archivoElegido.uri);
+      const contenido = await respuesta.text();
+      // El Blob de RN no implementa text(); se pasa un objeto minimo con esa forma.
+      // Con la API real ira un archivo RN ({ uri, name, type }) en el FormData.
+      const archivo = { text: async () => contenido } as unknown as Blob;
+      const resultado = await ds.importarCsv(archivo);
+      Alert.alert(
+        t('movimientos.importar'),
+        t('movimientos.resultadoImport', {
+          importadas: resultado.importadas,
+          rechazadas: resultado.rechazadas,
+        }),
+      );
+      recargar();
+    } catch (causa) {
+      Alert.alert(t('movimientos.importar'), causa instanceof Error ? causa.message : String(causa));
+    } finally {
+      setImportando(false);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: temaActivo.canvas }}>
       <Hero paddingTop={insets.top + 14} redondeado={false}>
@@ -119,8 +188,22 @@ export default function PantallaMovimientos() {
         />
       </Hero>
 
-      {/* Export solo-UI */}
+      {/* Importar CSV (real) + exportar (solo-UI) */}
       <View style={estilos.exportFila}>
+        <Pressable
+          onPress={() => void importarCsv()}
+          disabled={importando}
+          style={[
+            estilos.exportChip,
+            { backgroundColor: temaActivo.acento, borderColor: 'transparent' },
+            importando && { opacity: 0.6 },
+          ]}
+        >
+          <Ionicons name="cloud-upload-outline" size={13} color={temaActivo.sobreAcento} />
+          <Text style={[estilos.exportTexto, { color: temaActivo.sobreAcento }]}>
+            {importando ? t('comun.cargando') : t('movimientos.importar')}
+          </Text>
+        </Pressable>
         {(['exportPdf', 'exportXlsx'] as const).map((clave) => (
           <Pressable
             key={clave}
@@ -149,50 +232,50 @@ export default function PantallaMovimientos() {
         </View>
       </View>
 
-      {/* Filtro por categoria */}
-      <View style={estilos.filtrosWrap}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={estilos.filtros}
+      {/* Filtros compactos: abren un selector, sin scroll horizontal */}
+      <View style={estilos.filtrosFila}>
+        <Pressable
+          onPress={() => setSelector('categoria')}
+          style={[estilos.selector, { backgroundColor: temaActivo.tarjeta, borderColor: filtro ? temaActivo.acento : temaActivo.linea }]}
         >
-          <Pressable
-            onPress={() => setFiltro('')}
-            style={[
-              estilos.chipFiltro, 
-              { backgroundColor: temaActivo.tarjeta, borderColor: temaActivo.linea },
-              filtro === '' && { backgroundColor: temaActivo.acento, borderColor: 'transparent' }
-            ]}
-          >
-            <Text style={[estilos.chipFiltroTexto, { color: filtro === '' ? temaActivo.blanco : temaActivo.tintaSuave }]}>
-              {t('movimientos.todas')}
+          <Text style={[estilos.selectorEtiqueta, { color: temaActivo.apagado }]}>
+            {t('movimientos.categoria')}
+          </Text>
+          <View style={estilos.selectorValorFila}>
+            <Text numberOfLines={1} style={[estilos.selectorValor, { color: temaActivo.tinta }]}>
+              {filtro ? (etiquetas.get(filtro) ?? filtro) : t('movimientos.todas')}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={temaActivo.apagado} />
+          </View>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setSelector('tarjeta')}
+          style={[estilos.selector, { backgroundColor: temaActivo.tarjeta, borderColor: filtroTarjeta ? temaActivo.acento : temaActivo.linea }]}
+        >
+          <Text style={[estilos.selectorEtiqueta, { color: temaActivo.apagado }]}>
+            {t('movimientos.filtrarTarjeta')}
+          </Text>
+          <View style={estilos.selectorValorFila}>
+            <Text numberOfLines={1} style={[estilos.selectorValor, { color: temaActivo.tinta }]}>
+              {filtroTarjeta ? (nombreTarjeta.get(filtroTarjeta) ?? filtroTarjeta) : t('movimientos.todasTarjetas')}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={temaActivo.apagado} />
+          </View>
+        </Pressable>
+      </View>
+
+      <View style={estilos.filtrosPie}>
+        <Text style={[estilos.resultados, { color: temaActivo.apagado }]}>
+          {t('movimientos.resultados', { n: visibles.length })}
+        </Text>
+        {filtro || filtroTarjeta ? (
+          <Pressable onPress={limpiarFiltros} hitSlop={8}>
+            <Text style={[estilos.limpiarFiltros, { color: temaActivo.acento }]}>
+              {t('movimientos.limpiarFiltros')}
             </Text>
           </Pressable>
-          {datos?.categorias.map((categoria) => {
-            const activo = filtro === categoria.slug;
-            return (
-              <Pressable
-                key={categoria.slug}
-                onPress={() => setFiltro(categoria.slug)}
-                style={[
-                  estilos.chipFiltro,
-                  { backgroundColor: temaActivo.tarjeta, borderColor: temaActivo.linea },
-                  activo && { backgroundColor: temaActivo.acento, borderColor: 'transparent' }
-                ]}
-              >
-                <View
-                  style={[
-                    estilos.chipPunto,
-                    { backgroundColor: COLOR_CATEGORIA[categoria.slug] ?? temaActivo.serieResto },
-                  ]}
-                />
-                <Text style={[estilos.chipFiltroTexto, { color: activo ? temaActivo.blanco : temaActivo.tintaSuave }]}>
-                  {categoria.etiqueta}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        ) : null}
       </View>
 
       <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
@@ -210,6 +293,9 @@ export default function PantallaMovimientos() {
               <View style={{ flex: 1, gap: 3 }}>
                 <Text numberOfLines={1} style={[estilos.filaDescripcion, { color: temaActivo.tinta }]}>
                   {transaccion.descripcion}
+                  {transaccion.comercio ? (
+                    <Text style={{ color: temaActivo.apagado }}> · {transaccion.comercio}</Text>
+                  ) : null}
                 </Text>
                 <Text style={[estilos.filaMeta, { color: temaActivo.apagado }]}>
                   {formatearFecha(transaccion.fecha, idioma)} ·{' '}
@@ -218,6 +304,23 @@ export default function PantallaMovimientos() {
                     ? ` · ${t('movimientos.origenUsuario')}`
                     : ` · ${t('movimientos.confianza', { pct: Math.round(transaccion.confianza * 100) })}`}
                 </Text>
+                {transaccion.medio_operacion || (transaccion.id_tarjeta && nombreTarjeta.has(transaccion.id_tarjeta)) ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 1 }}>
+                    {transaccion.medio_operacion ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                        <Ionicons name={MEDIO_ICONO[transaccion.medio_operacion]} size={12} color={temaActivo.apagado} />
+                        <Text style={[estilos.filaMeta, { color: temaActivo.apagado }]}>
+                          {t(`movimientos.medios.${transaccion.medio_operacion}`)}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {transaccion.id_tarjeta && nombreTarjeta.has(transaccion.id_tarjeta) ? (
+                      <Text style={[estilos.filaMeta, { color: temaActivo.acento }]}>
+                        {nombreTarjeta.get(transaccion.id_tarjeta)}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
                 <View style={{ flexDirection: 'row', gap: 14, marginTop: 3 }}>
                   <Pressable onPress={() => setCorrigiendo(transaccion)}>
                     <Text style={[estilos.accion, { color: temaActivo.acento }]}>{t('movimientos.corregir')}</Text>
@@ -280,6 +383,70 @@ export default function PantallaMovimientos() {
       </Modal>
 
       {/* ── Modal correccion de categoria ──────────────────────── */}
+      {/* ── Selector de filtro (categoria / tarjeta) ─────────────── */}
+      <Modal visible={selector !== null} animationType="slide" transparent onRequestClose={() => setSelector(null)}>
+        <View style={estilos.fondoModal}>
+          <View style={[estilos.modal, { backgroundColor: temaActivo.canvas }]}>
+            <Text style={[estilos.modalTitulo, { color: temaActivo.tinta }]}>
+              {selector === 'tarjeta' ? t('movimientos.filtrarTarjeta') : t('movimientos.categoria')}
+            </Text>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {(selector === 'tarjeta'
+                ? [
+                    { valor: '', etiqueta: t('movimientos.todasTarjetas'), color: undefined as string | undefined },
+                    ...(datos?.tarjetas ?? []).map((tarjeta) => ({
+                      valor: tarjeta.id,
+                      etiqueta: tarjeta.etiqueta ?? `•••• ${tarjeta.ultimos4}`,
+                      color: undefined as string | undefined,
+                    })),
+                  ]
+                : [
+                    { valor: '', etiqueta: t('movimientos.todas'), color: undefined as string | undefined },
+                    ...(datos?.categorias ?? []).map((categoria) => ({
+                      valor: categoria.slug as string,
+                      etiqueta: categoria.etiqueta,
+                      color: COLOR_CATEGORIA[categoria.slug] as string | undefined,
+                    })),
+                  ]
+              ).map((opcion) => {
+                const activo =
+                  selector === 'tarjeta' ? filtroTarjeta === opcion.valor : filtro === opcion.valor;
+                return (
+                  <Pressable
+                    key={`${selector}-${opcion.valor}`}
+                    onPress={() => {
+                      if (selector === 'tarjeta') setFiltroTarjeta(opcion.valor);
+                      else setFiltro(opcion.valor as CategoriaSlug | '');
+                      setSelector(null);
+                    }}
+                    style={[estilos.opcionCategoria, { borderBottomColor: temaActivo.linea, flexDirection: 'row', alignItems: 'center', gap: 10 }]}
+                  >
+                    <Ionicons
+                      name={activo ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={18}
+                      color={activo ? temaActivo.acento : temaActivo.linea}
+                    />
+                    {opcion.color ? (
+                      <View style={[estilos.chipPunto, { backgroundColor: opcion.color }]} />
+                    ) : null}
+                    <Text
+                      style={{
+                        fontFamily: activo ? Fuentes.cuerpoSemi : Fuentes.cuerpo,
+                        fontSize: 14,
+                        color: temaActivo.tinta,
+                      }}
+                    >
+                      {opcion.etiqueta}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Boton texto={t('comun.cancelar')} variante="fantasma" onPress={() => setSelector(null)} />
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={corrigiendo !== null} animationType="slide" transparent>
         <View style={estilos.fondoModal}>
           <View style={[estilos.modal, { backgroundColor: temaActivo.canvas }]}>
@@ -343,11 +510,15 @@ const estilos = StyleSheet.create({
   resumenCaja: { flex: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
   resumenEtiqueta: { fontFamily: Fuentes.cuerpoSemi, fontSize: 9.5, letterSpacing: 0.8 },
   resumenCifra: { fontFamily: Fuentes.titulo, fontSize: 17, marginTop: 2 },
-  filtrosWrap: { height: 56, justifyContent: 'center' },
-  filtros: { gap: 8, paddingHorizontal: Espacio.m, alignItems: 'center' },
-  chipFiltro: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 999, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 8 },
+  limpiarFiltros: { fontFamily: Fuentes.cuerpoSemi, fontSize: 12 },
+  resultados: { fontFamily: Fuentes.cuerpo, fontSize: 11.5, paddingHorizontal: Espacio.m, paddingBottom: 4 },
   chipPunto: { width: 8, height: 8, borderRadius: 4 },
-  chipFiltroTexto: { fontFamily: Fuentes.cuerpoMedio, fontSize: 13 },
+  filtrosFila: { flexDirection: 'row', gap: 10, paddingHorizontal: Espacio.m, paddingTop: 14 },
+  selector: { flex: 1, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 9, gap: 2 },
+  selectorEtiqueta: { fontFamily: Fuentes.cuerpoSemi, fontSize: 10, letterSpacing: 0.7, textTransform: 'uppercase' },
+  selectorValorFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  selectorValor: { flex: 1, fontFamily: Fuentes.cuerpoMedio, fontSize: 13.5 },
+  filtrosPie: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Espacio.m, paddingTop: 8, paddingBottom: 2 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
   filaDescripcion: { fontFamily: Fuentes.cuerpoMedio, fontSize: 14 },
   filaMeta: { fontFamily: Fuentes.cuerpo, fontSize: 11.5 },
