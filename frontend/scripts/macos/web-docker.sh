@@ -19,6 +19,18 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
 elif command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
   echo "Docker no disponible; usando Podman como alternativa."
   motor="podman"
+elif command -v podman >/dev/null 2>&1; then
+  # En macOS Podman corre dentro de una VM ("machine"). Si esta parada, TODOS
+  # los comandos fallan con "Cannot connect to Podman" y parece que no existiera
+  # ni la imagen ni el contenedor. Hay que arrancarla explicitamente.
+  echo "La maquina de Podman esta parada; arrancandola (puede tardar ~1 min)..."
+  podman machine start || true
+  if podman info >/dev/null 2>&1; then
+    motor="podman"
+  else
+    echo "ERROR: no se pudo arrancar la maquina de Podman. Prueba 'podman machine start'." >&2
+    exit 1
+  fi
 else
   echo "ERROR: ni Docker ni Podman responden. Abre Docker Desktop (o 'podman machine start')." >&2
   exit 1
