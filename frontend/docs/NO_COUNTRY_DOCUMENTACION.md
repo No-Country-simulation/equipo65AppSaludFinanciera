@@ -11,20 +11,20 @@ notas de mantenimiento al final.
   visible durante todo el proyecto. Al cerrar cada bloque de trabajo, actualizar
   la sección *Estado actual* y volver a pegarlo.
 - Antes de pegar: completar los enlaces marcados `(pendiente)` y, cuando el
-  equipo decida el nombre (D4), reemplazar "financeAI".
+  equipo decida el nombre (D4), reemplazar "Fintech Vital".
 
 ---
 
 <!-- ============ INICIO DEL TEXTO PARA PEGAR (max 10.000 chars) ============ -->
 
-# financeAI - salud financiera inteligente
+# Fintech Vital - salud financiera inteligente
 
 *(nombre provisional del equipo)* · Hackathon **ONE G9 - Alura + Oracle**
 
 ## Introducción
 
 Muchas personas tienen acceso a los datos de sus transacciones, pero les cuesta
-transformar esa información en decisiones. **financeAI** analiza el
+transformar esa información en decisiones. **Fintech Vital** analiza el
 comportamiento financiero de una persona a partir de sus transacciones y su
 información financiera (ingreso mensual, nivel de endeudamiento, frecuencia de
 ahorro): clasifica automáticamente los gastos con machine learning, calcula

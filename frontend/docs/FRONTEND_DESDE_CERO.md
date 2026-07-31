@@ -79,7 +79,7 @@ brew install git node@22
 ## §3 Clonar y verificar la máquina
 
 ```bash
-git clone <url-del-repo> financeAI
+git clone <url-del-repo> Fintech Vital
 cd financeAI/frontend
 ```
 
@@ -119,7 +119,7 @@ Abre <http://localhost:3000> → redirige a `/es` (hay `/pt` y `/en`).
 cd web && npm run dev
 ```
 
-**Usuario demo**: `demo@financeai.dev` + cualquier contraseña de 10+
+**Usuario demo**: `demo@fintechvital.dev` + cualquier contraseña de 10+
 caracteres. Cualquier otro email crea una cuenta vacía. Hoy los datos salen de
 la **capa mock** ([ADR-0011](adr/0011-mocks-desacoplados-frontend.md)) y se
 respaldan localmente: recargar no los borra.

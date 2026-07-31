@@ -1,4 +1,4 @@
-# financeAI - frontend (web + móvil)
+# Fintech Vital - frontend (web + móvil)
 
 *(nombre provisional del proyecto - propuestas en [`docs/BRANDING.md`](docs/BRANDING.md))*
 
@@ -85,7 +85,7 @@ trilingües · exportación de datos y eliminación de cuenta.
 4. Opción `[6]` arranca el emulador Android + Expo (o `[7]` para teléfono
    físico con Expo Go).
 
-**Usuario demo**: `demo@financeai.dev` + cualquier contraseña de 10+
+**Usuario demo**: `demo@fintechvital.dev` + cualquier contraseña de 10+
 caracteres. Cualquier otro email crea una cuenta vacía.
 
 ¿Máquina sin nada instalado? Guía completa paso a paso:

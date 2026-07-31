@@ -1,4 +1,4 @@
-# financeAI - web (dashboard)
+# Fintech Vital - web (dashboard)
 
 Dashboard web del proyecto: login/registro con 2FA, panel financiero,
 movimientos (alta manual + import CSV), presupuestos, metas de ahorro,
@@ -38,7 +38,7 @@ O en contenedor (Docker o Podman, igual que la demo):
 ../scripts/linux/web-docker.sh             # (macos/ para Mac) --down para detener
 ```
 
-**Usuario demo**: `demo@financeai.dev` + cualquier contraseña de 10+
+**Usuario demo**: `demo@fintechvital.dev` + cualquier contraseña de 10+
 caracteres. Cualquier otro email crea una cuenta vacía (sirve para probar los
 estados vacíos y el onboarding).
 
@@ -59,7 +59,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 ```
 
 El mock respalda su estado en `localStorage` (clave
-`financeai.mock.estado.v1`), así que recargar la página **no** borra lo que
+`fintechvital.mock.estado.v1`), así que recargar la página **no** borra lo que
 cargaste. Receta de eliminación del mock: [`src/data/mock/README.md`](src/data/mock/README.md).
 
 **Regla del proyecto: CERO datos mock en la demo/entrega.** Sin API en
