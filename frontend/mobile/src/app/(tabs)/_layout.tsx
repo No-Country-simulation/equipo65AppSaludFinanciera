@@ -1,7 +1,8 @@
 import { ActivityIndicator, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
-import { Colores, Fuentes } from '@/constants/tema';
+import { Fuentes } from '@/constants/tema';
+import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/i18n';
 import { useSesion } from '@/lib/sesion';
 
@@ -9,11 +10,14 @@ import { useSesion } from '@/lib/sesion';
 export default function TabsLayout() {
   const { usuario, listo } = useSesion();
   const { t } = useI18n();
+  // Antes usaba `Colores` (estatico = tema oscuro): en modo claro la barra de
+  // pestanas y el fondo de las pantallas se quedaban oscuros.
+  const { temaActivo } = useTheme();
 
   if (!listo) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colores.canvas }}>
-        <ActivityIndicator size="large" color={Colores.acento} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: temaActivo.canvas }}>
+        <ActivityIndicator size="large" color={temaActivo.acento} />
       </View>
     );
   }
@@ -23,17 +27,17 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colores.acento,
-        tabBarInactiveTintColor: Colores.apagado,
+        tabBarActiveTintColor: temaActivo.acento,
+        tabBarInactiveTintColor: temaActivo.apagado,
         tabBarStyle: {
-          backgroundColor: Colores.tarjeta,
-          borderTopColor: Colores.linea,
+          backgroundColor: temaActivo.tarjeta,
+          borderTopColor: temaActivo.linea,
           height: 62,
           paddingTop: 6,
           paddingBottom: 8,
         },
         tabBarLabelStyle: { fontFamily: Fuentes.cuerpoSemi, fontSize: 9.5 },
-        sceneStyle: { backgroundColor: Colores.canvas },
+        sceneStyle: { backgroundColor: temaActivo.canvas },
       }}
     >
       <Tabs.Screen
@@ -49,6 +53,15 @@ export default function TabsLayout() {
           title: t('nav.movimientos'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="swap-vertical-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="tarjetas"
+        options={{
+          title: t('nav.tarjetas'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="card-outline" color={color} size={size} />
           ),
         }}
       />
