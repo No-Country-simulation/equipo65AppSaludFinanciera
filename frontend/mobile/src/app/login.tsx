@@ -15,11 +15,13 @@ import { Colores, Espacio, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
 import { useSesion } from '@/lib/sesion';
 import { useDataSource } from '@/lib/useDatos';
+import { BotonTema } from '@/components/BotonTema';
 import { SelectorIdioma } from '@/components/SelectorIdioma';
 import { Boton, Campo } from '@/components/ui';
+import { Logo } from '@/components/Logo';
 
 export default function PantallaLogin() {
-  const { t } = useI18n();
+  const { t, setIdioma } = useI18n();
   const ds = useDataSource();
   const { iniciarSesion } = useSesion();
   const insets = useSafeAreaInsets();
@@ -42,6 +44,7 @@ export default function PantallaLogin() {
       }
       const usuario = sesion.usuario ?? (await ds.me());
       iniciarSesion(usuario, { access: sesion.access_token, refresh: sesion.refresh_token });
+      setIdioma(usuario.idioma); // adopta el idioma preferido (cross-device)
       router.replace('/');
     } catch (causa) {
       setError(causa instanceof FinanceApiError ? causa.message : String(causa));
@@ -60,10 +63,11 @@ export default function PantallaLogin() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={estilos.logo}>
-            finance<Text style={{ color: Colores.menta }}>AI</Text>
-          </Text>
-          <SelectorIdioma claro />
+          <Logo alto={44} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <SelectorIdioma claro />
+            <BotonTema claro />
+          </View>
         </View>
 
         <Text style={estilos.lema}>{t('comun.lema')}</Text>
@@ -77,6 +81,7 @@ export default function PantallaLogin() {
           {pide2fa ? (
             <Campo
               etiqueta={t('auth.codigo')}
+              ayuda={DATA_SOURCE === 'mock' ? t('auth.totpDemoAyuda') : undefined}
               value={codigoTotp}
               onChangeText={(texto) => setCodigoTotp(texto.replace(/\D/g, '').slice(0, 6))}
               keyboardType="number-pad"
@@ -88,7 +93,7 @@ export default function PantallaLogin() {
                 etiqueta={t('auth.email')}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="demo@financeai.dev"
+                placeholder="demo@fintechvital.dev"
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
@@ -132,7 +137,6 @@ export default function PantallaLogin() {
 
 const estilos = StyleSheet.create({
   contenido: { flexGrow: 1, padding: Espacio.l, gap: Espacio.l },
-  logo: { fontFamily: Fuentes.titulo, fontSize: 28, color: Colores.blanco },
   lema: {
     fontFamily: Fuentes.titulo,
     fontSize: 30,
