@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 
-const CLAVE = 'financeai.avisoAlmacenamiento';
+const CLAVE = 'fintechvital.avisoAlmacenamiento';
 
 /**
  * Aviso de almacenamiento local (transparencia tipo "banner de cookies").
@@ -36,8 +36,12 @@ export function AvisoAlmacenamiento() {
   if (!visible) return null;
 
   return (
-    <div className="aparece fixed inset-x-0 bottom-0 z-50 px-4 pb-4">
-      <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl border border-line bg-card px-5 py-4 shadow-[var(--sombra-md)]">
+    // El envoltorio ocupa TODO el ancho pero la tarjeta va centrada y acotada:
+    // sin `pointer-events-none` su franja transparente se traga los clics de lo
+    // que quede debajo (pasaba con el boton de colapsar la sidebar, que cae
+    // justo en esa banda inferior). Los eventos se reactivan en la tarjeta.
+    <div className="aparece pointer-events-none fixed inset-x-0 bottom-0 z-50 px-4 pb-4">
+      <div className="pointer-events-auto mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl border border-line bg-card px-5 py-4 shadow-[var(--sombra-md)]">
         <p className="min-w-0 flex-1 text-sm leading-relaxed text-ink-soft">
           {t('avisoAlmacenamiento')}{' '}
           <Link
@@ -49,7 +53,7 @@ export function AvisoAlmacenamiento() {
         </p>
         <button
           onClick={descartar}
-          className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.97]"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-sobre-accent transition active:scale-[0.97]"
         >
           {t('entendido')}
         </button>

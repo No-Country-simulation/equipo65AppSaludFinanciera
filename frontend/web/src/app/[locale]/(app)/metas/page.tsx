@@ -79,7 +79,7 @@ export default function PaginaMetas() {
       {datos && datos.length > 0 ? (
         <section
           className="aparece aparece-2 relative overflow-hidden rounded-[var(--radio)] p-6 text-white shadow-[var(--sombra-lg)]"
-          style={{ background: 'linear-gradient(140deg, var(--hero-b), var(--hero-a) 60%, #071a16)' }}
+          style={{ background: 'linear-gradient(140deg, var(--hero-b), var(--hero-a) 60%, #0a1219)' }}
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -123,7 +123,7 @@ export default function PaginaMetas() {
                     key={clave}
                     onClick={() => setIcono(clave)}
                     className={`grid h-10 w-10 place-items-center rounded-xl transition ${
-                      icono === clave ? 'bg-accent text-white ring-2 ring-accent' : 'bg-canvas-2 text-ink-soft hover:bg-canvas-2/60'
+                      icono === clave ? 'bg-accent text-sobre-accent ring-2 ring-accent' : 'bg-canvas-2 text-ink-soft hover:bg-canvas-2/60'
                     }`}
                   >
                     <Icono nombre={clave} />

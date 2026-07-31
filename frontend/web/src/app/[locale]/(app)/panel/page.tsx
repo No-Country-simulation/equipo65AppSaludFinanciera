@@ -102,7 +102,7 @@ export default function PaginaPanel() {
                 className="aparece aparece-2 relative overflow-hidden rounded-[var(--radio)] p-6 text-white shadow-[var(--sombra-lg)] sm:p-7"
                 style={{
                   background:
-                    'linear-gradient(140deg, var(--hero-b) 0%, var(--hero-a) 58%, #071a16 100%)',
+                    'linear-gradient(140deg, var(--hero-b) 0%, var(--hero-a) 58%, #0a1219 100%)',
                 }}
               >
                 <div
@@ -110,7 +110,7 @@ export default function PaginaPanel() {
                   className="absolute inset-0"
                   style={{
                     backgroundImage:
-                      'radial-gradient(60% 80% at 92% 8%, rgba(22,185,138,0.22), transparent 60%), radial-gradient(50% 60% at 0% 100%, rgba(242,163,13,0.12), transparent 55%)',
+                      'radial-gradient(60% 80% at 92% 8%, rgba(136,189,36,0.24), transparent 60%), radial-gradient(50% 60% at 0% 100%, rgba(159,198,64,0.12), transparent 55%)',
                   }}
                 />
                 <div className="relative flex flex-wrap items-start justify-between gap-6">

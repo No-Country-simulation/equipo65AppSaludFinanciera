@@ -75,7 +75,7 @@ export function GastosCategoria({
               key={modo}
               onClick={() => setVista(modo)}
               className={`rounded-full px-3 py-1 transition-colors ${
-                vista === modo ? 'bg-accent text-white shadow-sm' : 'text-muted hover:text-ink'
+                vista === modo ? 'bg-accent text-sobre-accent shadow-sm' : 'text-muted hover:text-ink'
               }`}
             >
               {t(modo === 'dona' ? 'verDona' : 'verBarras')}
