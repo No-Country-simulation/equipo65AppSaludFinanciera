@@ -1,4 +1,62 @@
 # Raiz del repo. Por ahora se publica SOLO frontend/ (su .gitignore afina
 # que entra alli). Lo demas queda local hasta que el equipo lo tome.
+
+# --- Modulos que todavia no se publican ---
 /infra/
+
+# --- Doc interna / de trabajo (NO va al repo publico) ---
 /CLAUDE.md
+bd.md
+perfil_financiero.sql
+CAMBIOS_INTERFACES.md
+CAMBIOS_BASE_DATOS.md
+COMMITS_PENDIENTES.md
+
+# CHANGELOG.md SI se publica (es entregable del proyecto): no lo agregues aqui.
+
+# NOTA sobre /.idea/: esta TRACKEADO a proposito porque el equipo dejo ahi el
+# backend Spring (pom.xml, mvnw, src/). No se ignora para no ocultar ese codigo.
+# Cuando se mueva a /backend/, conviene dejar de trackear la config de IntelliJ
+# (workspace.xml, misc.xml, modules.xml, compiler.xml) con `git rm --cached`.
+
+# --- Secretos (defensa en profundidad; el detalle esta en frontend/.gitignore) ---
+.env
+*.env
+.env.*
+!.env.ejemplo
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# --- Dependencias y artefactos que nunca deben subir desde la raiz ---
+node_modules/
+dist/
+build/
+target/
+__pycache__/
+*.tsbuildinfo
+
+# --- Herramientas de agentes / indexado local ---
+.agents/
+.codegraph/
+# Solo lo local: `.claude/settings.json` (compartido) SI puede subir. Se listan
+# los contenidos, no el directorio: git no reincluye archivos dentro de un
+# directorio ya excluido.
+.claude/*
+!.claude/settings.json
+
+# --- IDE / SO ---
+.vscode/*
+!.vscode/extensions.json
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs y temporales ---
+*.log
+logs/
+tmp/
+temp/

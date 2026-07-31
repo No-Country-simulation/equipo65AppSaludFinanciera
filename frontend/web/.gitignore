@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /out/
+.turbo/
 
 # production
 /build
@@ -32,6 +33,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# La plantilla SI se publica: sin ella nadie sabe que variables hacen falta.
+# (Este .gitignore es mas especifico que el de frontend/, asi que hay que repetir
+#  la excepcion aqui o `.env*` se la come.)
+!.env.ejemplo
 
 # vercel
 .vercel
@@ -39,3 +44,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agentes / indexado local
+.claude/settings.local.json
+.codegraph/
+
+# OS
+Thumbs.db
+desktop.ini

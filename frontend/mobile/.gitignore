@@ -5,6 +5,7 @@ node_modules/
 
 # Expo
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
@@ -30,11 +31,25 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# env: el .env de Expo solo trae EXPO_PUBLIC_* (no secretos), pero se ignora
+# igual - la copia de referencia es .env.ejemplo, que SI se publica.
+.env
 .env*.local
+!.env.ejemplo
 
 # typescript
 *.tsbuildinfo
+
+# agentes / indexado local
+.claude/settings.local.json
+.codegraph/
+
+# OS
+Thumbs.db
+desktop.ini
+
+# perfiles de memoria de Android
+*.hprof
 
 example
 
