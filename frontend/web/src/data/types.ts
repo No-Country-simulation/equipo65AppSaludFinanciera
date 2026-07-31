@@ -30,6 +30,20 @@ export type Idioma = 'es' | 'pt' | 'en';
 export type FrecuenciaAhorro = 'nula' | 'baja' | 'media' | 'alta';
 export type Moneda = 'USD' | 'MXN' | 'ARS' | 'COP' | 'CLP' | 'PEN' | 'BRL' | 'EUR';
 
+/**
+ * Medio por el que se hizo la operacion (TRANSACCIONES.medio_operacion, MySQL).
+ * Slugs snake_case: la etiqueta legible la pone el frontend por idioma.
+ */
+export type MedioOperacion = 'app_movil' | 'portal_web' | 'cajero' | 'sucursal' | 'pos';
+
+/** Red de pago de la tarjeta (TARJETAS.red_pago). */
+export type RedPago = 'visa' | 'mastercard' | 'amex';
+export type TipoTarjeta = 'debito' | 'credito';
+/** Estado de cuenta o tarjeta (ACTIVA/BLOQUEADA/CANCELADA en la BD). */
+export type EstadoBancario = 'activa' | 'bloqueada' | 'cancelada';
+/** Estado del plan de ahorro (PLANES_AHORRO.estado_plan). */
+export type EstadoPlan = 'activo' | 'finalizado' | 'cancelado';
+
 /** Version vigente de los T&C que acepta el checkbox de registro. */
 export const TERMINOS_VERSION = '1.0';
 
@@ -43,6 +57,15 @@ export interface Usuario {
   nivel_endeudamiento: number; // 0-100
   frecuencia_ahorro: FrecuenciaAhorro;
   totp_activo: boolean;
+  // Datos personales (USUARIOS: apellido, fecha_nacimiento, genero, telefono, id_ciudad).
+  // Los provee el banco; en la app son de solo lectura. Opcionales para no romper el mock vacio.
+  apellido?: string;
+  fecha_nacimiento?: string; // ISO date - la edad se calcula, no se guarda
+  genero?: 'M' | 'F';
+  telefono?: string;
+  ciudad?: string;
+  estado_region?: string; // 'estado' en CIUDADES
+  pais?: string;
   // Prueba de consentimiento (feature de producto - extiende el contrato; ver ROADMAP)
   terminos_version?: string;
   terminos_aceptados_en?: string; // ISO-8601
@@ -71,6 +94,70 @@ export interface Transaccion {
   categoria: CategoriaSlug;
   confianza: number;
   categoria_origen: 'modelo' | 'usuario';
+  // Datos que trae TRANSACCIONES en la BD del equipo (opcionales: el mock viejo no los tenia)
+  comercio?: string; // TRANSACCIONES.comercio - el establecimiento
+  medio_operacion?: MedioOperacion; // TRANSACCIONES.medio_operacion
+  id_tarjeta?: string; // TRANSACCIONES.id_tarjeta - para filtrar por tarjeta
+}
+
+/** Cuenta bancaria (CUENTAS_BANCARIAS). No guarda saldo: se calcula. */
+export interface CuentaBancaria {
+  id: string;
+  numero: string; // enmascarado ('**** 4821'); nunca el numero completo
+  estado: EstadoBancario;
+  fecha_apertura: string; // ISO date
+}
+
+/** Datos exclusivos de una tarjeta de credito (TARJETAS_CREDITO). */
+export interface CreditoTarjeta {
+  limite_credito: number;
+  dia_corte: number; // 1-31
+  dia_pago: number; // 1-31
+  /** Monto usado del limite. En la BD es derivado (no se almacena); aqui lo trae la vista. */
+  saldo_utilizado: number;
+}
+
+/** Tarjeta (TARJETAS + subtipo TARJETAS_CREDITO cuando tipo === 'credito'). */
+export interface Tarjeta {
+  id: string;
+  id_cuenta: string;
+  ultimos4: string; // los 4 ultimos digitos, nunca el PAN completo
+  tipo: TipoTarjeta;
+  red_pago: RedPago;
+  fecha_vencimiento: string; // 'YYYY-MM'
+  estado: EstadoBancario;
+  etiqueta?: string; // apodo de UI ("Nomina", "Oro") - solo presentacion, no va a la BD
+  credito?: CreditoTarjeta; // presente solo si tipo === 'credito'
+}
+
+/** Tipo de evento del calendario (recordatorios del usuario). */
+export type TipoEvento = 'pago' | 'cobro' | 'recordatorio';
+
+/**
+ * Evento del calendario: recordatorio que crea el usuario (un pago que viene, un
+ * cobro esperado). Feature de producto: extiende el contrato, ver ROADMAP.
+ */
+export interface EventoCalendario {
+  id: string;
+  fecha: string; // ISO date
+  titulo: string;
+  tipo: TipoEvento;
+  monto?: number;
+}
+
+/** Un registro del buro de credito (HISTORIAL_BURO, historico por usuario). */
+export interface RegistroBuro {
+  fecha: string; // ISO date (fecha_consulta)
+  score_crediticio: number; // 0-999
+  dias_atraso: number;
+  monto_adeudado: number;
+}
+
+/** Salud crediticia = ultimo registro + su evolucion (HISTORIAL_BURO). */
+export interface SaludCrediticia {
+  moneda: Moneda;
+  actual: RegistroBuro;
+  historial: RegistroBuro[]; // orden cronologico ascendente
 }
 
 export interface Indicadores {
@@ -142,14 +229,16 @@ export interface ResumenAnalisis {
   analizado_en: string;
 }
 
-/** Meta de ahorro (feature de producto - extiende el contrato; ver ROADMAP). */
+/** Meta de ahorro (PLANES_AHORRO; icono/color son solo presentacion, no van a la BD). */
 export interface MetaAhorro {
   id: string;
-  nombre: string;
-  objetivo: number;
-  ahorrado: number;
+  nombre: string; // nombre_meta
+  objetivo: number; // monto_meta
+  ahorrado: number; // calculado (no se guarda): suma de aportes/transacciones
   moneda: Moneda;
-  fecha_limite?: string; // ISO date
+  fecha_inicio?: string; // ISO date (fecha_inicio)
+  fecha_limite?: string; // ISO date (fecha_fin)
+  estado?: EstadoPlan; // estado_plan (ACTIVO/FINALIZADO/CANCELADO)
   icono: string; // emoji
   color: string; // token o hex
 }

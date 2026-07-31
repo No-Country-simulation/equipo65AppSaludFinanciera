@@ -5,13 +5,18 @@
  */
 import type {
   CategoriaSlug,
+  CuentaBancaria,
+  EventoCalendario,
   FrecuenciaAhorro,
   Idioma,
+  MedioOperacion,
   MetaAhorro,
   PerfilSlug,
   Presupuesto,
   PrioridadRecomendacion,
   PuntoEvolucion,
+  RegistroBuro,
+  Tarjeta,
   Transaccion,
   Usuario,
 } from '../types';
@@ -175,25 +180,44 @@ export const CLAVES_CATEGORIA: [CategoriaSlug, string[]][] = [
 
 export const USUARIO_DEMO: Usuario = {
   id: 'u-demo-001',
-  email: 'demo@financeai.dev',
+  email: 'demo@fintechvital.dev',
   nombre: 'Valentina Ríos',
+  apellido: 'Ríos Mendoza',
+  fecha_nacimiento: '1994-05-18',
+  genero: 'F',
+  telefono: '+52 55 1234 5678',
+  ciudad: 'Ciudad de México',
+  estado_region: 'CDMX',
+  pais: 'México',
   moneda_principal: 'MXN',
   idioma: 'es',
   ingreso_mensual: 28500,
   nivel_endeudamiento: 32,
   frecuencia_ahorro: 'baja',
-  totp_activo: false,
+  // 2FA OBLIGATORIO: el usuario demo ya lo tiene configurado (el login pide el codigo).
+  totp_activo: true,
   terminos_version: '1.0',
   terminos_aceptados_en: '2026-07-01T12:00:00Z',
 };
 
+/** Ids de las tarjetas demo (se referencian desde las transacciones). */
+export const TARJETA_DEBITO = 'tar-debito-01';
+export const TARJETA_ORO = 'tar-credito-oro';
+export const TARJETA_AMEX = 'tar-credito-amex';
+
 let siguienteId = 100;
+interface ExtraTx {
+  comercio?: string;
+  medio?: MedioOperacion;
+  tarjeta?: string;
+}
 const transaccion = (
   fecha: string,
   descripcion: string,
   valor: number,
   categoria: CategoriaSlug,
   confianza = 0.93,
+  extra: ExtraTx = {},
 ): Transaccion => ({
   id: `t-${siguienteId++}`,
   descripcion,
@@ -203,45 +227,48 @@ const transaccion = (
   categoria,
   confianza,
   categoria_origen: 'modelo',
+  comercio: extra.comercio,
+  medio_operacion: extra.medio,
+  id_tarjeta: extra.tarjeta,
 });
 
 /** Julio 2026 (el mes que se analiza) + junio para la lista y los filtros. */
 export const TRANSACCIONES_DEMO: Transaccion[] = [
-  // --- Julio 2026 ---
-  transaccion('2026-07-01', 'SALARIO JULIO NOMINA', 28500, 'ingresos', 0.99),
-  transaccion('2026-07-01', 'TRANSFERENCIA AHORRO CETES', -1000, 'ahorro_inversion', 0.95),
-  transaccion('2026-07-02', 'RENTA DEPARTAMENTO CONDESA', -8500, 'vivienda', 0.97),
-  transaccion('2026-07-02', 'SORIANA SUPERMERCADO', -1240.5, 'alimentacion', 0.96),
-  transaccion('2026-07-03', 'CFE RECIBO LUZ', -640, 'servicios', 0.98),
-  transaccion('2026-07-03', 'NETFLIX.COM', -219, 'entretenimiento', 0.97),
-  transaccion('2026-07-04', 'OXXO PLAZA INSURGENTES', -185, 'alimentacion', 0.9),
-  transaccion('2026-07-04', 'SMARTFIT GIMNASIO', -499, 'entretenimiento', 0.92),
-  transaccion('2026-07-05', 'PEMEX GASOLINERA 5482', -750, 'transporte', 0.95),
-  transaccion('2026-07-05', 'SPOTIFY PREMIUM', -129, 'entretenimiento', 0.97),
-  transaccion('2026-07-05', 'TELMEX INTERNET HOGAR', -599, 'servicios', 0.96),
-  transaccion('2026-07-06', 'AGUA CDMX BIMESTRE', -180, 'servicios', 0.91),
-  transaccion('2026-07-07', 'UBER EATS PEDIDO', -320, 'alimentacion', 0.88),
-  transaccion('2026-07-08', 'UBER VIAJE ROMA NORTE', -132, 'transporte', 0.93),
-  transaccion('2026-07-08', 'DEVOLUCION AMAZON', 450, 'ingresos', 0.85),
-  transaccion('2026-07-09', 'CAFEBRERIA EL PENDULO', -145, 'alimentacion', 0.82),
-  transaccion('2026-07-10', 'FARMACIA GUADALAJARA', -230, 'salud', 0.96),
-  transaccion('2026-07-11', 'PLATZI SUSCRIPCION ANUAL', -249, 'educacion', 0.9),
-  transaccion('2026-07-12', 'MERCADO ROMA LOCAL 12', -260, 'alimentacion', 0.8),
-  transaccion('2026-07-13', 'CINEPOLIS VIP BOLETOS', -380, 'entretenimiento', 0.94),
-  transaccion('2026-07-13', 'BOLETOS OCESA CONCIERTO', -1800, 'entretenimiento', 0.89),
-  transaccion('2026-07-14', 'AMAZON MX MARKETPLACE', -1450, 'compras', 0.93),
-  transaccion('2026-07-15', 'PAGO TARJETA CREDITO', -2500, 'finanzas', 0.95),
-  transaccion('2026-07-15', 'INTERESES TDC', -180, 'finanzas', 0.94),
-  transaccion('2026-07-15', 'METRO CDMX RECARGA', -100, 'transporte', 0.9),
-  transaccion('2026-07-16', 'SORIANA SUPERMERCADO', -980, 'alimentacion', 0.96),
-  transaccion('2026-07-16', 'CETESDIRECTO INVERSION', -1500, 'ahorro_inversion', 0.96),
-  transaccion('2026-07-17', 'XBOX GAME PASS', -229, 'entretenimiento', 0.91),
-  transaccion('2026-07-18', 'OXXO GASOLINERA TIENDA', -97.5, 'alimentacion', 0.72),
-  transaccion('2026-07-19', 'LIVERPOOL DEPTO DAMAS', -2890, 'compras', 0.95),
-  transaccion('2026-07-19', 'MERCADO LIBRE ENVIO', -780, 'compras', 0.9),
-  transaccion('2026-07-20', 'ZARA REFORMA 222', -690, 'compras', 0.93),
-  transaccion('2026-07-21', 'VETERINARIA DR PATA', -600, 'otros', 0.38),
-  transaccion('2026-07-22', 'RETIRO CAJERO ATM', -400, 'otros', 0.35),
+  // --- Julio 2026 --- (comercio + medio_operacion + tarjeta, como en la BD del equipo)
+  transaccion('2026-07-01', 'SALARIO JULIO NOMINA', 28500, 'ingresos', 0.99, { comercio: 'Nómina empresa', medio: 'sucursal', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-01', 'TRANSFERENCIA AHORRO CETES', -1000, 'ahorro_inversion', 0.95, { comercio: 'CetesDirecto', medio: 'app_movil', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-02', 'RENTA DEPARTAMENTO CONDESA', -8500, 'vivienda', 0.97, { comercio: 'Arrendamiento', medio: 'portal_web', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-02', 'SORIANA SUPERMERCADO', -1240.5, 'alimentacion', 0.96, { comercio: 'Soriana', medio: 'pos', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-03', 'CFE RECIBO LUZ', -640, 'servicios', 0.98, { comercio: 'CFE', medio: 'portal_web', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-03', 'NETFLIX.COM', -219, 'entretenimiento', 0.97, { comercio: 'Netflix', medio: 'app_movil', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-04', 'OXXO PLAZA INSURGENTES', -185, 'alimentacion', 0.9, { comercio: 'Oxxo', medio: 'pos', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-04', 'SMARTFIT GIMNASIO', -499, 'entretenimiento', 0.92, { comercio: 'Smart Fit', medio: 'app_movil', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-05', 'PEMEX GASOLINERA 5482', -750, 'transporte', 0.95, { comercio: 'Pemex', medio: 'pos', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-05', 'SPOTIFY PREMIUM', -129, 'entretenimiento', 0.97, { comercio: 'Spotify', medio: 'app_movil', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-05', 'TELMEX INTERNET HOGAR', -599, 'servicios', 0.96, { comercio: 'Telmex', medio: 'portal_web', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-06', 'AGUA CDMX BIMESTRE', -180, 'servicios', 0.91, { comercio: 'SACMEX', medio: 'cajero', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-07', 'UBER EATS PEDIDO', -320, 'alimentacion', 0.88, { comercio: 'Uber Eats', medio: 'app_movil', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-08', 'UBER VIAJE ROMA NORTE', -132, 'transporte', 0.93, { comercio: 'Uber', medio: 'app_movil', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-08', 'DEVOLUCION AMAZON', 450, 'ingresos', 0.85, { comercio: 'Amazon', medio: 'app_movil', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-09', 'CAFEBRERIA EL PENDULO', -145, 'alimentacion', 0.82, { comercio: 'El Péndulo', medio: 'pos', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-10', 'FARMACIA GUADALAJARA', -230, 'salud', 0.96, { comercio: 'Farmacias Guadalajara', medio: 'pos', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-11', 'PLATZI SUSCRIPCION ANUAL', -249, 'educacion', 0.9, { comercio: 'Platzi', medio: 'portal_web', tarjeta: TARJETA_AMEX }),
+  transaccion('2026-07-12', 'MERCADO ROMA LOCAL 12', -260, 'alimentacion', 0.8, { comercio: 'Mercado Roma', medio: 'pos', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-13', 'CINEPOLIS VIP BOLETOS', -380, 'entretenimiento', 0.94, { comercio: 'Cinépolis', medio: 'app_movil', tarjeta: TARJETA_AMEX }),
+  transaccion('2026-07-13', 'BOLETOS OCESA CONCIERTO', -1800, 'entretenimiento', 0.89, { comercio: 'Ticketmaster', medio: 'portal_web', tarjeta: TARJETA_AMEX }),
+  transaccion('2026-07-14', 'AMAZON MX MARKETPLACE', -1450, 'compras', 0.93, { comercio: 'Amazon', medio: 'app_movil', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-15', 'PAGO TARJETA CREDITO', -2500, 'finanzas', 0.95, { comercio: 'Pago TDC', medio: 'app_movil', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-15', 'INTERESES TDC', -180, 'finanzas', 0.94, { comercio: 'Intereses', medio: 'sucursal', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-15', 'METRO CDMX RECARGA', -100, 'transporte', 0.9, { comercio: 'Metro CDMX', medio: 'cajero', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-16', 'SORIANA SUPERMERCADO', -980, 'alimentacion', 0.96, { comercio: 'Soriana', medio: 'pos', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-16', 'CETESDIRECTO INVERSION', -1500, 'ahorro_inversion', 0.96, { comercio: 'CetesDirecto', medio: 'app_movil', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-17', 'XBOX GAME PASS', -229, 'entretenimiento', 0.91, { comercio: 'Microsoft', medio: 'app_movil', tarjeta: TARJETA_AMEX }),
+  transaccion('2026-07-18', 'OXXO GASOLINERA TIENDA', -97.5, 'alimentacion', 0.72, { comercio: 'Oxxo Gas', medio: 'pos', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-19', 'LIVERPOOL DEPTO DAMAS', -2890, 'compras', 0.95, { comercio: 'Liverpool', medio: 'pos', tarjeta: TARJETA_AMEX }),
+  transaccion('2026-07-19', 'MERCADO LIBRE ENVIO', -780, 'compras', 0.9, { comercio: 'Mercado Libre', medio: 'app_movil', tarjeta: TARJETA_ORO }),
+  transaccion('2026-07-20', 'ZARA REFORMA 222', -690, 'compras', 0.93, { comercio: 'Zara', medio: 'pos', tarjeta: TARJETA_AMEX }),
+  transaccion('2026-07-21', 'VETERINARIA DR PATA', -600, 'otros', 0.38, { comercio: 'Vet Dr. Pata', medio: 'pos', tarjeta: TARJETA_DEBITO }),
+  transaccion('2026-07-22', 'RETIRO CAJERO ATM', -400, 'otros', 0.35, { comercio: 'Cajero BBVA', medio: 'cajero', tarjeta: TARJETA_DEBITO }),
   // --- Junio 2026 (historial para lista/filtros; fuera del analisis del mes) ---
   transaccion('2026-06-01', 'SALARIO JUNIO NOMINA', 28500, 'ingresos', 0.99),
   transaccion('2026-06-02', 'RENTA DEPARTAMENTO CONDESA', -8500, 'vivienda', 0.97),
@@ -266,7 +293,7 @@ export const EVOLUCION_DEMO: PuntoEvolucion[] = [
 
 export const MONEDAS_DEMO = ['USD', 'MXN', 'ARS', 'COP', 'CLP', 'PEN', 'BRL', 'EUR'] as const;
 
-/** Metas de ahorro demo. */
+/** Metas de ahorro demo (PLANES_AHORRO: fecha_inicio + estado_plan). */
 export const METAS_DEMO: MetaAhorro[] = [
   {
     id: 'm-1',
@@ -274,7 +301,9 @@ export const METAS_DEMO: MetaAhorro[] = [
     objetivo: 90000,
     ahorrado: 52000,
     moneda: 'MXN',
+    fecha_inicio: '2026-01-10',
     fecha_limite: '2026-12-31',
+    estado: 'activo',
     icono: 'escudo',
     color: '#12a566',
   },
@@ -284,7 +313,9 @@ export const METAS_DEMO: MetaAhorro[] = [
     objetivo: 45000,
     ahorrado: 12500,
     moneda: 'MXN',
+    fecha_inicio: '2026-03-01',
     fecha_limite: '2026-11-15',
+    estado: 'activo',
     icono: 'avion',
     color: '#2a78d6',
   },
@@ -294,7 +325,9 @@ export const METAS_DEMO: MetaAhorro[] = [
     objetivo: 38000,
     ahorrado: 30400,
     moneda: 'MXN',
+    fecha_inicio: '2026-02-15',
     fecha_limite: '2026-09-30',
+    estado: 'activo',
     icono: 'laptop',
     color: '#eb6834',
   },
@@ -307,4 +340,63 @@ export const PRESUPUESTOS_DEMO: Omit<Presupuesto, 'gastado'>[] = [
   { categoria: 'entretenimiento', limite: 2500, moneda: 'MXN' },
   { categoria: 'compras', limite: 3000, moneda: 'MXN' },
   { categoria: 'servicios', limite: 1500, moneda: 'MXN' },
+];
+
+/** Cuentas bancarias demo (CUENTAS_BANCARIAS). */
+export const CUENTAS_DEMO: CuentaBancaria[] = [
+  { id: 'cta-1', numero: '**** 4821', estado: 'activa', fecha_apertura: '2021-03-15' },
+  { id: 'cta-2', numero: '**** 9037', estado: 'activa', fecha_apertura: '2023-08-02' },
+];
+
+/** Tarjetas demo (TARJETAS + subtipo TARJETAS_CREDITO). */
+export const TARJETAS_DEMO: Tarjeta[] = [
+  {
+    id: TARJETA_DEBITO,
+    id_cuenta: 'cta-1',
+    ultimos4: '4821',
+    tipo: 'debito',
+    red_pago: 'visa',
+    fecha_vencimiento: '2028-05',
+    estado: 'activa',
+    etiqueta: 'Débito nómina',
+  },
+  {
+    id: TARJETA_ORO,
+    id_cuenta: 'cta-1',
+    ultimos4: '7734',
+    tipo: 'credito',
+    red_pago: 'mastercard',
+    fecha_vencimiento: '2027-11',
+    estado: 'activa',
+    etiqueta: 'Oro',
+    credito: { limite_credito: 45000, dia_corte: 17, dia_pago: 5, saldo_utilizado: 18200 },
+  },
+  {
+    id: TARJETA_AMEX,
+    id_cuenta: 'cta-1',
+    ultimos4: '1002',
+    tipo: 'credito',
+    red_pago: 'amex',
+    fecha_vencimiento: '2026-09',
+    estado: 'activa',
+    etiqueta: 'Platinum',
+    credito: { limite_credito: 60000, dia_corte: 25, dia_pago: 12, saldo_utilizado: 9800 },
+  },
+];
+
+/** Historial de buro demo (HISTORIAL_BURO): venia en riesgo, mejora - misma narrativa que EVOLUCION_DEMO. */
+export const BURO_DEMO: RegistroBuro[] = [
+  { fecha: '2026-02-28', score_crediticio: 612, dias_atraso: 15, monto_adeudado: 41000 },
+  { fecha: '2026-03-31', score_crediticio: 628, dias_atraso: 8, monto_adeudado: 39000 },
+  { fecha: '2026-04-30', score_crediticio: 651, dias_atraso: 0, monto_adeudado: 35500 },
+  { fecha: '2026-05-31', score_crediticio: 669, dias_atraso: 0, monto_adeudado: 33000 },
+  { fecha: '2026-06-30', score_crediticio: 685, dias_atraso: 0, monto_adeudado: 30500 },
+  { fecha: '2026-07-15', score_crediticio: 702, dias_atraso: 0, monto_adeudado: 28000 },
+];
+
+/** Eventos demo del calendario (recordatorios del usuario). */
+export const EVENTOS_DEMO: EventoCalendario[] = [
+  { id: 'ev-1', fecha: '2026-07-05', titulo: 'Pago de renta', tipo: 'pago', monto: 8500 },
+  { id: 'ev-2', fecha: '2026-07-15', titulo: 'Quincena', tipo: 'cobro', monto: 14250 },
+  { id: 'ev-3', fecha: '2026-07-28', titulo: 'Revisar suscripciones', tipo: 'recordatorio' },
 ];

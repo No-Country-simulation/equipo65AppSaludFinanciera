@@ -3,8 +3,11 @@
  * Esta carpeta QUEDA despues de la integracion; la que se borra es ../mock.
  */
 import type {
+  AltaEvento,
   AltaMeta,
+  AltaTarjeta,
   AltaTransaccion,
+  AltaUsuario,
   FiltrosTransacciones,
   FinanceDataSource,
   PatchUsuario,
@@ -14,7 +17,9 @@ import type {
   Categoria,
   CategoriaSlug,
   ComparacionMensual,
+  CuentaBancaria,
   DatosExportados,
+  EventoCalendario,
   Evolucion,
   ErrorApi,
   Idioma,
@@ -24,7 +29,9 @@ import type {
   Presupuesto,
   ResultadoImport,
   ResumenAnalisis,
+  SaludCrediticia,
   Sesion,
+  Tarjeta,
   Transaccion,
   Usuario,
 } from '../types';
@@ -80,23 +87,10 @@ export class ApiDataSource implements FinanceDataSource {
     return sesion;
   }
 
-  registro(
-    email: string,
-    password: string,
-    monedaPrincipal: Moneda,
-    terminosVersion?: string,
-  ): Promise<Usuario> {
-    return this.pedir<Usuario>('/auth/registro', {
-      method: 'POST',
-      body: {
-        email,
-        password,
-        moneda_principal: monedaPrincipal,
-        // Prueba de consentimiento - campo extra pendiente de ADR (ver ROADMAP)
-        ...(terminosVersion ? { terminos_version: terminosVersion } : {}),
-      },
-      auth: false,
-    });
+  registro(alta: AltaUsuario): Promise<Usuario> {
+    // Cuerpo ya en snake_case (email, password, moneda_principal, nombre, apellido,
+    // fecha_nacimiento, genero?, telefono?, ciudad?, terminos_version?).
+    return this.pedir<Usuario>('/auth/registro', { method: 'POST', body: alta, auth: false });
   }
 
   async logout(): Promise<void> {
@@ -126,6 +120,11 @@ export class ApiDataSource implements FinanceDataSource {
     });
   }
 
+  regenerarCodigos2fa(): Promise<{ codigos_respaldo: string[] }> {
+    // Endpoint TBD (2FA obligatorio; regenerar codigos de respaldo). Ver ROADMAP.
+    return this.pedir('/auth/2fa/codigos-respaldo', { method: 'POST' });
+  }
+
   desactivar2fa(password: string): Promise<void> {
     return this.pedir<void>('/auth/2fa', { method: 'DELETE', body: { password } });
   }
@@ -140,6 +139,7 @@ export class ApiDataSource implements FinanceDataSource {
     if (filtros.desde) query.set('desde', filtros.desde);
     if (filtros.hasta) query.set('hasta', filtros.hasta);
     if (filtros.categoria) query.set('categoria', filtros.categoria);
+    if (filtros.tarjeta) query.set('tarjeta', filtros.tarjeta);
     if (filtros.pagina !== undefined) query.set('pagina', String(filtros.pagina));
     if (filtros.tam !== undefined) query.set('tam', String(filtros.tam));
     const sufijo = query.size > 0 ? `?${query}` : '';
@@ -205,6 +205,48 @@ export class ApiDataSource implements FinanceDataSource {
       auth: false,
     });
     return respuesta.monedas.map((moneda) => moneda.codigo);
+  }
+
+  // Banca (endpoints TBD, ver ROADMAP: CUENTAS_BANCARIAS, TARJETAS, HISTORIAL_BURO)
+  cuentas(): Promise<CuentaBancaria[]> {
+    return this.pedir<CuentaBancaria[]>('/cuentas');
+  }
+
+  tarjetas(): Promise<Tarjeta[]> {
+    return this.pedir<Tarjeta[]>('/tarjetas');
+  }
+
+  saludCrediticia(): Promise<SaludCrediticia> {
+    return this.pedir<SaludCrediticia>('/buro/salud');
+  }
+
+  crearTarjeta(alta: AltaTarjeta): Promise<Tarjeta> {
+    return this.pedir<Tarjeta>('/tarjetas', { method: 'POST', body: alta });
+  }
+
+  actualizarTarjeta(id: string, cambios: Partial<AltaTarjeta>): Promise<Tarjeta> {
+    return this.pedir<Tarjeta>(`/tarjetas/${id}`, { method: 'PATCH', body: cambios });
+  }
+
+  eliminarTarjeta(id: string): Promise<void> {
+    return this.pedir<void>(`/tarjetas/${id}`, { method: 'DELETE' });
+  }
+
+  // Eventos del calendario (endpoints TBD, ver ROADMAP)
+  eventos(): Promise<EventoCalendario[]> {
+    return this.pedir<EventoCalendario[]>('/eventos');
+  }
+
+  crearEvento(alta: AltaEvento): Promise<EventoCalendario> {
+    return this.pedir<EventoCalendario>('/eventos', { method: 'POST', body: alta });
+  }
+
+  actualizarEvento(id: string, cambios: Partial<AltaEvento>): Promise<EventoCalendario> {
+    return this.pedir<EventoCalendario>(`/eventos/${id}`, { method: 'PATCH', body: cambios });
+  }
+
+  eliminarEvento(id: string): Promise<void> {
+    return this.pedir<void>(`/eventos/${id}`, { method: 'DELETE' });
   }
 
   // Producto - features extra (endpoints TBD, ver ROADMAP)
