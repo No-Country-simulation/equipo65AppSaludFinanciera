@@ -29,13 +29,13 @@ export default function PaginaPerfil() {
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
-  // 2FA
-  const [paso2fa, setPaso2fa] = useState<'inactivo' | 'secreto' | 'respaldo'>('inactivo');
-  const [secreto, setSecreto] = useState('');
-  const [codigo, setCodigo] = useState('');
+  // Endeudamiento y frecuencia se derivaran (pendiente formula de DS): solo lectura
+  // por defecto, con un fallback para ajustarlos a mano mientras no exista el calculo.
+  const [ajustarDerivados, setAjustarDerivados] = useState(false);
+
+  // 2FA obligatorio: no se desactiva; solo se regeneran los codigos de respaldo.
   const [respaldo, setRespaldo] = useState<string[]>([]);
-  const [passwordBaja, setPasswordBaja] = useState('');
-  const [error2fa, setError2fa] = useState<string | null>(null);
+  const [regenerando, setRegenerando] = useState(false);
 
   // Tus datos (derechos ARCO/LGPD)
   const [exportando, setExportando] = useState(false);
@@ -65,35 +65,13 @@ export default function PaginaPerfil() {
     }
   };
 
-  const iniciar2fa = async () => {
-    setError2fa(null);
-    const datos = await ds.iniciar2fa();
-    setSecreto(datos.secreto);
-    setPaso2fa('secreto');
-  };
-
-  const confirmar2fa = async () => {
-    setError2fa(null);
+  const regenerarCodigos = async () => {
+    setRegenerando(true);
     try {
-      const resultado = await ds.activar2fa(codigo);
+      const resultado = await ds.regenerarCodigos2fa();
       setRespaldo(resultado.codigos_respaldo);
-      setPaso2fa('respaldo');
-      actualizarUsuario({ ...usuario, totp_activo: true });
-    } catch (causa) {
-      setError2fa(causa instanceof Error ? causa.message : String(causa));
-    }
-  };
-
-  const desactivar2fa = async () => {
-    setError2fa(null);
-    try {
-      await ds.desactivar2fa(passwordBaja);
-      actualizarUsuario({ ...usuario, totp_activo: false });
-      setPasswordBaja('');
-      setPaso2fa('inactivo');
-      setRespaldo([]);
-    } catch (causa) {
-      setError2fa(causa instanceof Error ? causa.message : String(causa));
+    } finally {
+      setRegenerando(false);
     }
   };
 
@@ -106,7 +84,7 @@ export default function PaginaPerfil() {
       const url = URL.createObjectURL(blob);
       const enlace = document.createElement('a');
       enlace.href = url;
-      enlace.download = `financeai-datos-${datos.generado_en.slice(0, 10)}.json`;
+      enlace.download = `fintechvital-datos-${datos.generado_en.slice(0, 10)}.json`;
       enlace.click();
       URL.revokeObjectURL(url);
       setExportado(true);
@@ -133,6 +111,22 @@ export default function PaginaPerfil() {
         new Date(usuario.terminos_aceptados_en),
       )
     : null;
+
+  const edad = usuario.fecha_nacimiento
+    ? Math.floor((Date.now() - new Date(usuario.fecha_nacimiento).getTime()) / 31_557_600_000)
+    : null;
+
+  const personales: [string, string][] = [];
+  if (usuario.apellido) personales.push([t('apellido'), usuario.apellido]);
+  if (edad !== null) personales.push([t('edad'), t('anios', { n: edad })]);
+  if (usuario.genero) personales.push([t('genero'), t(`generos.${usuario.genero}`)]);
+  if (usuario.telefono) personales.push([t('telefono'), usuario.telefono]);
+  if (usuario.ciudad) {
+    personales.push([
+      t('ciudad'),
+      [usuario.ciudad, usuario.estado_region, usuario.pais].filter(Boolean).join(', '),
+    ]);
+  }
 
   return (
     <div className="space-y-5">
@@ -168,29 +162,59 @@ export default function PaginaPerfil() {
               onChange={(evento) => setIngreso(evento.target.value)}
             />
           </Campo>
-          <Campo etiqueta={t('endeudamiento')}>
-            <input
-              className={claseInput}
-              type="number"
-              min="0"
-              max="100"
-              value={deuda}
-              onChange={(evento) => setDeuda(evento.target.value)}
-            />
-          </Campo>
-          <Campo etiqueta={t('frecuencia')}>
-            <select
-              className={claseInput}
-              value={frecuencia}
-              onChange={(evento) => setFrecuencia(evento.target.value as FrecuenciaAhorro)}
-            >
-              {FRECUENCIAS.map((valor) => (
-                <option key={valor} value={valor}>
-                  {t(`frecuencias.${valor}`)}
-                </option>
-              ))}
-            </select>
-          </Campo>
+          {/* Endeudamiento y frecuencia: se DERIVARAN (pendiente formula de DS).
+              Solo lectura por defecto, con fallback de ajuste manual mientras tanto. */}
+          <div className="rounded-xl border border-line bg-canvas-2/40 p-4 sm:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">{t('derivadoEtiqueta')}</p>
+              <button
+                type="button"
+                onClick={() => setAjustarDerivados((valor) => !valor)}
+                className="text-xs font-semibold text-accent hover:underline"
+              >
+                {t('ajustarManual')}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-muted">{t('derivadoAyuda')}</p>
+            {ajustarDerivados ? (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <Campo etiqueta={t('endeudamiento')}>
+                  <input
+                    className={claseInput}
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={deuda}
+                    onChange={(evento) => setDeuda(evento.target.value)}
+                  />
+                </Campo>
+                <Campo etiqueta={t('frecuencia')}>
+                  <select
+                    className={claseInput}
+                    value={frecuencia}
+                    onChange={(evento) => setFrecuencia(evento.target.value as FrecuenciaAhorro)}
+                  >
+                    {FRECUENCIAS.map((valor) => (
+                      <option key={valor} value={valor}>
+                        {t(`frecuencias.${valor}`)}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+              </div>
+            ) : (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-card px-3 py-2">
+                  <p className="text-xs text-muted">{t('endeudamiento')}</p>
+                  <p className="cifra text-lg font-semibold text-ink">{deuda}/100</p>
+                </div>
+                <div className="rounded-lg bg-card px-3 py-2">
+                  <p className="text-xs text-muted">{t('frecuencia')}</p>
+                  <p className="cifra text-lg font-semibold text-ink">{t(`frecuencias.${frecuencia}`)}</p>
+                </div>
+              </div>
+            )}
+          </div>
           <Campo etiqueta={t('moneda')}>
             <select
               className={claseInput}
@@ -215,70 +239,46 @@ export default function PaginaPerfil() {
         </form>
       </Tarjeta>
 
+      {personales.length > 0 ? (
+        <Tarjeta className="aparece aparece-3">
+          <TituloTarjeta>{t('datosPersonales')}</TituloTarjeta>
+          <p className="-mt-2 mb-3 text-xs text-muted">{t('datosPersonalesAyuda')}</p>
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {personales.map(([etiqueta, valor]) => (
+              <div key={etiqueta}>
+                <dt className="text-xs text-muted">{etiqueta}</dt>
+                <dd className="text-sm font-medium text-ink">{valor}</dd>
+              </div>
+            ))}
+          </dl>
+        </Tarjeta>
+      ) : null}
+
       <Tarjeta className="aparece aparece-4">
         <TituloTarjeta>{t('seguridad')}</TituloTarjeta>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-ink">{t('dosfa')}</p>
-            <p className={`text-xs font-medium ${usuario.totp_activo ? 'text-ok-text' : 'text-muted'}`}>
-              {usuario.totp_activo ? t('dosfaActiva') : t('dosfaInactiva')}
-            </p>
+            <p className="text-xs font-medium text-ok-text">{t('dosfaObligatoria')}</p>
           </div>
-          {!usuario.totp_activo && paso2fa === 'inactivo' ? (
-            <Boton variante="fantasma" onClick={() => void iniciar2fa()}>
-              {t('activar')}
-            </Boton>
-          ) : null}
+          <Boton variante="fantasma" onClick={() => void regenerarCodigos()} disabled={regenerando}>
+            {regenerando ? t('regenerando') : t('regenerar')}
+          </Boton>
         </div>
+        <p className="mt-2 text-xs text-muted">{t('dosfaSiempre')}</p>
 
-        {paso2fa === 'secreto' ? (
-          <div className="mt-4 space-y-3 rounded-xl border border-line bg-white/60 p-4">
-            <p className="text-sm text-muted">{t('escaneaQr')}</p>
-            <code className="block break-all rounded-lg bg-ink/5 px-3 py-2 text-sm font-semibold tracking-wider text-ink">
-              {secreto}
-            </code>
-            <div className="flex gap-2">
-              <input
-                className={`${claseInput} !w-40 text-center tracking-[0.3em]`}
-                value={codigo}
-                inputMode="numeric"
-                onChange={(evento) => setCodigo(evento.target.value.replace(/\D/g, '').slice(0, 6))}
-              />
-              <Boton onClick={() => void confirmar2fa()}>{t('activar')}</Boton>
-            </div>
-          </div>
-        ) : null}
-
-        {paso2fa === 'respaldo' && respaldo.length > 0 ? (
+        {respaldo.length > 0 ? (
           <div className="mt-4 space-y-2 rounded-xl border border-ok/40 bg-ok/5 p-4">
-            <p className="text-sm font-medium text-ok-text">{t('codigosRespaldo')}</p>
+            <p className="text-sm font-medium text-ok-text">{t('codigosNuevos')}</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {respaldo.map((codigoRespaldo) => (
-                <code key={codigoRespaldo} className="rounded-lg bg-white px-2 py-1.5 text-center text-sm font-semibold text-ink">
+                <code key={codigoRespaldo} className="rounded-lg bg-card px-2 py-1.5 text-center text-sm font-semibold text-ink">
                   {codigoRespaldo}
                 </code>
               ))}
             </div>
           </div>
         ) : null}
-
-        {usuario.totp_activo ? (
-          <div className="mt-4 flex flex-wrap items-end gap-2">
-            <Campo etiqueta={t('passwordConfirmar')}>
-              <input
-                className={`${claseInput} !w-56`}
-                type="password"
-                value={passwordBaja}
-                onChange={(evento) => setPasswordBaja(evento.target.value)}
-              />
-            </Campo>
-            <Boton variante="peligro" onClick={() => void desactivar2fa()}>
-              {t('desactivar')}
-            </Boton>
-          </div>
-        ) : null}
-
-        {error2fa ? <p className="mt-3 text-sm font-medium text-risk">{error2fa}</p> : null}
       </Tarjeta>
 
       <Tarjeta className="aparece aparece-5">
@@ -290,7 +290,7 @@ export default function PaginaPerfil() {
           </p>
         ) : null}
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white/60 p-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-card/60 p-4">
           <div>
             <p className="text-sm font-semibold text-ink">{t('exportar')}</p>
             <p className="text-xs text-muted">{t('exportarAyuda')}</p>
