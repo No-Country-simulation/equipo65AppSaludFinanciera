@@ -11,6 +11,29 @@ Versionado: [SemVer](https://semver.org/lang/es/).
 
 ---
 
+## [0.3.2] — 2026-07-30
+
+### Añadido
+
+- **Atajo de login para desarrollo (SOLO en modo mock)**: dejando **email y
+  password en blanco** se entra directo como el usuario demo, sin password ni
+  2FA. Evita teclear correo + 10 caracteres + 6 digitos en cada recarga.
+  - **El 2FA obligatorio NO se toca** (ADR-0013): si escribes un email, el flujo
+    sigue exigiendo password de 10+ y codigo TOTP. Es lo que se le enseña al
+    jurado y sigue funcionando igual.
+  - El atajo vive en `mock/mockDataSource.ts`, asi que **desaparece solo** al
+    integrar la API (se borra esa carpeta, ADR-0011). Contra la API real los
+    campos vuelven a ser obligatorios (`required={DATA_SOURCE !== 'mock'}`).
+
+### Notas
+
+- Ojo con el correo del usuario demo: es **`demo@fintechvital.dev`** (con
+  "vital"). Cualquier otro correo NO coincide con el sembrado y el mock crea una
+  cuenta **nueva y vacia** - se ve como "Todavia no hay nada que analizar", que
+  es el comportamiento correcto, no un fallo.
+
+---
+
 ## [0.3.1] — 2026-07-30
 
 Arreglos en los scripts de desarrollo, a partir de dos fallos reproducidos en
