@@ -140,7 +140,7 @@ export default function PantallaPresupuestos() {
                     categoria === c.slug && { backgroundColor: temaActivo.acento, borderColor: 'transparent' }
                   ]}
                 >
-                  <Text style={{ fontFamily: Fuentes.cuerpoMedio, fontSize: 13, color: categoria === c.slug ? temaActivo.blanco : temaActivo.tintaSuave }}>
+                  <Text style={{ fontFamily: Fuentes.cuerpoMedio, fontSize: 13, color: categoria === c.slug ? temaActivo.sobreAcento : temaActivo.tintaSuave }}>
                     {c.etiqueta}
                   </Text>
                 </Pressable>

@@ -111,7 +111,7 @@ export default function PantallaMetas() {
                     onPress={() => setIcono(clave)}
                     style={[s.emoji, activo && { backgroundColor: Colores.acento, borderColor: Colores.acento }]}
                   >
-                    <Ionicons name={iconoMeta(clave)} size={20} color={activo ? Colores.blanco : Colores.tintaSuave} />
+                    <Ionicons name={iconoMeta(clave)} size={20} color={activo ? Colores.sobreAcento : Colores.tintaSuave} />
                   </Pressable>
                 );
               })}
