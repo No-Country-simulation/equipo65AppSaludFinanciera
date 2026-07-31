@@ -12,7 +12,7 @@ import {
 import { useLocale } from 'next-intl';
 import { getDataSource, setAuthTokens, type Idioma, type Usuario } from '@/data';
 
-const CLAVE_SESION = 'financeai.sesion';
+const CLAVE_SESION = 'fintechvital.sesion';
 
 interface ContextoSesion {
   usuario: Usuario | null;
