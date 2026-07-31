@@ -91,7 +91,9 @@ export function Hero({
   return (
     <LinearGradient
       // Usamos los colores dinámicos para el gradiente
-      colors={[temaActivo.heroB, temaActivo.heroA, temaActivo.canvas2]}
+      // El hero es SIEMPRE oscuro (como en la web): su texto es claro fijo. Antes
+      // terminaba en `canvas2`, que en tema claro es crema -> texto ilegible abajo.
+      colors={[temaActivo.heroB, temaActivo.heroA, temaActivo.heroA]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[
@@ -132,7 +134,10 @@ export function Boton({
   }[variante];
   
   const color = {
-    primario: temaActivo.blanco,
+    // `sobreAcento`, no `blanco`: en tema oscuro el acento es lima y el blanco
+    // encima queda ilegible (1.9:1). La variante `claro` sí va sobre un fondo
+    // translucido oscuro (el hero), asi que ahi el blanco es correcto.
+    primario: temaActivo.sobreAcento,
     fantasma: temaActivo.tinta,
     peligro: temaActivo.riesgo,
     claro: temaActivo.blanco,
@@ -161,17 +166,21 @@ export function Campo({
   ayuda,
   ...props
 }: TextInputProps & { etiqueta: string; ayuda?: string }) {
-  const { temaActivo } = useTheme();
+  const { temaActivo, esModoOscuro } = useTheme();
   const [enfoque, setEnfoque] = useState(false);
-  
+
+  // En oscuro el input debe ser una superficie oscura (con texto claro), no `blanco`
+  // (que en oscuro es casi blanco -> texto claro invisible). En claro sigue blanco.
+  const fondoInput = esModoOscuro ? temaActivo.canvas2 : temaActivo.blanco;
+
   return (
     <View style={{ gap: 6 }}>
       <Text style={[estilos.etiquetaCampo, { color: temaActivo.tintaSuave }]}>{etiqueta}</Text>
       <TextInput
         placeholderTextColor={`${temaActivo.apagado}99`}
         style={[
-          estilos.entrada, 
-          { backgroundColor: temaActivo.blanco, borderColor: temaActivo.linea, color: temaActivo.tinta },
+          estilos.entrada,
+          { backgroundColor: fondoInput, borderColor: temaActivo.linea, color: temaActivo.tinta },
           enfoque && { borderColor: temaActivo.acento }
         ]}
         onFocus={() => setEnfoque(true)}

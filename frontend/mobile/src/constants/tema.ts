@@ -1,24 +1,34 @@
 /**
- * Tema financeAI - sistema "Meridian" (mismo que la web):
- * verde pino profundo + arena cálida + menta viva. Paleta de series validada.
- * Tipos: Bricolage Grotesque (display/cifras) · Hanken Grotesk (UI).
+ * Tema Fintech Vital - sistema "Meridian" (mismo que la web):
+ * pizarra (#414c5a) + lima (#88bd24), derivados del imagotipo.
+ * Paleta de series validada. Tipos: Bricolage Grotesque · Hanken Grotesk.
+ *
+ * REGLA DEL LIMA (medida): sobre blanco da 2.25:1, no llega al 4.5:1 de
+ * WCAG AA -> en tema claro es SOLO relleno; para texto va `limaTexto`
+ * (5.69:1) y lo interactivo va en `acento` (pizarra, 8.73:1). En tema
+ * oscuro se invierte: el lima da 7.79:1 y pasa a ser el acento.
  */
 
 // 1. Guardamos el tema original (Claro) por si el usuario lo quiere después
 export const TemaClaro = {
-  canvas: '#e9e3d7',
-  canvas2: '#f2eee4',
-  tarjeta: '#fffefb',
-  tinta: '#0F0D06',        // Aumentamos la oscuridad para mayor contraste
-  tintaSuave: '#3D382B',   // Más oscuro para que no se pierda
-  apagado: '#756E5A',      // Más oscuro para visibilidad
-  linea: '#D1C9B3',        // Un poco más marcada
+  canvas: '#eef1f4',
+  canvas2: '#f7f9fa',
+  tarjeta: '#ffffff',
+  tinta: '#141d24',        // pizarra casi negra, para máximo contraste
+  tintaSuave: '#3c4954',
+  apagado: '#64737f',      // oscuro para visibilidad
+  linea: '#d4dde3',        // hairline marcada
   blanco: '#ffffff',
-  acento: '#0E453B',       // Pino más oscuro para mejor lectura
-  acentoFuerte: '#082E26',
-  menta: '#129670',        // Un poco más saturado
-  heroA: '#0c2a24',
-  heroB: '#14453a',
+  acento: '#3a4550',       // pizarra: lo interactivo (8.73:1 sobre blanco)
+  acentoFuerte: '#242e37',
+  // Texto que va ENCIMA de `acento`. No es siempre `blanco`: en oscuro el
+  // acento es lima y el blanco encima daria 1.9:1. Usar esto, no `blanco`.
+  sobreAcento: '#ffffff',  // blanco sobre pizarra
+
+  menta: '#88bd24',        // lima de marca: RELLENO, nunca texto
+  limaTexto: '#4a6614',    // lima legible como texto (6.56:1)
+  heroA: '#1b262e',
+  heroB: '#33414c',
   ok: '#12a566',
   okTexto: '#085735',      // Más oscuro
   okFondo: 'rgba(18,165,102,0.13)',
@@ -32,19 +42,22 @@ export const TemaClaro = {
 } as const;
 // 2. Guardamos el tema nuevo (Oscuro / Fintech)
 export const TemaOscuro = {
-  canvas: '#0B1519',      
-  canvas2: '#112026',     
-  tarjeta: '#16282E',     
-  tinta: '#E6E9EA',       
-  tintaSuave: '#8B9DA5',  
-  apagado: '#546A76',     
-  linea: '#2A3C44',       
-  blanco: '#F0F2F3',
-  acento: '#16b98a',      
-  acentoFuerte: '#0c3c33',
-  menta: '#16b98a',
-  heroA: '#0B1519',
-  heroB: '#112026',
+  canvas: '#0f1a20',
+  canvas2: '#172630',
+  tarjeta: '#1b2b35',
+  tinta: '#e8edf0',
+  tintaSuave: '#b4c2cb',
+  apagado: '#8698a4',
+  linea: '#2c3d48',
+  blanco: '#f0f2f3',
+  acento: '#9fc640',       // sobre oscuro el lima sí pasa AA (7.79:1)
+  acentoFuerte: '#88bd24',
+  sobreAcento: '#0f1a20',  // tinta oscura sobre lima: 8.94:1
+
+  menta: '#9fc640',
+  limaTexto: '#9fc640',
+  heroA: '#0f1a20',
+  heroB: '#1e2f3a',
   ok: '#12a566',
   okTexto: '#20D68A',     
   okFondo: 'rgba(18,165,102,0.2)',
@@ -85,9 +98,9 @@ export const Radio = {
   pill: 999,
 } as const;
 
-/** Sombra cálida por capas (para tarjetas). */
+/** Sombra por capas (para tarjetas). */
 export const sombra = {
-  shadowColor: '#0c2a24',
+  shadowColor: '#1b262e',
   shadowOffset: { width: 0, height: 10 },
   shadowOpacity: 0.1,
   shadowRadius: 20,

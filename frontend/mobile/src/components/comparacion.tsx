@@ -35,7 +35,7 @@ export function TarjetaComparacion({ datos, moneda }: { datos: ComparacionMensua
 
   const filas = [
     { clave: 'ingresos', actual: datos.actual.ingreso_total, anterior: datos.anterior.ingreso_total, invertir: false, color: temaActivo.ok },
-    { clave: 'gastos', actual: datos.actual.gasto_total, anterior: datos.anterior.gasto_total, invertir: true, color: temaActivo.alertaFondo },
+    { clave: 'gastos', actual: datos.actual.gasto_total, anterior: datos.anterior.gasto_total, invertir: true, color: temaActivo.alerta },
     { clave: 'balance', actual: datos.actual.balance, anterior: datos.anterior.balance, invertir: false, color: temaActivo.acento },
   ] as const;
 

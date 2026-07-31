@@ -25,7 +25,6 @@ import {
   MIEMBROS_GRUPO,
 } from '@/constants/tema';
 import { useTheme } from '@/context/ThemeContext';
-import { useI18n } from '@/i18n';
 import { formatearMes, formatearMoneda, formatearPct } from '@/lib/formato';
 
 export interface Porcion {
