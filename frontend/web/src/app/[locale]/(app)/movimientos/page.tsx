@@ -1,30 +1,43 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { Suspense, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import type { Categoria, CategoriaSlug, PaginaTransacciones } from '@/data';
+import type { Categoria, CategoriaSlug, EventoCalendario, MedioOperacion, PaginaTransacciones, Tarjeta as TarjetaBanco } from '@/data';
 import { formatearFecha, formatearMoneda } from '@/lib/formato';
 import { useDataSource, useDatos } from '@/lib/useDatos';
 import { CalendarioPagos } from '@/components/CalendarioPagos';
-import { Icono } from '@/components/Icono';
+import { Icono, type NombreIcono } from '@/components/Icono';
 import { Boton, Campo, claseInput, EstadoCarga, Tarjeta, TituloTarjeta } from '@/components/ui';
 
 interface DatosMovimientos {
   pagina: PaginaTransacciones;
   categorias: Categoria[];
+  tarjetas: TarjetaBanco[];
+  eventos: EventoCalendario[];
 }
 
 type ColumnaOrden = 'fecha' | 'descripcion' | 'categoria' | 'confianza' | 'monto';
 
 const MES_ACTUAL = new Date().toISOString().slice(0, 7);
 
-export default function PaginaMovimientos() {
+const MEDIO_ICONO: Record<MedioOperacion, NombreIcono> = {
+  app_movil: 'telefono',
+  portal_web: 'web',
+  cajero: 'cajero',
+  sucursal: 'sucursal',
+  pos: 'tarjeta',
+};
+
+function MovimientosVista() {
   const t = useTranslations('movimientos');
   const tComun = useTranslations('comun');
   const locale = useLocale();
   const ds = useDataSource();
+  const params = useSearchParams();
 
   const [filtro, setFiltro] = useState<CategoriaSlug | ''>('');
+  const [filtroTarjeta, setFiltroTarjeta] = useState<string>(params.get('tarjeta') ?? '');
   const [busqueda, setBusqueda] = useState('');
   const [vista, setVista] = useState<'lista' | 'tabla'>('lista');
   const [ordenCol, setOrdenCol] = useState<ColumnaOrden>('fecha');
@@ -43,13 +56,24 @@ export default function PaginaMovimientos() {
 
   const { datos, cargando, error, recargar } = useDatos<DatosMovimientos>(
     async (fuente) => {
-      const [pagina, categorias] = await Promise.all([
-        fuente.transacciones({ categoria: filtro || undefined, tam: 100 }),
+      const [pagina, categorias, tarjetas, eventos] = await Promise.all([
+        fuente.transacciones({
+          categoria: filtro || undefined,
+          tarjeta: filtroTarjeta || undefined,
+          tam: 100,
+        }),
         fuente.categorias(),
+        fuente.tarjetas(),
+        fuente.eventos(),
       ]);
-      return { pagina, categorias };
+      return { pagina, categorias, tarjetas, eventos };
     },
-    [filtro],
+    [filtro, filtroTarjeta],
+  );
+
+  const nombreTarjeta = useMemo(
+    () => new Map((datos?.tarjetas ?? []).map((tarjeta) => [tarjeta.id, tarjeta.etiqueta ?? `•••• ${tarjeta.ultimos4}`])),
+    [datos?.tarjetas],
   );
 
   const etiquetas = useMemo(
@@ -269,6 +293,19 @@ export default function PaginaMovimientos() {
             </option>
           ))}
         </select>
+        <select
+          className={`${claseInput} max-w-[12rem]`}
+          value={filtroTarjeta}
+          onChange={(evento) => setFiltroTarjeta(evento.target.value)}
+          aria-label={t('filtrarTarjeta')}
+        >
+          <option value="">{t('todasTarjetas')}</option>
+          {datos?.tarjetas.map((tarjeta) => (
+            <option key={tarjeta.id} value={tarjeta.id}>
+              {tarjeta.etiqueta ?? `•••• ${tarjeta.ultimos4}`}
+            </option>
+          ))}
+        </select>
         <div className="inline-flex rounded-2xl border border-line bg-canvas-2/60 p-0.5 text-sm font-semibold">
           {(['fecha', 'monto'] as const).map((modo) => (
             <button
@@ -278,7 +315,7 @@ export default function PaginaMovimientos() {
                 setOrdenAsc(false);
               }}
               className={`rounded-xl px-3 py-2 transition-colors ${
-                ordenCol === modo ? 'bg-accent text-white' : 'text-muted hover:text-ink'
+                ordenCol === modo ? 'bg-accent text-sobre-accent' : 'text-muted hover:text-ink'
               }`}
             >
               {t(modo === 'fecha' ? 'ordenFecha' : 'ordenMonto')}
@@ -291,7 +328,7 @@ export default function PaginaMovimientos() {
               key={modo}
               onClick={() => setVista(modo)}
               className={`rounded-xl px-3 py-2 transition-colors ${
-                vista === modo ? 'bg-accent text-white' : 'text-muted hover:text-ink'
+                vista === modo ? 'bg-accent text-sobre-accent' : 'text-muted hover:text-ink'
               }`}
             >
               {t(modo === 'lista' ? 'vistaLista' : 'vistaTabla')}
@@ -385,7 +422,23 @@ export default function PaginaMovimientos() {
                       <td className="whitespace-nowrap px-4 py-3 tabular-nums text-muted">
                         {formatearFecha(tx.fecha, locale)}
                       </td>
-                      <td className="max-w-[280px] truncate px-4 py-3 font-medium text-ink">{tx.descripcion}</td>
+                      <td className="max-w-[280px] px-4 py-3 font-medium text-ink">
+                        <span className="block truncate">{tx.descripcion}</span>
+                        {tx.comercio || tx.medio_operacion || tx.id_tarjeta ? (
+                          <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-normal text-muted">
+                            {tx.comercio ? <span>{tx.comercio}</span> : null}
+                            {tx.medio_operacion ? (
+                              <span className="inline-flex items-center gap-1" title={t(`medios.${tx.medio_operacion}`)}>
+                                <Icono nombre={MEDIO_ICONO[tx.medio_operacion]} className="h-3 w-3" />
+                                {t(`medios.${tx.medio_operacion}`)}
+                              </span>
+                            ) : null}
+                            {tx.id_tarjeta && nombreTarjeta.has(tx.id_tarjeta) ? (
+                              <span className="text-accent">{nombreTarjeta.get(tx.id_tarjeta)}</span>
+                            ) : null}
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3">
                         <span className="rounded-md bg-ink/5 px-1.5 py-0.5 text-xs font-medium text-ink-soft">
                           {etiquetas.get(tx.categoria) ?? tx.categoria}
@@ -409,12 +462,28 @@ export default function PaginaMovimientos() {
               {visibles.map((transaccion) => (
                 <li key={transaccion.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{transaccion.descripcion}</p>
+                    <p className="truncate text-sm font-medium text-ink">
+                      {transaccion.descripcion}
+                      {transaccion.comercio ? (
+                        <span className="ml-2 font-normal text-muted">· {transaccion.comercio}</span>
+                      ) : null}
+                    </p>
                     <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                       {formatearFecha(transaccion.fecha, locale)}
                       <span className="rounded-md bg-ink/5 px-1.5 py-0.5 font-medium">
                         {etiquetas.get(transaccion.categoria) ?? transaccion.categoria}
                       </span>
+                      {transaccion.medio_operacion ? (
+                        <span className="inline-flex items-center gap-1" title={t(`medios.${transaccion.medio_operacion}`)}>
+                          <Icono nombre={MEDIO_ICONO[transaccion.medio_operacion]} className="h-3.5 w-3.5" />
+                          {t(`medios.${transaccion.medio_operacion}`)}
+                        </span>
+                      ) : null}
+                      {transaccion.id_tarjeta && nombreTarjeta.has(transaccion.id_tarjeta) ? (
+                        <span className="rounded-md bg-accent/8 px-1.5 py-0.5 font-medium text-accent">
+                          {nombreTarjeta.get(transaccion.id_tarjeta)}
+                        </span>
+                      ) : null}
                       {transaccion.categoria_origen === 'usuario' ? (
                         <span className="text-accent">{t('origenUsuario')}</span>
                       ) : (
@@ -464,16 +533,29 @@ export default function PaginaMovimientos() {
           )}
         </Tarjeta>
 
-        {/* Calendario de pagos del mes */}
+        {/* Actividad del mes (mapa de calor de gasto diario, NO calendario de pagos) */}
         <Tarjeta className="aparece aparece-4 max-w-md">
-          <TituloTarjeta>{t('calendarioTitulo')}</TituloTarjeta>
+          <TituloTarjeta>{t('actividadMes')}</TituloTarjeta>
+          <p className="-mt-2 mb-3 text-xs text-muted">{t('actividadAyuda')}</p>
           <CalendarioPagos
             transacciones={datos?.pagina.items ?? []}
+            tarjetas={datos?.tarjetas ?? []}
+            eventos={datos?.eventos ?? []}
             mes={MES_ACTUAL}
             moneda={resumen.moneda}
+            onCambio={recargar}
           />
         </Tarjeta>
       </EstadoCarga>
     </div>
+  );
+}
+
+/** useSearchParams (filtro por tarjeta via ?tarjeta=) exige un limite de Suspense. */
+export default function PaginaMovimientos() {
+  return (
+    <Suspense>
+      <MovimientosVista />
+    </Suspense>
   );
 }
