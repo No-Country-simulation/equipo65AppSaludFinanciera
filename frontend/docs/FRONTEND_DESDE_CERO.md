@@ -129,7 +129,7 @@ respaldan localmente: recargar no los borra.
 **6.1 Emulador Android** - opción `[6]` del menú, o:
 
 ```powershell
-.\scripts\windows\movil-emulador.ps1      # Windows (AVD por defecto: Pixel_9)
+.\scripts\windows\movil-emulador.ps1      # Windows
 ```
 
 ```bash
@@ -138,6 +138,20 @@ respaldan localmente: recargar no los borra.
 
 El script arranca el AVD, espera el boot completo y lanza Expo apuntando al
 emulador (la primera vez instala Expo Go dentro del emulador).
+
+> **No existe un AVD "global" ni uno estándar del equipo.** Cada persona crea los
+> suyos en Android Studio y viven en su propia máquina (`~/.android/avd`), así que
+> el nombre que use un compañero (`Small_Phone`, `Pixel_9`…) **no tiene por qué
+> existir en la tuya**. Por eso el script **no cablea ningún nombre**: si no le
+> pasas uno, usa el primero que encuentre.
+>
+> - Uno concreto: `-Avd Pixel_9` (Windows) · `./movil-emulador.sh Pixel_9` (Linux/macOS)
+> - Fijar el tuyo sin repetirlo: variable de entorno `FINTECHVITAL_AVD`
+> - Ver los que tienes: `emulator -list-avds`
+
+**Si el emulador arranca congelado** (se ve el fondo de pantalla y no responde,
+normalmente tras haberlo matado de golpe) es un *snapshot* sucio. Arranca en frío:
+`-Frio` en Windows, `--frio` en Linux/macOS.
 
 **6.2 Teléfono físico** (sin Android Studio) - opción `[7]` del menú, o:
 
@@ -150,9 +164,11 @@ emulador (la primera vez instala Expo Go dentro del emulador).
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| `docker: command not found` / daemon no responde | Docker Desktop cerrado o no instalado | Abrir Docker Desktop y esperar; o usar Podman (`podman machine start`) - los scripts caen solos a Podman |
+| `docker: command not found` / daemon no responde | Docker Desktop cerrado o no instalado | Abrir Docker Desktop y esperar; o usar Podman - los scripts caen solos a Podman y **arrancan su máquina si hace falta** |
+| La opción `[2]` del menú no levanta nada, como si no existiera la imagen | La **máquina de Podman** estaba parada: sin ella *todos* los comandos fallan con `Cannot connect to Podman` | Ya lo resuelve el script (arranca la máquina). A mano: `podman machine start` |
 | El emulador no aparece / `emulator.exe` no encontrado | `ANDROID_HOME` sin definir | Definir la variable (§2) y abrir una terminal **nueva** |
-| `El AVD 'Pixel_9' no existe` | No hay dispositivo virtual creado | Android Studio → Device Manager → Create device; o pasar el nombre: `movil-emulador -Avd <nombre>` |
+| `El AVD '<nombre>' no existe en esta maquina` | Estás usando el nombre del AVD **de otra persona** (son locales, no se comparten) | Sin argumentos usa el primero que tengas; ver los tuyos con `emulator -list-avds` |
+| El emulador arranca congelado (fondo de pantalla fijo, no responde) | *Snapshot* sucio de una salida forzada | Arranque en frío: `-Frio` (Windows) · `--frio` (Linux/macOS) |
 | El emulador va lentísimo | Virtualización deshabilitada | Habilitar Intel VT-x / AMD-V en BIOS/UEFI (Linux: instalar KVM) |
 | Expo no conecta con el teléfono | Redes distintas o firewall | Mismo Wi-Fi; en redes restrictivas usar `npx expo start --tunnel` |
 | `npm install` falla con permisos (Linux) | npm global con sudo | Usar nvm, o no usar `sudo` con npm |

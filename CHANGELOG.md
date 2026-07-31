@@ -11,6 +11,46 @@ Versionado: [SemVer](https://semver.org/lang/es/).
 
 ---
 
+## [0.3.1] — 2026-07-30
+
+Arreglos en los scripts de desarrollo, a partir de dos fallos reproducidos en
+maquina.
+
+### Corregido
+
+- **La opcion `[2]` del menu (web en contenedor) no levantaba nada**, como si no
+  existieran ni la imagen ni el contenedor. Causa: en Windows/macOS **Podman
+  corre dentro de una VM** ("machine"); si esa VM esta parada, *todos* los
+  comandos de Podman fallan con `Cannot connect to Podman` (exit 125). El script
+  caia a Podman como alternativa pero **nunca arrancaba la maquina**. Ahora la
+  arranca (`podman machine start`) y espera a que responda. Mismo arreglo en
+  `macos/web-docker.sh`.
+- **Orden de deteccion del motor**: si Docker no responde pero Podman si, ahora
+  se usa Podman de inmediato en vez de esperar **2 minutos** a que Docker Desktop
+  arranque (en maquinas donde Docker Desktop pide UAC no arranca nunca y ese
+  tiempo era pura espera). Docker sigue teniendo prioridad si esta vivo.
+- **`web-docker.ps1` no arrancaba por un choque de nombres**: la variable local
+  `$motor` y el parametro `$Motor` son la MISMA variable (PowerShell no distingue
+  mayusculas), asi que asignarle `$null` reventaba contra su `ValidateSet`.
+- **El AVD del emulador estaba cableado a `Small_Phone`**, que solo existia en la
+  maquina de quien escribio el script (y el comentario decia `Pixel_9`, con lo
+  que ni siquiera coincidian). Los AVD son **locales de cada persona** y no hay
+  ninguno "global": ahora, sin argumento, se toma el primero disponible.
+
+### Añadido
+
+- `-Avd` / primer argumento posicional para elegir AVD, variable de entorno
+  `FINTECHVITAL_AVD` para fijar el propio, y error explicito con la lista de los
+  que hay cuando el nombre no existe.
+- **Arranque en frio del emulador**: `-Frio` (Windows) · `--frio` (Linux/macOS),
+  que anade `-no-snapshot-load`. Resuelve el caso del emulador que arranca
+  congelado (adb responde y `boot_completed=1`, pero la UI no pinta) por un
+  *snapshot* sucio de una salida forzada.
+- `-Motor docker|podman` en `web-docker.ps1` para forzar un motor y saltarse la
+  deteccion.
+
+---
+
 ## [0.3.0] — 2026-07-30
 
 Identidad de marca. El equipo entregó el **imagotipo** y con eso quedó decidido el
@@ -212,9 +252,8 @@ mas cuatro rondas de ajustes pedidos por Angel al probar la app.
 - ⚠️ Si el emulador Android se mata de golpe, queda un *snapshot* sucio y el
   dispositivo se queda en `offline`. Solucion: arrancar en frio
   (`emulator -avd <AVD> -no-snapshot-load`).
-- El AVD disponible en la maquina se llama `Pixel_9`; el script
-  `scripts/windows/movil-emulador.ps1` trae `Small_Phone` por defecto, hay que
-  pasarle `-Avd Pixel_9`.
+- Los AVD son **locales de cada maquina** y no hay ninguno estandar del equipo:
+  el script ya no cablea ningun nombre (ver `[0.3.1]`).
 - Dependencia nueva en movil: **`expo-document-picker`** (~57.0.1), para el import
   CSV. Viene incluida en Expo Go, no requiere dev build.
 - El `Blob` de React Native no implementa `.text()`; el import movil lee el archivo
