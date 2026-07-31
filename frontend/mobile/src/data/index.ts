@@ -31,4 +31,13 @@ export function setAuthTokens(access: string | null, refresh: string | null): vo
 
 export { DATA_SOURCE } from './config';
 export * from './types';
-export type { FinanceDataSource, AltaTransaccion, AltaMeta, FiltrosTransacciones, PatchUsuario } from './datasource';
+export type {
+  FinanceDataSource,
+  AltaTransaccion,
+  AltaMeta,
+  AltaEvento,
+  AltaTarjeta,
+  AltaUsuario,
+  FiltrosTransacciones,
+  PatchUsuario,
+} from './datasource';

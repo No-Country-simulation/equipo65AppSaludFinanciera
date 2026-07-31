@@ -8,16 +8,25 @@ import type {
   Categoria,
   CategoriaSlug,
   ComparacionMensual,
+  CuentaBancaria,
   DatosExportados,
+  EventoCalendario,
+  EstadoBancario,
   Evolucion,
   FrecuenciaAhorro,
+  Idioma,
   MetaAhorro,
   Moneda,
   PaginaTransacciones,
   Presupuesto,
+  RedPago,
   ResultadoImport,
   ResumenAnalisis,
+  SaludCrediticia,
   Sesion,
+  Tarjeta,
+  TipoEvento,
+  TipoTarjeta,
   Transaccion,
   Usuario,
 } from './types';
@@ -33,6 +42,7 @@ export interface FiltrosTransacciones {
   desde?: string;
   hasta?: string;
   categoria?: CategoriaSlug;
+  tarjeta?: string; // id_tarjeta - filtrar los movimientos de una tarjeta
   pagina?: number;
   tam?: number;
 }
@@ -42,6 +52,41 @@ export interface PatchUsuario {
   nivel_endeudamiento?: number;
   frecuencia_ahorro?: FrecuenciaAhorro;
   moneda_principal?: Moneda;
+  idioma?: Idioma; // preferencia de idioma persistida (cross-device)
+}
+
+/** Alta de usuario (USUARIOS: nombre/apellido/fecha_nacimiento son NOT NULL en la BD). */
+export interface AltaUsuario {
+  email: string;
+  password: string;
+  moneda_principal: Moneda;
+  nombre: string;
+  apellido: string;
+  fecha_nacimiento: string; // ISO date
+  genero?: 'M' | 'F';
+  telefono?: string;
+  ciudad?: string;
+  terminos_version?: string;
+}
+
+/** Alta/edicion de un evento del calendario. */
+export interface AltaEvento {
+  fecha: string;
+  titulo: string;
+  tipo: TipoEvento;
+  monto?: number;
+}
+
+/** Alta/edicion de tarjeta (CRUD). `credito` solo cuando tipo === 'credito'. */
+export interface AltaTarjeta {
+  id_cuenta: string;
+  tipo: TipoTarjeta;
+  red_pago: RedPago;
+  ultimos4: string;
+  fecha_vencimiento: string; // 'YYYY-MM'
+  etiqueta?: string;
+  estado?: EstadoBancario;
+  credito?: { limite_credito: number; dia_corte: number; dia_pago: number };
 }
 
 export interface AltaMeta {
@@ -60,18 +105,16 @@ export interface AltaMeta {
 export interface FinanceDataSource {
   // §4 Auth
   login(email: string, password: string, codigoTotp?: string): Promise<Sesion>;
-  /** `terminosVersion` registra la prueba de consentimiento del checkbox de T&C. */
-  registro(
-    email: string,
-    password: string,
-    monedaPrincipal: Moneda,
-    terminosVersion?: string,
-  ): Promise<Usuario>;
+  /** Alta con datos personales (los exige USUARIOS). `terminos_version` = prueba de consentimiento. */
+  registro(alta: AltaUsuario): Promise<Usuario>;
   logout(): Promise<void>;
   me(): Promise<Usuario>;
   actualizarPerfil(patch: PatchUsuario): Promise<Usuario>;
   iniciar2fa(): Promise<{ secreto: string; otpauth_uri: string }>;
   activar2fa(codigoTotp: string): Promise<{ codigos_respaldo: string[] }>;
+  /** Regenera los codigos de respaldo (unica accion 2FA del perfil: es obligatorio, no se desactiva). */
+  regenerarCodigos2fa(): Promise<{ codigos_respaldo: string[] }>;
+  /** Se conserva por el contrato (DELETE /auth/2fa); la UI ya NO lo expone (2FA obligatorio). */
   desactivar2fa(password: string): Promise<void>;
   /**
    * Re-vincula una sesion restaurada del almacenamiento del cliente (recarga de
@@ -98,6 +141,21 @@ export interface FinanceDataSource {
   // §7 Operacion
   categorias(): Promise<Categoria[]>;
   monedas(): Promise<Moneda[]>;
+
+  // Banca (CUENTAS_BANCARIAS, TARJETAS, HISTORIAL_BURO) - el banco YA tiene estos datos
+  cuentas(): Promise<CuentaBancaria[]>;
+  tarjetas(): Promise<Tarjeta[]>;
+  saludCrediticia(): Promise<SaludCrediticia>;
+  // CRUD de tarjetas
+  crearTarjeta(alta: AltaTarjeta): Promise<Tarjeta>;
+  actualizarTarjeta(id: string, cambios: Partial<AltaTarjeta>): Promise<Tarjeta>;
+  eliminarTarjeta(id: string): Promise<void>;
+
+  // CRUD de eventos del calendario (recordatorios del usuario)
+  eventos(): Promise<EventoCalendario[]>;
+  crearEvento(alta: AltaEvento): Promise<EventoCalendario>;
+  actualizarEvento(id: string, cambios: Partial<AltaEvento>): Promise<EventoCalendario>;
+  eliminarEvento(id: string): Promise<void>;
 
   // Producto - features extra (extienden el contrato; ver ROADMAP)
   comparacionMensual(): Promise<ComparacionMensual>;

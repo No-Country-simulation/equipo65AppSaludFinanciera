@@ -17,7 +17,9 @@ import type {
   Categoria,
   CategoriaSlug,
   ComparacionMensual,
+  CuentaBancaria,
   DatosExportados,
+  EventoCalendario,
   Evolucion,
   Idioma,
   Indicadores,
@@ -28,24 +30,31 @@ import type {
   Presupuesto,
   PuntoEvolucion,
   RecomendacionDetalle,
+  RegistroBuro,
   ResultadoImport,
   ResumenAnalisis,
   ResumenMensual,
+  SaludCrediticia,
+  Tarjeta,
   Transaccion,
   Usuario,
 } from '../types';
 import { CATEGORIAS, FinanceApiError, TERMINOS_VERSION } from '../types';
 import { almacenLocal } from '../config';
 import {
+  BURO_DEMO,
   CLAVES_CATEGORIA,
+  CUENTAS_DEMO,
   ETIQUETAS_CATEGORIA,
   ETIQUETAS_PERFIL,
+  EVENTOS_DEMO,
   EVOLUCION_DEMO,
   FRECUENCIA_NUM,
   METAS_DEMO,
   MONEDAS_DEMO,
   PRESUPUESTOS_DEMO,
   PRIORIDAD_RECOMENDACION,
+  TARJETAS_DEMO,
   TEXTOS_RECOMENDACION,
   TIPO_CATEGORIA,
   TRANSACCIONES_DEMO,
@@ -63,6 +72,10 @@ interface EstadoMock {
   analisisGuardados: Analisis[];
   metas: MetaAhorro[];
   presupuestos: Omit<Presupuesto, 'gastado'>[];
+  cuentas: CuentaBancaria[];
+  tarjetas: Tarjeta[];
+  buro: RegistroBuro[];
+  eventos: EventoCalendario[];
   siguienteId: number;
 }
 
@@ -74,6 +87,10 @@ const estado: EstadoMock = {
   analisisGuardados: [],
   metas: [],
   presupuestos: [],
+  cuentas: [],
+  tarjetas: [],
+  buro: [],
+  eventos: [],
   siguienteId: 500,
 };
 
@@ -85,7 +102,9 @@ const MES_ANTERIOR = '2026-06';
  * app (movil) no borre lo que el usuario cargo. Clave versionada: si cambia la
  * forma de EstadoMock, subir a v2 y el estado viejo se descarta solo.
  */
-const CLAVE_ESTADO = 'financeai.mock.estado.v1';
+// v3: EstadoMock gano cuentas/tarjetas/buro (v2) y eventos (v3). Subir la version
+// descarta el respaldo viejo y re-siembra, en vez de dejar las pantallas vacias.
+const CLAVE_ESTADO = 'fintechvital.mock.estado.v3';
 
 /** Rehidratacion en curso; espera() la aguarda para no servir datos a medias. */
 let hidratacion: Promise<void> = Promise.resolve();
@@ -125,6 +144,14 @@ const redondear = (n: number, decimales = 3) => {
   const factor = 10 ** decimales;
   return Math.round(n * factor) / factor;
 };
+
+/** 8 codigos de respaldo de un solo uso (formato XXXX-XXXX). En la BD van hasheados. */
+function generarCodigosRespaldo(): string[] {
+  const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bloque = () =>
+    Array.from({ length: 4 }, () => alfabeto[Math.floor(Math.random() * alfabeto.length)]).join('');
+  return Array.from({ length: 8 }, () => `${bloque()}-${bloque()}`);
+}
 
 export function clasificarDescripcion(descripcion: string): { categoria: CategoriaSlug; confianza: number } {
   const texto = descripcion.toLowerCase();
@@ -284,6 +311,33 @@ function evaluarReglas(
     .slice(0, 5); // RN8
 }
 
+/**
+ * Re-renderiza los textos de un analisis GUARDADO al idioma actual. El motor
+ * persiste `codigo` + `parametros` (el texto es solo presentacion), asi que un
+ * analisis creado en es se lee en pt/en sin volver a calcularlo. Ver ADR-0009.
+ */
+function traducirAnalisis(analisis: Analisis, idioma: Idioma): Analisis {
+  if (analisis.idioma === idioma) return analisis;
+  const detalle = analisis.recomendaciones_detalle.map((rec) => {
+    let texto = TEXTOS_RECOMENDACION[rec.codigo]?.[idioma] ?? rec.texto;
+    for (const [clave, valor] of Object.entries(rec.parametros)) {
+      const legible =
+        clave === 'categoria'
+          ? (ETIQUETAS_CATEGORIA[valor as CategoriaSlug]?.[idioma] ?? String(valor))
+          : String(valor);
+      texto = texto.replaceAll(`{${clave}}`, legible);
+    }
+    return { ...rec, texto };
+  });
+  return {
+    ...analisis,
+    perfil_financiero: ETIQUETAS_PERFIL[analisis.perfil_codigo][idioma],
+    recomendaciones: detalle.map((rec) => rec.texto),
+    recomendaciones_detalle: detalle,
+    idioma,
+  };
+}
+
 function construirAnalisis(idioma: Idioma, id: string, fechaIso: string): Analisis {
   const usuario = exigirSesion();
   const transaccionesMes = estado.transacciones.filter(delMes);
@@ -359,6 +413,10 @@ function iniciarEstadoDemo(): void {
   estado.analisisGuardados = [];
   estado.metas = METAS_DEMO.map((meta) => ({ ...meta }));
   estado.presupuestos = PRESUPUESTOS_DEMO.map((presupuesto) => ({ ...presupuesto }));
+  estado.cuentas = CUENTAS_DEMO.map((cuenta) => ({ ...cuenta }));
+  estado.tarjetas = TARJETAS_DEMO.map((tarjeta) => ({ ...tarjeta, credito: tarjeta.credito ? { ...tarjeta.credito } : undefined }));
+  estado.buro = BURO_DEMO.map((registro) => ({ ...registro }));
+  estado.eventos = EVENTOS_DEMO.map((evento) => ({ ...evento }));
 }
 
 function iniciarEstadoVacio(email: string, moneda: Moneda, terminosVersion?: string): void {
@@ -371,7 +429,7 @@ function iniciarEstadoVacio(email: string, moneda: Moneda, terminosVersion?: str
     ingreso_mensual: 0,
     nivel_endeudamiento: 0,
     frecuencia_ahorro: 'nula',
-    totp_activo: false,
+    totp_activo: false, // pendiente: el asistente de registro lo activa (2FA obligatorio)
     terminos_version: terminosVersion ?? TERMINOS_VERSION,
     terminos_aceptados_en: new Date().toISOString(),
   };
@@ -380,6 +438,10 @@ function iniciarEstadoVacio(email: string, moneda: Moneda, terminosVersion?: str
   estado.analisisGuardados = [];
   estado.metas = [];
   estado.presupuestos = [];
+  estado.cuentas = [];
+  estado.tarjetas = [];
+  estado.buro = [];
+  estado.eventos = [];
 }
 
 /** Gasto por categoría de un mes ('YYYY-MM'), solo gastos. */
@@ -439,15 +501,28 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
       };
     },
 
-    async registro(email, password, monedaPrincipal, terminosVersion) {
+    async registro(alta) {
       await espera();
-      if (password.length < 10) {
+      if (alta.password.length < 10) {
         throw error(422, 'VALIDACION_ENTRADA', 'La password debe tener al menos 10 caracteres');
       }
-      if (email === USUARIO_DEMO.email) {
+      if (alta.email === USUARIO_DEMO.email) {
         throw error(409, 'EMAIL_YA_REGISTRADO', 'Ese email ya esta registrado');
       }
-      iniciarEstadoVacio(email, monedaPrincipal, terminosVersion);
+      iniciarEstadoVacio(alta.email, alta.moneda_principal, alta.terminos_version);
+      // Datos personales del alta (USUARIOS los exige/soporta)
+      if (estado.usuario) {
+        const nombre = alta.nombre.trim();
+        estado.usuario = {
+          ...estado.usuario,
+          nombre: nombre || estado.usuario.nombre,
+          apellido: alta.apellido.trim() || undefined,
+          fecha_nacimiento: alta.fecha_nacimiento || undefined,
+          genero: alta.genero,
+          telefono: alta.telefono?.trim() || undefined,
+          ciudad: alta.ciudad?.trim() || undefined,
+        };
+      }
       persistir();
       return exigirSesion();
     },
@@ -476,7 +551,7 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
       return {
         secreto: 'MOCKBASE32SECRETXYZ234',
         otpauth_uri:
-          'otpauth://totp/financeAI:demo?secret=MOCKBASE32SECRETXYZ234&issuer=financeAI',
+          'otpauth://totp/FintechVital:demo?secret=MOCKBASE32SECRETXYZ234&issuer=FintechVital',
       };
     },
 
@@ -488,7 +563,14 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
       }
       estado.usuario = { ...usuario, totp_activo: true };
       persistir();
-      return { codigos_respaldo: ['8H2K-91LM', 'C3PD-77QX', 'ZR4T-05AF', 'JW6Y-33NE'] };
+      return { codigos_respaldo: generarCodigosRespaldo() };
+    },
+
+    async regenerarCodigos2fa() {
+      await espera();
+      exigirSesion();
+      // 2FA obligatorio: no se desactiva; a lo sumo se regeneran los codigos de respaldo.
+      return { codigos_respaldo: generarCodigosRespaldo() };
     },
 
     async desactivar2fa(password) {
@@ -517,11 +599,12 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
     async transacciones(filtros: FiltrosTransacciones = {}) {
       await espera();
       exigirSesion();
-      const { desde, hasta, categoria, pagina = 1, tam = 50 } = filtros;
+      const { desde, hasta, categoria, tarjeta, pagina = 1, tam = 50 } = filtros;
       const filtradas = estado.transacciones
         .filter((transaccion) => (desde ? transaccion.fecha >= desde : true))
         .filter((transaccion) => (hasta ? transaccion.fecha <= hasta : true))
         .filter((transaccion) => (categoria ? transaccion.categoria === categoria : true))
+        .filter((transaccion) => (tarjeta ? transaccion.id_tarjeta === tarjeta : true))
         .sort((a, b) => b.fecha.localeCompare(a.fecha));
       const inicio = (pagina - 1) * tam;
       return {
@@ -639,7 +722,7 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
     async obtenerAnalisis(id) {
       await espera();
       const guardado = estado.analisisGuardados.find((analisis) => analisis.id === id);
-      if (guardado) return guardado;
+      if (guardado) return traducirAnalisis(guardado, idioma);
       const indice = estado.evolucion.findIndex((punto) => `a-${punto.fecha}` === id);
       if (indice === -1) throw error(404, 'NO_ENCONTRADO', 'El analisis no existe');
       return analisisDesdePunto(estado.evolucion[indice], idioma, indice);
@@ -648,7 +731,9 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
     async ultimoAnalisis() {
       await espera();
       exigirSesion();
-      if (estado.analisisGuardados.length > 0) return estado.analisisGuardados[0];
+      if (estado.analisisGuardados.length > 0) {
+        return traducirAnalisis(estado.analisisGuardados[0], idioma);
+      }
       if (estado.transacciones.filter(delMes).length < 3) return null;
       const analisis = construirAnalisis(idioma, 'a-actual', `${MES_ANALISIS}-14T09:30:00Z`);
       estado.analisisGuardados = [analisis];
@@ -689,6 +774,139 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
       return [...MONEDAS_DEMO];
     },
 
+    async cuentas() {
+      await espera(200);
+      exigirSesion();
+      return estado.cuentas.map((cuenta) => ({ ...cuenta }));
+    },
+
+    async tarjetas() {
+      await espera(200);
+      exigirSesion();
+      return estado.tarjetas.map((tarjeta) => ({
+        ...tarjeta,
+        credito: tarjeta.credito ? { ...tarjeta.credito } : undefined,
+      }));
+    },
+
+    async saludCrediticia() {
+      await espera();
+      const usuario = exigirSesion();
+      const historial = [...estado.buro].sort((a, b) => a.fecha.localeCompare(b.fecha));
+      const actual = historial[historial.length - 1] ?? {
+        fecha: new Date().toISOString().slice(0, 10),
+        score_crediticio: 0,
+        dias_atraso: 0,
+        monto_adeudado: 0,
+      };
+      return {
+        moneda: usuario.moneda_principal,
+        actual: { ...actual },
+        historial: historial.map((registro) => ({ ...registro })),
+      } satisfies SaludCrediticia;
+    },
+
+    async crearTarjeta(alta) {
+      await espera();
+      exigirSesion();
+      if (!/^\d{4}$/.test(alta.ultimos4)) {
+        throw error(422, 'VALIDACION_ENTRADA', 'Los ultimos 4 digitos son invalidos');
+      }
+      const nueva: Tarjeta = {
+        id: `tar-${estado.siguienteId++}`,
+        id_cuenta: alta.id_cuenta,
+        ultimos4: alta.ultimos4,
+        tipo: alta.tipo,
+        red_pago: alta.red_pago,
+        fecha_vencimiento: alta.fecha_vencimiento,
+        estado: alta.estado ?? 'activa',
+        etiqueta: alta.etiqueta?.trim() || undefined,
+        credito:
+          alta.tipo === 'credito' && alta.credito
+            ? { ...alta.credito, saldo_utilizado: 0 }
+            : undefined,
+      };
+      estado.tarjetas = [...estado.tarjetas, nueva];
+      persistir();
+      return { ...nueva, credito: nueva.credito ? { ...nueva.credito } : undefined };
+    },
+
+    async actualizarTarjeta(id, cambios) {
+      await espera();
+      exigirSesion();
+      const tarjeta = estado.tarjetas.find((t) => t.id === id);
+      if (!tarjeta) throw error(404, 'NO_ENCONTRADO', 'La tarjeta no existe');
+      if (cambios.id_cuenta !== undefined) tarjeta.id_cuenta = cambios.id_cuenta;
+      if (cambios.ultimos4 !== undefined) tarjeta.ultimos4 = cambios.ultimos4;
+      if (cambios.tipo !== undefined) tarjeta.tipo = cambios.tipo;
+      if (cambios.red_pago !== undefined) tarjeta.red_pago = cambios.red_pago;
+      if (cambios.fecha_vencimiento !== undefined) tarjeta.fecha_vencimiento = cambios.fecha_vencimiento;
+      if (cambios.estado !== undefined) tarjeta.estado = cambios.estado;
+      if (cambios.etiqueta !== undefined) tarjeta.etiqueta = cambios.etiqueta.trim() || undefined;
+      if (tarjeta.tipo === 'credito') {
+        const base = cambios.credito ?? tarjeta.credito ?? { limite_credito: 0, dia_corte: 1, dia_pago: 1 };
+        tarjeta.credito = {
+          limite_credito: base.limite_credito,
+          dia_corte: base.dia_corte,
+          dia_pago: base.dia_pago,
+          saldo_utilizado: tarjeta.credito?.saldo_utilizado ?? 0,
+        };
+      } else {
+        tarjeta.credito = undefined;
+      }
+      persistir();
+      return { ...tarjeta, credito: tarjeta.credito ? { ...tarjeta.credito } : undefined };
+    },
+
+    async eliminarTarjeta(id) {
+      await espera();
+      exigirSesion();
+      estado.tarjetas = estado.tarjetas.filter((t) => t.id !== id);
+      persistir();
+    },
+
+    async eventos() {
+      await espera(150);
+      exigirSesion();
+      return estado.eventos.map((evento) => ({ ...evento }));
+    },
+
+    async crearEvento(alta) {
+      await espera(200);
+      exigirSesion();
+      if (!alta.titulo.trim()) throw error(422, 'VALIDACION_ENTRADA', 'El titulo no puede estar vacio');
+      const nuevo: EventoCalendario = {
+        id: `ev-${estado.siguienteId++}`,
+        fecha: alta.fecha,
+        titulo: alta.titulo.trim(),
+        tipo: alta.tipo,
+        monto: alta.monto,
+      };
+      estado.eventos = [...estado.eventos, nuevo];
+      persistir();
+      return { ...nuevo };
+    },
+
+    async actualizarEvento(id, cambios) {
+      await espera(200);
+      exigirSesion();
+      const evento = estado.eventos.find((e) => e.id === id);
+      if (!evento) throw error(404, 'NO_ENCONTRADO', 'El evento no existe');
+      if (cambios.fecha !== undefined) evento.fecha = cambios.fecha;
+      if (cambios.titulo !== undefined) evento.titulo = cambios.titulo.trim();
+      if (cambios.tipo !== undefined) evento.tipo = cambios.tipo;
+      if (cambios.monto !== undefined) evento.monto = cambios.monto;
+      persistir();
+      return { ...evento };
+    },
+
+    async eliminarEvento(id) {
+      await espera(200);
+      exigirSesion();
+      estado.eventos = estado.eventos.filter((e) => e.id !== id);
+      persistir();
+    },
+
     async comparacionMensual() {
       await espera();
       exigirSesion();
@@ -717,7 +935,7 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
         moneda: usuario.moneda_principal,
         fecha_limite: alta.fecha_limite,
         icono: alta.icono ?? 'meta',
-        color: alta.color ?? '#12564a',
+        color: alta.color ?? '#414c5a',
       };
       estado.metas = [...estado.metas, nueva];
       persistir();

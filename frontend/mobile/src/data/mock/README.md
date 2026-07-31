@@ -16,7 +16,7 @@ via `@/data`. Si un import de `mock/` aparece fuera de `src/data`, es un bug.
 
 ## Usuaria demo
 
-`demo@financeai.dev` / cualquier password de 10+ caracteres.
+`demo@fintechvital.dev` / cualquier password de 10+ caracteres.
 Cualquier otro email crea una cuenta vacia (sirve para probar estados vacios
 y el onboarding).
 
@@ -24,7 +24,7 @@ y el onboarding).
 
 La "BD" en memoria se respalda entera en el almacenamiento del cliente
 (`localStorage` en web, `AsyncStorage` en movil) bajo la clave
-`financeai.mock.estado.v1`. Por eso recargar la pagina o reabrir la app NO
+`fintechvital.mock.estado.v1`. Por eso recargar la pagina o reabrir la app NO
 borra lo cargado, y volver a iniciar sesion con el mismo email recupera los
 datos. Si cambia la forma de `EstadoMock`, subir la clave a `v2` (el respaldo
 viejo se descarta solo). Eliminar cuenta borra tambien el respaldo. Con la API

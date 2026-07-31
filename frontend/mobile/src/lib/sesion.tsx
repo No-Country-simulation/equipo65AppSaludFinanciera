@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDataSource, setAuthTokens, type Usuario } from '@/data';
 import { useI18n } from '@/i18n';
 
-const CLAVE_SESION = 'financeai.sesion';
+const CLAVE_SESION = 'fintechvital.sesion';
 
 interface ContextoSesion {
   usuario: Usuario | null;
