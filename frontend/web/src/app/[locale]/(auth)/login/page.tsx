@@ -69,6 +69,9 @@ export default function PaginaLogin() {
         </Campo>
       ) : (
         <>
+          {/* En modo mock los campos NO son obligatorios: dejarlos en blanco es
+              el atajo para entrar como el usuario demo (ver mockDataSource).
+              Contra la API real vuelven a ser obligatorios. */}
           <Campo etiqueta={t('email')}>
             <input
               className={claseInput}
@@ -77,7 +80,7 @@ export default function PaginaLogin() {
               onChange={(evento) => setEmail(evento.target.value)}
               placeholder="demo@fintechvital.dev"
               autoComplete="email"
-              required
+              required={DATA_SOURCE !== 'mock'}
             />
           </Campo>
           <Campo etiqueta={t('password')} ayuda={t('demoAyuda')}>
@@ -87,7 +90,7 @@ export default function PaginaLogin() {
               value={password}
               onChange={(evento) => setPassword(evento.target.value)}
               autoComplete="current-password"
-              required
+              required={DATA_SOURCE !== 'mock'}
             />
           </Campo>
         </>

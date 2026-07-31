@@ -477,17 +477,28 @@ export function crearMockDataSource(idioma: Idioma): FinanceDataSource {
   return {
     async login(email, password, codigoTotp) {
       await espera();
-      if (password.length < 10) {
+      // ATAJO DE DESARROLLO (solo mock, se va junto con esta carpeta al integrar):
+      // con el email EN BLANCO se entra directo como el usuario demo, sin
+      // password ni 2FA. Evita teclear correo + 10 caracteres + 6 digitos en cada
+      // recarga durante el desarrollo.
+      // El flujo REAL queda intacto: si escribes un email, se sigue exigiendo
+      // password de 10+ y codigo TOTP. Eso es lo que se le enseña al jurado
+      // (2FA obligatorio, ADR-0013) y no se puede perder.
+      const atajoDemo = email.trim() === '';
+      const correo = atajoDemo ? USUARIO_DEMO.email : email;
+
+      if (!atajoDemo && password.length < 10) {
         throw error(401, 'CREDENCIALES_INVALIDAS', 'Email o password incorrectos');
       }
-      if (!estado.usuario || estado.usuario.email !== email) {
+      if (!estado.usuario || estado.usuario.email !== correo) {
         // Volver a entrar con el mismo email recupera los datos respaldados
-        if (!(await restaurarEstado(email))) {
-          if (email === USUARIO_DEMO.email) iniciarEstadoDemo();
-          else iniciarEstadoVacio(email, 'USD');
+        if (!(await restaurarEstado(correo))) {
+          if (correo === USUARIO_DEMO.email) iniciarEstadoDemo();
+          else iniciarEstadoVacio(correo, 'USD');
         }
       }
-      const yaActivo = estado.usuario?.email === email && estado.usuario.totp_activo;
+      const yaActivo =
+        !atajoDemo && estado.usuario?.email === correo && estado.usuario.totp_activo;
       if (yaActivo && !codigoTotp) {
         return { access_token: '', refresh_token: '', expira_en: 0, requiere_2fa: true };
       }
