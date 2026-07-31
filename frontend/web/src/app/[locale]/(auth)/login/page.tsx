@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FinanceApiError } from '@/data';
+import { DATA_SOURCE, FinanceApiError } from '@/data';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useSesion } from '@/lib/sesion';
 import { useDataSource } from '@/lib/useDatos';
@@ -36,7 +36,8 @@ export default function PaginaLogin() {
         access: sesion.access_token,
         refresh: sesion.refresh_token,
       });
-      router.replace('/panel');
+      // Adopta el idioma preferido del usuario (cross-device) al iniciar sesion.
+      router.replace('/panel', { locale: usuario.idioma });
     } catch (causa) {
       setError(causa instanceof FinanceApiError ? causa.message : String(causa));
     } finally {
@@ -56,7 +57,7 @@ export default function PaginaLogin() {
       </header>
 
       {pide2fa ? (
-        <Campo etiqueta={t('codigo')}>
+        <Campo etiqueta={t('codigo')} ayuda={DATA_SOURCE === 'mock' ? t('totpDemoAyuda') : undefined}>
           <input
             className={`${claseInput} cifra text-center text-2xl tracking-[0.4em]`}
             value={codigoTotp}
@@ -74,7 +75,7 @@ export default function PaginaLogin() {
               type="email"
               value={email}
               onChange={(evento) => setEmail(evento.target.value)}
-              placeholder="demo@financeai.dev"
+              placeholder="demo@fintechvital.dev"
               autoComplete="email"
               required
             />
