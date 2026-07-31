@@ -55,11 +55,13 @@ export function DonutGastos({
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[11px] uppercase tracking-widest text-muted">
+        {/* El texto vive dentro del hueco de la dona (innerRadius 72%): el padding
+            lo acota para que la cifra nunca invada el anillo. */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+          <span className="text-[10px] uppercase leading-tight tracking-widest text-muted">
             {etiquetaTotal}
           </span>
-          <span className="cifra text-2xl font-semibold text-ink">
+          <span className="cifra text-lg font-semibold leading-tight text-ink tabular-nums">
             {formatearMoneda(total, moneda, locale)}
           </span>
         </div>
