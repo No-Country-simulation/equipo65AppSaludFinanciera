@@ -45,7 +45,7 @@
     "entrando": "Entrando…",
     "sinCuenta": "Não tem conta?",
     "crearCuenta": "Criar conta",
-    "demoAyuda": "Demo: demo@fintechvital.dev com qualquer senha de 10+ caracteres",
+    "demoAyuda": "Demo: deixe os dois campos em branco e toque em Entrar. Ou demo@fintechvital.dev com qualquer senha de 10+ caracteres (vai pedir o código 2FA)",
     "totpTitulo": "Verificação em duas etapas",
     "totpAyuda": "Digite o código de 6 dígitos do seu app autenticador",
     "totpDemoAyuda": "Demo: digite qualquer código de 6 dígitos",

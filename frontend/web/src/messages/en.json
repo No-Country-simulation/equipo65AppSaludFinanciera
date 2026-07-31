@@ -45,7 +45,7 @@
     "entrando": "Signing in…",
     "sinCuenta": "No account yet?",
     "crearCuenta": "Create account",
-    "demoAyuda": "Demo: demo@fintechvital.dev with any password of 10+ characters",
+    "demoAyuda": "Demo: leave both fields blank and press Sign in. Or demo@fintechvital.dev with any password of 10+ characters (it will ask for the 2FA code)",
     "totpTitulo": "Two-step verification",
     "totpAyuda": "Enter the 6-digit code from your authenticator app",
     "totpDemoAyuda": "Demo: enter any 6-digit code",
