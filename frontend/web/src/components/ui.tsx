@@ -43,7 +43,7 @@ export function Boton({
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variante?: VarianteBoton }) {
   const estilos: Record<VarianteBoton, string> = {
     primario:
-      'bg-accent text-white hover:bg-accent-strong shadow-[0_1px_2px_rgba(12,42,36,0.35),0_8px_20px_-10px_rgba(18,86,74,0.6)] disabled:opacity-50',
+      'bg-accent text-sobre-accent hover:bg-accent-strong shadow-[0_1px_2px_rgba(27,38,46,0.35),0_8px_20px_-10px_rgba(65,76,90,0.6)] disabled:opacity-50',
     fantasma:
       'border border-line bg-card/60 text-ink hover:border-accent hover:bg-card disabled:opacity-50',
     peligro: 'bg-risk/10 text-risk hover:bg-risk/20 disabled:opacity-50',
@@ -75,7 +75,7 @@ export function Campo({
 }
 
 export const claseInput =
-  'w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none transition-all duration-200 focus:border-accent focus:ring-4 focus:ring-mint/15 placeholder:text-muted/60';
+  'w-full rounded-2xl border border-line bg-card px-4 py-3 text-sm text-ink outline-none transition-all duration-200 focus:border-accent focus:ring-4 focus:ring-mint/15 placeholder:text-muted/60';
 
 /** Perfil SIEMPRE con icono + etiqueta, nunca solo color. */
 export function ChipPerfil({

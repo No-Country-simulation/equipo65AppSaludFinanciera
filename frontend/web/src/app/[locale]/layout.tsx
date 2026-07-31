@@ -19,7 +19,7 @@ const bricolage = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: 'financeAI',
+  title: 'Fintech Vital',
   description: 'Tu comportamiento financiero, claro y accionable',
 };
 
@@ -38,7 +38,21 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound();
 
   return (
-    <html lang={locale} className={`${hanken.variable} ${bricolage.variable}`}>
+    <html
+      lang={locale}
+      className={`${hanken.variable} ${bricolage.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Pinta el tema antes del primer render para que no parpadee en claro. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('fintechvital.tema');" +
+              "document.documentElement.dataset.theme=(t==='oscuro')?'dark':'light';}catch(e){}})();",
+          }}
+        />
+      </head>
       <body className="min-h-screen antialiased">
         <NextIntlClientProvider>
           <SesionProvider>

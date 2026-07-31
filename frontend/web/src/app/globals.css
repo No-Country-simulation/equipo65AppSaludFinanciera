@@ -1,26 +1,40 @@
 @import "tailwindcss";
 
 /* ============================================================
-   financeAI - Sistema de diseño "Meridian"
-   Private banking cálido: verde pino profundo + arena + menta.
+   Fintech Vital - Sistema de diseño "Meridian"
+   Derivado del imagotipo: pizarra (#414c5a) + lima (#88bd24).
    Tipos: Bricolage Grotesque (display/cifras) · Hanken Grotesk (UI).
+
+   REGLA DE USO DEL LIMA (medida, no opinable): sobre blanco el lima da
+   2.25:1 de contraste - NO llega al 4.5:1 que pide WCAG AA. Por eso en
+   tema claro el lima es SOLO relleno decorativo (barras, iconos grandes,
+   fondos); para texto en lima se usa --lima-texto (5.69:1). Lo
+   interactivo (botones, enlaces) va en pizarra --accent (8.73:1).
+   En tema oscuro se invierte: el lima luce 7.79:1 y sí es el acento.
    ============================================================ */
 :root {
-  /* Neutrales cálidos */
-  --canvas: #e9e3d7;        /* fondo de la app (arena) */
-  --canvas-2: #f2eee4;      /* variante clara */
-  --card: #fffefb;          /* superficie de tarjeta */
-  --ink: #191509;           /* tinta cálida casi negra */
-  --ink-soft: #4b463a;
-  --muted: #8b8571;
-  --line: #e2dccb;          /* hairline */
+  /* Neutrales fríos (familia de la pizarra del logo) */
+  --canvas: #eef1f4;        /* fondo de la app */
+  --canvas-2: #f7f9fa;      /* variante clara */
+  --card: #ffffff;          /* superficie de tarjeta */
+  --ink: #1b262e;           /* tinta: pizarra muy oscura */
+  --ink-soft: #44525d;
+  --muted: #6d7c88;
+  --line: #dce3e8;          /* hairline */
 
-  /* Marca - verde pino + menta */
-  --accent: #12564a;        /* primario (pino) */
-  --accent-strong: #0c3c33;
-  --mint: #16b98a;          /* acento vivo */
-  --hero-a: #0c2a24;        /* gradiente del hero (oscuro) */
-  --hero-b: #14453a;
+  /* Marca - pizarra + lima (tomados del imagotipo) */
+  --accent: #414c5a;        /* primario (pizarra) - interactivo */
+  --accent-strong: #2b3640;
+  /* Color del TEXTO que va ENCIMA de --accent. No es siempre blanco: en oscuro
+     el accent es lima y el blanco encima daria 1.98:1. Usar `text-sobre-accent`
+     junto a `bg-accent`, nunca `text-white`. */
+  --sobre-accent: #ffffff;  /* blanco sobre pizarra: 8.73:1 */
+  --lima: #88bd24;          /* lima de marca - RELLENO, nunca texto */
+  --lima-suave: #9fc640;    /* brillo del logo */
+  --lima-texto: #527016;    /* lima legible como texto (5.69:1) */
+  --mint: var(--lima);      /* alias heredado: clases text-mint/bg-mint */
+  --hero-a: #1b262e;        /* gradiente del hero (oscuro) */
+  --hero-b: #33414c;
 
   /* Estatus de perfil (icono + etiqueta SIEMPRE, nunca solo color) */
   --ok: #12a566;
@@ -47,6 +61,53 @@
   --radio: 24px;
 }
 
+/* ------------------------------------------------------------------
+   Tema oscuro. Se activa con data-theme="dark" en <html> (lo pone el
+   script anti-parpadeo del layout + BotonTema). Misma paleta que la app
+   movil (constants/tema.ts -> TemaOscuro) para que web y movil coincidan.
+   ------------------------------------------------------------------ */
+:root[data-theme='dark'] {
+  --canvas: #0f1a20;
+  --canvas-2: #172630;
+  --card: #1b2b35;
+  --ink: #e8edf0;
+  --ink-soft: #b4c2cb;
+  --muted: #8698a4;
+  --line: #2c3d48;
+
+  /* Sobre fondo oscuro el lima sí pasa AA (7.79:1), así que toma el mando. */
+  --accent: #9fc640;
+  --accent-strong: #88bd24;
+  --sobre-accent: #0f1a20;  /* tinta oscura sobre lima: 8.94:1 */
+  --lima: #9fc640;
+  --lima-suave: #b4d45f;
+  --lima-texto: #9fc640;
+  --mint: var(--lima);
+  --hero-a: #0f1a20;
+  --hero-b: #1e2f3a;
+
+  --ok: #12a566;
+  --ok-text: #20d68a;
+  --warn: #f2a30d;
+  --warn-bg: #f2a30d;
+  --risk: #e55c4f;
+
+  --serie-2: #17a317;
+  --serie-resto: #8a94a0;
+
+  --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sombra-md: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 30px -14px rgba(0, 0, 0, 0.7);
+  --sombra-lg: 0 2px 4px rgba(0, 0, 0, 0.5), 0 24px 60px -24px rgba(0, 0, 0, 0.85);
+}
+
+/* El grano del shell se invierte: puntos claros sobre fondo oscuro. */
+:root[data-theme='dark'] .fondo-papel {
+  background-image:
+    radial-gradient(120% 90% at 8% -10%, rgba(136, 189, 36, 0.10), transparent 60%),
+    radial-gradient(100% 80% at 110% 0%, rgba(159, 198, 64, 0.05), transparent 55%),
+    radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+}
+
 @theme inline {
   --color-canvas: var(--canvas);
   --color-canvas-2: var(--canvas-2);
@@ -57,6 +118,10 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
+  --color-sobre-accent: var(--sobre-accent);
+  --color-lima: var(--lima);
+  --color-lima-suave: var(--lima-suave);
+  --color-lima-texto: var(--lima-texto);
   --color-mint: var(--mint);
   --color-ok: var(--ok);
   --color-ok-text: var(--ok-text);
@@ -82,9 +147,34 @@ body {
   letter-spacing: -0.006em;
 }
 
+/* En claro el accent es pizarra (texto blanco encima, 8.73:1); en oscuro el
+   accent es lima y el blanco encima daría 2.25:1, así que se invierte. */
 ::selection {
   background: var(--accent);
   color: #fff;
+}
+:root[data-theme='dark'] ::selection {
+  color: #0f1a20;
+}
+
+/* Las <option> son un widget nativo del SO: no heredan el tema del <select>, asi
+   que en modo oscuro se veian casi transparentes. Se les fija fondo y color. */
+option {
+  background-color: var(--card);
+  color: var(--ink);
+}
+
+/* Variantes de la marca segun tema. Se resuelve en CSS y no en React porque
+   el tema se pinta en <html> antes de hidratar (ver el script del layout);
+   decidirlo en JS haria parpadear el logo en cada carga. */
+.solo-oscuro {
+  display: none;
+}
+:root[data-theme='dark'] .solo-claro {
+  display: none;
+}
+:root[data-theme='dark'] .solo-oscuro {
+  display: block;
 }
 
 /* Titulares y cifras en Bricolage Grotesque */
@@ -102,9 +192,9 @@ body {
 .fondo-papel {
   background-color: var(--canvas);
   background-image:
-    radial-gradient(120% 90% at 8% -10%, rgba(18, 86, 74, 0.06), transparent 60%),
-    radial-gradient(100% 80% at 110% 0%, rgba(242, 163, 13, 0.05), transparent 55%),
-    radial-gradient(rgba(25, 21, 9, 0.035) 1px, transparent 1px);
+    radial-gradient(120% 90% at 8% -10%, rgba(136, 189, 36, 0.08), transparent 60%),
+    radial-gradient(100% 80% at 110% 0%, rgba(65, 76, 90, 0.06), transparent 55%),
+    radial-gradient(rgba(27, 38, 46, 0.04) 1px, transparent 1px);
   background-size: auto, auto, 22px 22px;
 }
 

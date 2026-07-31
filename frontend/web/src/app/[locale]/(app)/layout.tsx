@@ -5,33 +5,35 @@ import { useTranslations } from 'next-intl';
 import { DATA_SOURCE } from '@/data';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { useSesion } from '@/lib/sesion';
+import { BotonTema } from '@/components/BotonTema';
 import { SelectorIdioma } from '@/components/SelectorIdioma';
 import { Icono, type NombreIcono } from '@/components/Icono';
+import { Logo } from '@/components/Logo';
 
 const RUTAS: { href: string; clave: string; icono: NombreIcono }[] = [
   { href: '/panel', clave: 'panel', icono: 'panel' },
   { href: '/movimientos', clave: 'movimientos', icono: 'movimientos' },
+  { href: '/tarjetas', clave: 'tarjetas', icono: 'tarjeta' },
+  { href: '/credito', clave: 'credito', icono: 'credito' },
   { href: '/presupuestos', clave: 'presupuestos', icono: 'presupuestos' },
   { href: '/metas', clave: 'metas', icono: 'metas' },
   { href: '/analisis', clave: 'analisis', icono: 'analisis' },
   { href: '/perfil', clave: 'perfil', icono: 'perfil' },
 ];
 
-const CLAVE_COLAPSO = 'financeai.sidebar.colapsada';
+const CLAVE_COLAPSO = 'fintechvital.sidebar.colapsada';
 
 function Marca({ compacta = false }: { compacta?: boolean }) {
+  // La sidebar y la cabecera movil son gradiente oscuro en AMBOS temas, por eso
+  // el logo va fijo en negativo y no en `auto`.
   if (compacta) {
     return (
-      <span className="display grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-lg font-bold text-white">
-        f<span className="text-mint">A</span>
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/10">
+        <Logo variante="isotipo" alto={20} />
       </span>
     );
   }
-  return (
-    <span className="display text-2xl font-bold tracking-tight">
-      finance<span className="text-mint">AI</span>
-    </span>
-  );
+  return <Logo alto={42} fondo="oscuro" />;
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -103,14 +105,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div
           aria-hidden
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(160deg, var(--hero-b) 0%, var(--hero-a) 55%, #081c18 100%)' }}
+          style={{ background: 'linear-gradient(160deg, var(--hero-b) 0%, var(--hero-a) 55%, #0a1219 100%)' }}
         />
         <div
           aria-hidden
           className="absolute inset-0 opacity-70"
           style={{
             backgroundImage:
-              'radial-gradient(90% 50% at 15% -5%, rgba(22,185,138,0.16), transparent 60%), radial-gradient(70% 40% at 100% 105%, rgba(242,163,13,0.10), transparent 55%)',
+              'radial-gradient(90% 50% at 15% -5%, rgba(136,189,36,0.18), transparent 60%), radial-gradient(70% 40% at 100% 105%, rgba(159,198,64,0.10), transparent 55%)',
           }}
         />
 
@@ -157,7 +159,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Icono nombre="chevron-der" className={`h-3.5 w-3.5 text-white/50 transition-transform ${cuentas ? 'rotate-90' : ''}`} />
             </button>
             {cuentas ? (
-              <div className="absolute inset-x-3 top-full z-10 mt-1 rounded-2xl border border-white/10 bg-[#0b241e] p-1.5 shadow-xl">
+              <div className="absolute inset-x-3 top-full z-10 mt-1 rounded-2xl border border-white/10 bg-[#1b262e] p-1.5 shadow-xl">
                 <div className="rounded-xl bg-white/8 px-3 py-2 text-xs font-semibold text-white">
                   {tPanel('cuentaPrincipal')} · {usuario.moneda_principal}
                 </div>
@@ -213,8 +215,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="space-y-3 border-t border-white/10 px-4 py-4">
-            <div className={colapsada ? 'lg:hidden' : ''}>
+            <div className={`flex items-center gap-2 ${colapsada ? 'lg:hidden' : ''}`}>
               <SelectorIdioma />
+              <BotonTema claro />
             </div>
             <div className={`flex items-center gap-2 ${colapsada ? 'lg:justify-center' : 'justify-between'}`}>
               <span className={`truncate text-xs text-white/55 ${colapsada ? 'lg:hidden' : ''}`}>{usuario.email}</span>
@@ -266,6 +269,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Marca />
         </div>
         <SelectorIdioma compacto />
+        <BotonTema claro />
       </header>
 
       {/* ── Contenido ──────────────────────────────────────────────── */}

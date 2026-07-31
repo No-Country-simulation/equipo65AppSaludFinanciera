@@ -6,6 +6,8 @@ export type NombreIcono =
   // navegación
   | 'panel'
   | 'movimientos'
+  | 'tarjeta'
+  | 'credito'
   | 'presupuestos'
   | 'metas'
   | 'analisis'
@@ -38,11 +40,20 @@ export type NombreIcono =
   | 'telefono'
   | 'laptop'
   | 'regalo'
-  | 'salud';
+  | 'salud'
+  // medios de operacion (TRANSACCIONES.medio_operacion)
+  | 'web'
+  | 'cajero'
+  | 'sucursal'
+  // tema claro/oscuro
+  | 'sol'
+  | 'luna';
 
 const TRAZOS: Record<NombreIcono, string> = {
   panel: 'M4 5h7v7H4zM13 5h7v4h-7zM13 12h7v7h-7zM4 15h7v4H4z',
   movimientos: 'M4 7h16M4 12h16M4 17h10',
+  tarjeta: 'M3 6h18a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V7a1 1 0 011-1zM2 10h20M6 15h4',
+  credito: 'M4 14a8 8 0 0116 0M12 14l3.5-3.5M12 14h.01M7 19h10',
   presupuestos: 'M3 10h18M3 10l2-5h14l2 5M4 10v9h16v-9M8 14h.01M12 14h4',
   metas: 'M12 3v9m0 0l3-3m-3 3L9 9M5 21h14a1 1 0 001-1v-5a8 8 0 10-16 0v5a1 1 0 001 1z',
   analisis: 'M4 19l5-6 4 3 7-9M4 19h16',
@@ -73,6 +84,11 @@ const TRAZOS: Record<NombreIcono, string> = {
   laptop: 'M4 5.5h16v10H4zM2 19.5h20',
   regalo: 'M20 12v9H4v-9M2 8h20v4H2zM12 8v13M12 8S9.5 3.5 7 5.5 8 8 12 8zM12 8s2.5-4.5 5-2.5S16 8 12 8z',
   salud: 'M12 20.5s-7-4.3-9.3-8.4C1.2 9.3 3 6 6.2 6c2 0 3.4 1.3 5.3 3.3C13.4 7.3 14.8 6 16.8 6 20 6 21.8 9.3 20.3 12.1 18 16.2 12 20.5 12 20.5z',
+  web: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18',
+  cajero: 'M6 3h12a1 1 0 011 1v13H5V4a1 1 0 011-1zM9 8h6M8 13h8M8 20h8',
+  sucursal: 'M3 21h18M4 9l8-4 8 4M6 9v12M18 9v12M10 9v12M14 9v12',
+  sol: 'M12 17a5 5 0 100-10 5 5 0 000 10zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  luna: 'M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z',
 };
 
 export function Icono({
