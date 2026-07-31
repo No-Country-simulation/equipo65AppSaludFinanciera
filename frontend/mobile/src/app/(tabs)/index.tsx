@@ -3,7 +3,7 @@ import { Alert, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, 
 import { router, type Href } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { Analisis, Categoria, CategoriaSlug, ComparacionMensual, MetaAhorro, Presupuesto, Transaccion } from '@/data';
+import type { Analisis, Categoria, CategoriaSlug, ComparacionMensual, EventoCalendario, MetaAhorro, Presupuesto, Tarjeta as TarjetaBanco, Transaccion } from '@/data';
 import { CalendarioPagos } from '@/components/calendario';
 import { Colores, Espacio, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
@@ -18,6 +18,7 @@ import { progresoMeta, TarjetaMeta } from '@/components/metas';
 import { BarraPresupuesto, estadoPresupuesto } from '@/components/presupuestos';
 import { SelectorIdioma } from '@/components/SelectorIdioma';
 import { Aparece, Boton, ChipPerfil, CifraAnimada, EstadoCarga, Hero, Tarjeta, TituloTarjeta } from '@/components/ui';
+import { Logo } from '@/components/Logo';
 
 interface DatosInicio {
   analisis: Analisis | null;
@@ -26,6 +27,8 @@ interface DatosInicio {
   metas: MetaAhorro[];
   presupuestos: Presupuesto[];
   transacciones: Transaccion[];
+  tarjetas: TarjetaBanco[];
+  eventos: EventoCalendario[];
 }
 
 const MES_ACTUAL = new Date().toISOString().slice(0, 7);
@@ -41,15 +44,17 @@ export default function PantallaInicio() {
   const [buscador, setBuscador] = useState(false); // solo interfaz (F9)
 
   const { datos, cargando, error, recargar } = useDatos<DatosInicio>(async (fuente) => {
-    const [analisis, categorias, comparacion, metas, presupuestos, pagina] = await Promise.all([
+    const [analisis, categorias, comparacion, metas, presupuestos, pagina, tarjetas, eventos] = await Promise.all([
       fuente.ultimoAnalisis(),
       fuente.categorias(),
       fuente.comparacionMensual(),
       fuente.metas(),
       fuente.presupuestos(),
       fuente.transacciones({ tam: 100 }),
+      fuente.tarjetas(),
+      fuente.eventos(),
     ]);
-    return { analisis, categorias, comparacion, metas, presupuestos, transacciones: pagina.items };
+    return { analisis, categorias, comparacion, metas, presupuestos, transacciones: pagina.items, tarjetas, eventos };
   });
 
   const etiquetas = useMemo(
@@ -85,9 +90,7 @@ export default function PantallaInicio() {
       {/* ── Cabecera con gradiente (estilo app de banca) ──────────────── */}
       <Hero paddingTop={insets.top + 18}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={estilos.logo}>
-            finance<Text style={{ color: Colores.menta }}>AI</Text>
-          </Text>
+          <Logo alto={34} />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Pressable onPress={() => setBuscador(true)} hitSlop={8}>
               <Ionicons name="search-outline" size={20} color="rgba(255,255,255,0.85)" />
@@ -149,7 +152,9 @@ export default function PantallaInicio() {
                 <CifraAnimada
                   valor={gastoTotal}
                   formato={(n) => formatearMoneda(n, datos.analisis!.moneda, idioma)}
-                  style={[estilos.cifra, { color: temaActivo.alertaFondo }]}
+                  // Ambar vivo fijo: el hero es oscuro en ambos temas, y `alerta`
+                  // en tema claro es marron oscuro (ilegible sobre el hero).
+                  style={[estilos.cifra, { color: '#F2A30D' }]}
                 />
               </View>
 
@@ -263,11 +268,15 @@ export default function PantallaInicio() {
 
               <Aparece delay={240}>
                 <Tarjeta>
-                  <TituloTarjeta>{t('movimientos.calendarioTitulo')}</TituloTarjeta>
+                  <TituloTarjeta>{t('movimientos.actividadMes')}</TituloTarjeta>
                   <CalendarioPagos
                     transacciones={datos.transacciones}
+                    tarjetas={datos.tarjetas}
+                    eventos={datos.eventos}
                     mes={MES_ACTUAL}
                     idioma={idioma}
+                    moneda={datos.analisis?.moneda ?? usuario?.moneda_principal ?? 'USD'}
+                    onCambio={recargar}
                   />
                 </Tarjeta>
               </Aparece>
@@ -351,7 +360,6 @@ export default function PantallaInicio() {
 }
 
 const estilos = StyleSheet.create({
-  logo: { fontFamily: Fuentes.titulo, fontSize: 22, color: Colores.blanco },
   saludo: { fontFamily: Fuentes.titulo, fontSize: 27, color: Colores.blanco, marginTop: 14, letterSpacing: -0.5 },
   subtexto: { fontFamily: Fuentes.cuerpo, fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 8 },
   filaCifras: { flexDirection: 'row', gap: 6, marginTop: 18 },
