@@ -15,7 +15,7 @@ $raiz = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 function Mostrar-Menu {
     Write-Host ''
     Write-Host '=================================================' -ForegroundColor Cyan
-    Write-Host '    financeAI - menu de desarrollo (frontend)' -ForegroundColor Cyan
+    Write-Host '    Fintech Vital - menu de desarrollo (frontend)' -ForegroundColor Cyan
     Write-Host '=================================================' -ForegroundColor Cyan
     Write-Host '  [1] Verificar requisitos de la maquina (doctor)'
     Write-Host '  [2] Web: levantar en contenedor  -> http://localhost:3000'

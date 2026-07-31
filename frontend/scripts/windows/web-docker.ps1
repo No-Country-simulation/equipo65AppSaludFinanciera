@@ -17,13 +17,23 @@ param(
 $ErrorActionPreference = 'Stop'
 $raiz = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $web = Join-Path $raiz 'web'
-$imagen = 'financeai/web:local'
-$contenedor = 'financeai-web'
+$imagen = 'fintechvital/web:local'
+$contenedor = 'fintechvital-web'
 
 function Test-DockerVivo {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { return $false }
-    docker info *> $null
-    return [bool]$?
+    # 'Continue' local: si el daemon no responde, el stderr de docker no debe
+    # ser un error terminante (con 'Stop' abortaba el script y nunca caia a Podman)
+    $anterior = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & docker info 2>&1 | Out-Null
+        return ($LASTEXITCODE -eq 0)
+    } catch {
+        return $false
+    } finally {
+        $ErrorActionPreference = $anterior
+    }
 }
 
 function Iniciar-DockerDesktop {
@@ -86,7 +96,7 @@ for ($i = 0; $i -lt 30; $i++) {
 if ($listo) {
     Write-Host ''
     Write-Host "Web lista ($motor): http://localhost:3000 (es | pt | en)"
-    Write-Host 'Demo: demo@financeai.dev con cualquier password de 10+ caracteres'
+    Write-Host 'Demo: demo@fintechvital.dev con cualquier password de 10+ caracteres'
 } else {
     Write-Warning "El contenedor arranco pero la web no respondio a tiempo. Revisa: $motor logs $contenedor"
 }

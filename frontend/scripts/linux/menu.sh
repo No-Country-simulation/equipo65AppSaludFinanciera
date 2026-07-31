@@ -14,7 +14,7 @@ mostrar_menu() {
   cat <<'FIN'
 
 =================================================
-    financeAI - menu de desarrollo (frontend)
+    Fintech Vital - menu de desarrollo (frontend)
 =================================================
   [1] Verificar requisitos de la maquina (doctor)
   [2] Web: levantar en contenedor  -> http://localhost:3000

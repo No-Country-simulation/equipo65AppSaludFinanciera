@@ -10,8 +10,8 @@ set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WEB="$RAIZ/web"
-IMAGEN="financeai/web:local"
-CONTENEDOR="financeai-web"
+IMAGEN="fintechvital/web:local"
+CONTENEDOR="fintechvital-web"
 
 motor=""
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
@@ -49,7 +49,7 @@ for _ in $(seq 1 30); do
   if curl -fsS http://127.0.0.1:3000/es/login >/dev/null 2>&1; then
     echo ""
     echo "Web lista ($motor): http://localhost:3000 (es | pt | en)"
-    echo "Demo: demo@financeai.dev con cualquier password de 10+ caracteres"
+    echo "Demo: demo@fintechvital.dev con cualquier password de 10+ caracteres"
     exit 0
   fi
 done
