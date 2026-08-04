@@ -1,10 +1,13 @@
 /* ============================================================================
-BASE DE DATOS: PERFIL FINANCIERO CON IA (VERSIÓN FINAL COMPATIBLE)
+BASE DE DATOS: PERFIL FINANCIERO CON IA
 Proyecto: equipo65AppSaludFinanciera (No-Country Simulation)
-Motor: MySQL 8.0 / PostgreSQL Compliant
+Motor: MySQL 8.0+ / MariaDB / PostgreSQL Compliant
 ============================================================================ */
 
-CREATE DATABASE IF NOT EXISTS perfil_financiero;
+CREATE DATABASE IF NOT EXISTS perfil_financiero 
+CHARACTER SET utf8mb4 
+COLLATE utf8mb4_unicode_ci;
+
 USE perfil_financiero;
 
 -- ----------------------------------------------------------------------------
@@ -14,7 +17,7 @@ CREATE TABLE IF NOT EXISTS ciudades (
     id_ciudad VARCHAR(36) NOT NULL,
     nombre_ciudad VARCHAR(100) NOT NULL,
     estado VARCHAR(100) NOT NULL,
-    pais VARCHAR(50) NOT NULL DEFAULT 'México',
+    pais VARCHAR(50) NOT NULL DEFAULT 'Mexico',
 
     CONSTRAINT pk_ciudades PRIMARY KEY (id_ciudad),
     CONSTRAINT uq_ciudades_nombre_estado UNIQUE (nombre_ciudad, estado)
@@ -28,10 +31,10 @@ CREATE TABLE IF NOT EXISTS usuarios (
     nombre VARCHAR(50) NOT NULL,
     apellido VARCHAR(50) NOT NULL,
     fecha_nacimiento DATE NOT NULL,
-    genero CHAR(1),
-    id_ciudad VARCHAR(36),
-    ingreso_mensual DECIMAL(12,2) NOT NULL,
-    telefono VARCHAR(15),
+    genero VARCHAR(20) DEFAULT 'NO_ESPECIFICADO',
+    id_ciudad VARCHAR(36) NULL,
+    ingreso_mensual DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    telefono VARCHAR(20) NULL,
     email VARCHAR(150) NOT NULL,
     moneda_principal CHAR(3) NOT NULL DEFAULT 'MXN',
     idioma CHAR(2) NOT NULL DEFAULT 'es',
@@ -42,8 +45,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 
     CONSTRAINT pk_usuarios PRIMARY KEY (id_usuario),
     CONSTRAINT uq_usuarios_email UNIQUE (email),
-    CONSTRAINT fk_usuarios_ciudades FOREIGN KEY (id_ciudad) REFERENCES ciudades (id_ciudad),
-    CONSTRAINT chk_usuarios_genero CHECK (genero IN ('M', 'F') OR genero IS NULL),
+    CONSTRAINT fk_usuarios_ciudades FOREIGN KEY (id_ciudad) REFERENCES ciudades (id_ciudad) ON DELETE SET NULL,
     CONSTRAINT chk_usuarios_ingreso CHECK (ingreso_mensual >= 0)
 );
 
@@ -139,15 +141,14 @@ CREATE TABLE IF NOT EXISTS cuentas_usuarios (
 CREATE TABLE IF NOT EXISTS tarjetas (
     id_tarjeta VARCHAR(36) NOT NULL,
     id_cuenta VARCHAR(36) NOT NULL,
-    numero_tarjeta VARCHAR(16) NOT NULL,
-    tipo_tarjeta ENUM('DEBITO', 'CREDITO') NOT NULL,
-    red_pago ENUM('VISA', 'MASTERCARD', 'AMEX') NOT NULL,
+    numero_tarjeta VARCHAR(20) NOT NULL,
+    tipo_tarjeta ENUM('DEBITO', 'CREDITO') NOT NULL DEFAULT 'DEBITO',
+    red_pago ENUM('VISA', 'MASTERCARD', 'AMEX') NOT NULL DEFAULT 'VISA',
     fecha_vencimiento DATE NOT NULL,
     estado_tarjeta ENUM('ACTIVA', 'BLOQUEADA', 'CANCELADA') NOT NULL DEFAULT 'ACTIVA',
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_tarjetas PRIMARY KEY (id_tarjeta),
-    CONSTRAINT uq_tarjetas_numero UNIQUE (numero_tarjeta),
     CONSTRAINT fk_tarjetas_cuentas FOREIGN KEY (id_cuenta) REFERENCES cuentas_bancarias (id_cuenta) ON DELETE CASCADE
 );
 
@@ -156,7 +157,7 @@ CREATE TABLE IF NOT EXISTS tarjetas (
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tarjetas_credito (
     id_tarjeta VARCHAR(36) NOT NULL,
-    limite_credito DECIMAL(12,2) NOT NULL,
+    limite_credito DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     dia_corte TINYINT NOT NULL,
     dia_pago TINYINT NOT NULL,
 
@@ -196,7 +197,7 @@ CREATE TABLE IF NOT EXISTS tasas_cambio (
 );
 
 -- ----------------------------------------------------------------------------
--- TABLA 12: transacciones (AMPLIADA PARA METODOS DE PAGO DEL CSV)
+-- TABLA 12: transacciones
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS transacciones (
     id_transaccion VARCHAR(36) NOT NULL,
@@ -204,10 +205,10 @@ CREATE TABLE IF NOT EXISTS transacciones (
     id_categoria INT NULL,
     confianza DECIMAL(5,4) NULL,
     categoria_origen ENUM('modelo', 'usuario') NOT NULL DEFAULT 'modelo',
-    moneda CHAR(3) NULL,
+    moneda CHAR(3) DEFAULT 'MXN',
     fecha_hora TIMESTAMP NOT NULL,
-    concepto VARCHAR(100) NOT NULL,
-    comercio VARCHAR(100) NULL,
+    concepto VARCHAR(150) NOT NULL,
+    comercio VARCHAR(150) NULL,
     monto DECIMAL(12,2) NOT NULL,
     tipo_movimiento ENUM('INGRESO', 'EGRESO') NOT NULL,
     medio_operacion ENUM('APP_MOVIL', 'PORTAL_WEB', 'CAJERO', 'SUCURSAL', 'POS', 'TRANSFERENCIA', 'EFECTIVO') DEFAULT 'APP_MOVIL',
@@ -215,8 +216,8 @@ CREATE TABLE IF NOT EXISTS transacciones (
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_transacciones PRIMARY KEY (id_transaccion),
-    CONSTRAINT fk_transacciones_tarjetas FOREIGN KEY (id_tarjeta) REFERENCES tarjetas (id_tarjeta),
-    CONSTRAINT fk_transacciones_categorias FOREIGN KEY (id_categoria) REFERENCES categorias (id_categoria),
+    CONSTRAINT fk_transacciones_tarjetas FOREIGN KEY (id_tarjeta) REFERENCES tarjetas (id_tarjeta) ON DELETE SET NULL,
+    CONSTRAINT fk_transacciones_categorias FOREIGN KEY (id_categoria) REFERENCES categorias (id_categoria) ON DELETE SET NULL,
     CONSTRAINT chk_transacciones_monto CHECK (monto > 0)
 );
 
@@ -287,7 +288,7 @@ CREATE TABLE IF NOT EXISTS historial_analisis_financiero (
 
     CONSTRAINT pk_historial_analisis PRIMARY KEY (id_analisis),
     CONSTRAINT fk_analisis_usuarios FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE CASCADE,
-    CONSTRAINT fk_analisis_modelos FOREIGN KEY (id_modelo) REFERENCES modelos_ia (id_modelo)
+    CONSTRAINT fk_analisis_modelos FOREIGN KEY (id_modelo) REFERENCES modelos_ia (id_modelo) ON DELETE SET NULL
 );
 
 -- ----------------------------------------------------------------------------
@@ -310,24 +311,24 @@ CREATE TABLE IF NOT EXISTS resumen_mensual (
 );
 
 /* ============================================================================
-CATÁLOGOS SEMILLA COMPLETO (TODAS LAS CIUDADES DEL CSV)
+CATÁLOGO SEMILLA (CIUDADES LIMPIAS SIN ACENTOS PARA EVITAR PROBLEMAS EN API)
 ============================================================================ */
 
 INSERT INTO ciudades (id_ciudad, nombre_ciudad, estado, pais) VALUES
-('c1000000-0000-0000-0000-000000000001', 'Ciudad de México', 'CDMX', 'México'),
-('c1000000-0000-0000-0000-000000000002', 'Guadalajara', 'Jalisco', 'México'),
-('c1000000-0000-0000-0000-000000000003', 'Monterrey', 'Nuevo León', 'México'),
-('c1000000-0000-0000-0000-000000000004', 'Querétaro', 'Querétaro', 'México'),
-('c1000000-0000-0000-0000-000000000005', 'Puebla', 'Puebla', 'México'),
-('c1000000-0000-0000-0000-000000000006', 'Tijuana', 'Baja California', 'México'),
-('c1000000-0000-0000-0000-000000000007', 'Cancún', 'Quintana Roo', 'México'),
-('c1000000-0000-0000-0000-000000000008', 'Mérida', 'Yucatán', 'México'),
-('c1000000-0000-0000-0000-000000000009', 'León', 'Guanajuato', 'México'),
-('c1000000-0000-0000-0000-000000000010', 'Toluca', 'Estado de México', 'México')
+('c1000000-0000-0000-0000-000000000001', 'Ciudad de Mexico', 'CDMX', 'Mexico'),
+('c1000000-0000-0000-0000-000000000002', 'Guadalajara', 'Jalisco', 'Mexico'),
+('c1000000-0000-0000-0000-000000000003', 'Monterrey', 'Nuevo Leon', 'Mexico'),
+('c1000000-0000-0000-0000-000000000004', 'Queretaro', 'Queretaro', 'Mexico'),
+('c1000000-0000-0000-0000-000000000005', 'Puebla', 'Puebla', 'Mexico'),
+('c1000000-0000-0000-0000-000000000006', 'Tijuana', 'Baja California', 'Mexico'),
+('c1000000-0000-0000-0000-000000000007', 'Cancun', 'Quintana Roo', 'Mexico'),
+('c1000000-0000-0000-0000-000000000008', 'Merida', 'Yucatan', 'Mexico'),
+('c1000000-0000-0000-0000-000000000009', 'Leon', 'Guanajuato', 'Mexico'),
+('c1000000-0000-0000-0000-000000000010', 'Toluca', 'Estado de Mexico', 'Mexico')
 ON DUPLICATE KEY UPDATE nombre_ciudad = VALUES(nombre_ciudad);
 
 /* ============================================================================
-VISTAS CORREGIDAS
+VISTAS OPTIMIZADAS PARA SERVICIOS BACKEND / API REST
 ============================================================================ */
 
 -- VIEW 1: Resumen de ratios
@@ -347,7 +348,7 @@ SELECT
              OR (u.ingreso_mensual - COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'EGRESO' THEN t.monto ELSE 0 END), 0)) < 0 
         THEN 'En riesgo'
         WHEN (COALESCE(hb.monto_adeudado, 0.00) / NULLIF(u.ingreso_mensual, 0)) BETWEEN 0.30 AND 0.50 
-        THEN 'En observación'
+        THEN 'En observacion'
         ELSE 'Saludable'
     END AS perfil_preliminar
 FROM usuarios u
@@ -403,7 +404,7 @@ JOIN cuentas_usuarios cu ON tr.id_cuenta = cu.id_cuenta
 JOIN categorias cat ON t.id_categoria = cat.id_categoria
 WHERE t.tipo_movimiento = 'EGRESO'
   AND (
-      cat.slug IN ('ocio', 'servicios') 
+      cat.slug IN ('ocio', 'servicios', 'streaming') 
       OR LOWER(t.concepto) LIKE '%netflix%'
       OR LOWER(t.concepto) LIKE '%prime%'
       OR LOWER(t.concepto) LIKE '%hbo%'
@@ -423,11 +424,11 @@ SELECT
     v.perfil_preliminar,
     CASE 
         WHEN v.ratio_dti_porcentaje > 50 THEN 'Alto endeudamiento: DTI supera el 50% de los ingresos.'
-        WHEN v.tasa_ahorro_porcentaje < 0 THEN 'Déficit presupuestal: Los gastos superan los ingresos mensuales.'
-        ELSE 'Atención: Nivel de endeudamiento en zona de precaución.'
+        WHEN v.tasa_ahorro_porcentaje < 0 THEN 'Deficit presupuestal: Los gastos superan los ingresos mensuales.'
+        ELSE 'Atencion: Nivel de endeudamiento en zona de precaucion.'
     END AS motivo_alerta
 FROM vw_resumen_cliente_ratios v
-WHERE v.perfil_preliminar IN ('En riesgo', 'En observación');
+WHERE v.perfil_preliminar IN ('En riesgo', 'En observacion');
 
 /* ============================================================================
 TRIGGERS
