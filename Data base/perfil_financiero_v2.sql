@@ -1,32 +1,16 @@
 /* ============================================================================
-BASE DE DATOS: PERFIL FINANCIERO CON IA
-Motor: MySQL 8.0 / PostgreSQL Compliant (Sintaxis ANSI SQL)
-Objetivo:
-  * Sistema bancario enfocado en analizar el comportamiento financiero de 
-    los usuarios mediante Data Science e IA.
-Principios aplicados:
-  - Normalización hasta 3FN
-  - Evitar almacenar datos calculables
-  - Separación de responsabilidades por entidad
-  - Estándar estricto de nomenclatura: snake_case (tablas, columnas, PKs, FKs, UQs, CHKs)
+BASE DE DATOS: PERFIL FINANCIERO CON IA (VERSIÓN FINAL COMPATIBLE)
+Proyecto: equipo65AppSaludFinanciera (No-Country Simulation)
+Motor: MySQL 8.0 / PostgreSQL Compliant
 ============================================================================ */
 
-
+CREATE DATABASE IF NOT EXISTS perfil_financiero;
 USE perfil_financiero;
 
-/* ============================================================================
-TABLA 1: ciudades
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Catálogo de ciudades donde están registrados los usuarios.
-
-INT-002: Normalización en snake_case de tabla y restricciones.
-FRONTEND:
-  ✔ Utiliza únicamente el nombre de la ciudad actualmente.
-  □ Pendiente implementar selección/despliegue de estado y país.
-DATA SCIENCE:
-  ✔ Permite análisis demográficos regionales.
-============================================================================ */
-CREATE TABLE ciudades (
+-- ----------------------------------------------------------------------------
+-- TABLA 1: ciudades
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ciudades (
     id_ciudad VARCHAR(36) NOT NULL,
     nombre_ciudad VARCHAR(100) NOT NULL,
     estado VARCHAR(100) NOT NULL,
@@ -36,23 +20,10 @@ CREATE TABLE ciudades (
     CONSTRAINT uq_ciudades_nombre_estado UNIQUE (nombre_ciudad, estado)
 );
 
-/* ============================================================================
-TABLA 2: usuarios
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Guarda la información personal y preferencia del cliente.
-Importante: No se almacena la edad directamente (se calcula de fecha_nacimiento).
-
-INT-003: Integración de campos para auditoría de sesión (ultima_sesion).
-FRONTEND:
-  ✔ Captura: nombre, apellido, email, telefono, fecha_nacimiento, id_ciudad,
-    moneda_principal, idioma.
-BACKEND:
-  ✔ Soporta autenticación, perfil, presupuestos, metas y movimientos.
-  □ Pendiente Backend: Actualizar `ultima_sesion` al autenticar exitosamente.
-DATA SCIENCE:
-  ✔ Entidad central para vincular variables socioeconómicas y comportamiento.
-============================================================================ */
-CREATE TABLE usuarios (
+-- ----------------------------------------------------------------------------
+-- TABLA 2: usuarios
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS usuarios (
     id_usuario VARCHAR(36) NOT NULL,
     nombre VARCHAR(50) NOT NULL,
     apellido VARCHAR(50) NOT NULL,
@@ -62,12 +33,12 @@ CREATE TABLE usuarios (
     ingreso_mensual DECIMAL(12,2) NOT NULL,
     telefono VARCHAR(15),
     email VARCHAR(150) NOT NULL,
-    moneda_principal CHAR(3) NOT NULL DEFAULT 'MXN',   -- ISO-4217
-    idioma CHAR(2) NOT NULL DEFAULT 'es',              -- es | pt | en
+    moneda_principal CHAR(3) NOT NULL DEFAULT 'MXN',
+    idioma CHAR(2) NOT NULL DEFAULT 'es',
     estado_usuario ENUM('ACTIVO', 'INACTIVO') NOT NULL DEFAULT 'ACTIVO',
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    ultima_sesion TIMESTAMP NULL COMMENT 'Último acceso del usuario al sistema',
+    ultima_sesion TIMESTAMP NULL,
 
     CONSTRAINT pk_usuarios PRIMARY KEY (id_usuario),
     CONSTRAINT uq_usuarios_email UNIQUE (email),
@@ -76,25 +47,16 @@ CREATE TABLE usuarios (
     CONSTRAINT chk_usuarios_ingreso CHECK (ingreso_mensual >= 0)
 );
 
-/* ============================================================================
-TABLA 3: usuarios_seguridad
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Credenciales y secretos de 2FA. Se aisla de `usuarios` por
-principios de seguridad (cifrado en reposo, permisos de lectura mínimos). Relación 1:1.
-
-INT-004: Agregados campos de auditoría de contraseñas e intentos fallidos.
-BACKEND:
-  ✔ Obligatorio 2FA: `totp_activo` = TRUE al confirmar registro.
-  □ Pendiente Backend: Incrementar `intentos_fallidos` y bloquear cuenta tras N fallos.
-  □ Pendiente Backend: Forzar cambio de contraseña si `requiere_cambio_password` = TRUE.
-============================================================================ */
-CREATE TABLE usuarios_seguridad (
+-- ----------------------------------------------------------------------------
+-- TABLA 3: usuarios_seguridad
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS usuarios_seguridad (
     id_usuario VARCHAR(36) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,               -- bcrypt / argon2
-    totp_secret VARCHAR(64) NULL,                       -- Base32 cifrado
+    password_hash VARCHAR(255) NOT NULL,
+    totp_secret VARCHAR(64) NULL,
     totp_activo BOOLEAN NOT NULL DEFAULT FALSE,
     totp_activado_en TIMESTAMP NULL,
-    totp_ultimo_paso BIGINT NULL,                       -- Anti-replay TOTP
+    totp_ultimo_paso BIGINT NULL,
     fecha_cambio_password TIMESTAMP NULL,
     requiere_cambio_password BOOLEAN NOT NULL DEFAULT FALSE,
     intentos_fallidos INT NOT NULL DEFAULT 0,
@@ -105,21 +67,13 @@ CREATE TABLE usuarios_seguridad (
     CONSTRAINT fk_usuarios_seguridad_usuarios FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE CASCADE
 );
 
-/* ============================================================================
-TABLA 4: codigos_respaldo_2fa
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Códigos de respaldo de un solo uso, almacenados hasheados.
-
-INT-005: Estructura de códigos unifilar con indexación por usuario.
-FRONTEND:
-  □ Mostrar los códigos en texto plano ÚNICAMENTE al momento de generarlos.
-BACKEND:
-  □ Marcar `usado` = TRUE y actualizar `fecha_uso` al ser consumido.
-============================================================================ */
-CREATE TABLE codigos_respaldo_2fa (
+-- ----------------------------------------------------------------------------
+-- TABLA 4: codigos_respaldo_2fa
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS codigos_respaldo_2fa (
     id_codigo VARCHAR(36) NOT NULL,
     id_usuario VARCHAR(36) NOT NULL,
-    codigo_hash VARCHAR(255) NOT NULL COMMENT 'Hash del código de respaldo',
+    codigo_hash VARCHAR(255) NOT NULL,
     usado BOOLEAN NOT NULL DEFAULT FALSE,
     fecha_uso TIMESTAMP NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -130,24 +84,14 @@ CREATE TABLE codigos_respaldo_2fa (
 
 CREATE INDEX idx_codigos_respaldo_usuario ON codigos_respaldo_2fa (id_usuario);
 
-/* ============================================================================
-TABLA 5: refresh_tokens
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Almacena Refresh Tokens rotativos (JWTs accesibles son stateless).
-
-INT-006: Inclusión de campo auditor `ultimo_uso` y rastreo de familias de tokens.
-BACKEND:
-  □ Guardar únicamente el hash del token.
-  □ Revocar toda la `familia` si se detecta reutilización (reuso malicioso).
-  □ Implementar Job de limpieza para tokens expirados.
-FRONTEND:
-  ✔ Envío del token en encabezados / cookies HTTP-Only.
-============================================================================ */
-CREATE TABLE refresh_tokens (
+-- ----------------------------------------------------------------------------
+-- TABLA 5: refresh_tokens
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS refresh_tokens (
     id_token VARCHAR(36) NOT NULL,
     id_usuario VARCHAR(36) NOT NULL,
-    token_hash VARCHAR(255) NOT NULL COMMENT 'Hash del Refresh Token',
-    familia VARCHAR(36) NOT NULL COMMENT 'Identificador de la familia de tokens',
+    token_hash VARCHAR(255) NOT NULL,
+    familia VARCHAR(36) NOT NULL,
     revocado BOOLEAN NOT NULL DEFAULT FALSE,
     expira_en TIMESTAMP NOT NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -158,21 +102,11 @@ CREATE TABLE refresh_tokens (
 );
 
 CREATE INDEX idx_refresh_tokens_usuario ON refresh_tokens (id_usuario);
-CREATE INDEX idx_refresh_tokens_familia ON refresh_tokens (familia);
 
-/* ============================================================================
-TABLA 6: cuentas_bancarias
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Representa el contrato bancario formal del cliente.
-No almacena saldo actual, tipo de cuenta ni deuda (datos dinámicos/calculados).
-
-INT-007: Se añade `fecha_actualizacion` para trazabilidad de estados.
-FRONTEND:
-  □ Pendiente verificar que el Backend responda el `estado_cuenta` al Dashboard.
-DATA SCIENCE:
-  ✔ Permite analizar el ciclo de vida y antigüedad contractual de cuentas.
-============================================================================ */
-CREATE TABLE cuentas_bancarias (
+-- ----------------------------------------------------------------------------
+-- TABLA 6: cuentas_bancarias
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cuentas_bancarias (
     id_cuenta VARCHAR(36) NOT NULL,
     numero_cuenta VARCHAR(50) NOT NULL,
     estado_cuenta ENUM('ACTIVA', 'BLOQUEADA', 'CANCELADA') NOT NULL DEFAULT 'ACTIVA',
@@ -184,18 +118,10 @@ CREATE TABLE cuentas_bancarias (
     CONSTRAINT uq_cuentas_bancarias_numero UNIQUE (numero_cuenta)
 );
 
-/* ============================================================================
-TABLA 7: cuentas_usuarios
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Tabla pivote N:M entre usuarios y cuentas bancarias.
-
-INT-008: Inclusión de `fecha_desvinculacion` para trazabilidad histórica.
-FRONTEND:
-  □ Verificar que el módulo de cuentas muestre el `rol_usuario` correctamente.
-BUSINESS LOGIC:
-  ✔ Permite historial sin perder integridad cuando un cotitular se retira.
-============================================================================ */
-CREATE TABLE cuentas_usuarios (
+-- ----------------------------------------------------------------------------
+-- TABLA 7: cuentas_usuarios
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cuentas_usuarios (
     id_cuenta VARCHAR(36) NOT NULL,
     id_usuario VARCHAR(36) NOT NULL,
     rol_usuario ENUM('TITULAR_PRINCIPAL', 'COTITULAR', 'AUTORIZADO') NOT NULL DEFAULT 'TITULAR_PRINCIPAL',
@@ -207,14 +133,10 @@ CREATE TABLE cuentas_usuarios (
     CONSTRAINT fk_cuentas_usuarios_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE CASCADE
 );
 
-/* ============================================================================
-TABLA 8: tarjetas
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Entidad base para tarjetas físicas/virtuales asociadas a una cuenta.
-
-INT-009: Estandarización de `numero_tarjeta` a VARCHAR(16) y restricciones de integridad.
-============================================================================ */
-CREATE TABLE tarjetas (
+-- ----------------------------------------------------------------------------
+-- TABLA 8: tarjetas
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS tarjetas (
     id_tarjeta VARCHAR(36) NOT NULL,
     id_cuenta VARCHAR(36) NOT NULL,
     numero_tarjeta VARCHAR(16) NOT NULL,
@@ -229,14 +151,10 @@ CREATE TABLE tarjetas (
     CONSTRAINT fk_tarjetas_cuentas FOREIGN KEY (id_cuenta) REFERENCES cuentas_bancarias (id_cuenta) ON DELETE CASCADE
 );
 
-/* ============================================================================
-TABLA 9: tarjetas_credito
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Extensión 1:1 exclusiva para tarjetas de crédito.
-
-INT-010: Normalización de llaves secundarias e imposición de rangos válidos.
-============================================================================ */
-CREATE TABLE tarjetas_credito (
+-- ----------------------------------------------------------------------------
+-- TABLA 9: tarjetas_credito
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS tarjetas_credito (
     id_tarjeta VARCHAR(36) NOT NULL,
     limite_credito DECIMAL(12,2) NOT NULL,
     dia_corte TINYINT NOT NULL,
@@ -249,17 +167,10 @@ CREATE TABLE tarjetas_credito (
     CONSTRAINT chk_tarjetas_credito_pago CHECK (dia_pago BETWEEN 1 AND 31)
 );
 
-/* ============================================================================
-TABLA 10: categorias
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Catálogo parametrizado de categorías transaccionales.
-
-INT-011: Unificación de restricción de slugs canónicos y tipo de movimiento.
-DATA SCIENCE / IA:
-  ✔ Permite clasificación mediante TF-IDF + Logistic Regression.
-  ✔ `MOVIMIENTO` = Ahorro/Inversión (salida que no penaliza como gasto).
-============================================================================ */
-CREATE TABLE categorias (
+-- ----------------------------------------------------------------------------
+-- TABLA 10: categorias
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS categorias (
     id_categoria INT AUTO_INCREMENT NOT NULL,
     slug VARCHAR(50) NOT NULL,
     nombre_categoria VARCHAR(100) NOT NULL,
@@ -272,45 +183,34 @@ CREATE TABLE categorias (
     CONSTRAINT uq_categorias_slug UNIQUE (slug)
 );
 
-/* ============================================================================
-TABLA 11: tasas_cambio
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Cache de tasas multi-moneda normalizadas a la base (USD).
-
-INT-012: Soporte para conversiones financieras históricas cross-currency.
-============================================================================ */
-CREATE TABLE tasas_cambio (
-    moneda CHAR(3) NOT NULL,                         -- ISO-4217
-    tasa_a_base DECIMAL(18,8) NOT NULL,               -- Unidades por 1 USD
+-- ----------------------------------------------------------------------------
+-- TABLA 11: tasas_cambio
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS tasas_cambio (
+    moneda CHAR(3) NOT NULL,
+    tasa_a_base DECIMAL(18,8) NOT NULL,
     fecha DATE NOT NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_tasas_cambio PRIMARY KEY (moneda, fecha)
 );
 
-/* ============================================================================
-TABLA 12: transacciones
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Registro de movimientos financieros individuales.
-
-INT-013: Relaciones hacia tarjetas y categorías, incorporando atributos de ML.
-DATA SCIENCE / IA:
-  ✔ `confianza`: Probabilidad del modelo al clasificar (0.0000 a 1.0000).
-  ✔ `categoria_origen`: Identifica si fue asignada por 'modelo' o 'usuario'.
-============================================================================ */
-CREATE TABLE transacciones (
+-- ----------------------------------------------------------------------------
+-- TABLA 12: transacciones (AMPLIADA PARA METODOS DE PAGO DEL CSV)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS transacciones (
     id_transaccion VARCHAR(36) NOT NULL,
     id_tarjeta VARCHAR(36) NULL,
     id_categoria INT NULL,
-    confianza DECIMAL(5,4) NULL,                      -- Rango [0, 1]
+    confianza DECIMAL(5,4) NULL,
     categoria_origen ENUM('modelo', 'usuario') NOT NULL DEFAULT 'modelo',
-    moneda CHAR(3) NULL,                              -- ISO-4217 si difiere de preferencia
+    moneda CHAR(3) NULL,
     fecha_hora TIMESTAMP NOT NULL,
     concepto VARCHAR(100) NOT NULL,
     comercio VARCHAR(100) NULL,
     monto DECIMAL(12,2) NOT NULL,
     tipo_movimiento ENUM('INGRESO', 'EGRESO') NOT NULL,
-    medio_operacion ENUM('APP_MOVIL', 'PORTAL_WEB', 'CAJERO', 'SUCURSAL', 'POS') DEFAULT 'APP_MOVIL',
+    medio_operacion ENUM('APP_MOVIL', 'PORTAL_WEB', 'CAJERO', 'SUCURSAL', 'POS', 'TRANSFERENCIA', 'EFECTIVO') DEFAULT 'APP_MOVIL',
     estado_transaccion ENUM('COMPLETADA', 'PENDIENTE', 'CANCELADA') DEFAULT 'COMPLETADA',
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -320,14 +220,10 @@ CREATE TABLE transacciones (
     CONSTRAINT chk_transacciones_monto CHECK (monto > 0)
 );
 
-/* ============================================================================
-TABLA 13: historial_buro
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Registro histórico del comportamiento en buró de crédito.
-
-INT-014: Normalización de contenciones numéricas y auditoría crediticia.
-============================================================================ */
-CREATE TABLE historial_buro (
+-- ----------------------------------------------------------------------------
+-- TABLA 13: historial_buro
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS historial_buro (
     id_buro VARCHAR(36) NOT NULL,
     id_usuario VARCHAR(36) NOT NULL,
     score_crediticio INT NULL,
@@ -342,14 +238,10 @@ CREATE TABLE historial_buro (
     CONSTRAINT chk_historial_buro_deuda CHECK (monto_adeudado >= 0)
 );
 
-/* ============================================================================
-TABLA 14: planes_ahorro
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Definición y seguimiento de metas de ahorro del cliente.
-
-INT-015: Definición estandarizada para evaluación de desempeño del usuario.
-============================================================================ */
-CREATE TABLE planes_ahorro (
+-- ----------------------------------------------------------------------------
+-- TABLA 14: planes_ahorro
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS planes_ahorro (
     id_plan VARCHAR(36) NOT NULL,
     id_usuario VARCHAR(36) NOT NULL,
     nombre_meta VARCHAR(100) NOT NULL,
@@ -364,14 +256,10 @@ CREATE TABLE planes_ahorro (
     CONSTRAINT chk_planes_ahorro_meta CHECK (monto_meta > 0)
 );
 
-/* ============================================================================
-TABLA 15: modelos_ia
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Catálogo de modelos ML entrenados y desplegados.
-
-INT-016: Habilitación de la tabla de catálogo para linaje de datos.
-============================================================================ */
-CREATE TABLE modelos_ia (
+-- ----------------------------------------------------------------------------
+-- TABLA 15: modelos_ia
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS modelos_ia (
     id_modelo VARCHAR(36) NOT NULL,
     nombre_modelo VARCHAR(100) NOT NULL,
     algoritmo VARCHAR(100) NOT NULL,
@@ -385,20 +273,16 @@ CREATE TABLE modelos_ia (
     CONSTRAINT pk_modelos_ia PRIMARY KEY (id_modelo)
 );
 
-/* ============================================================================
-TABLA 16: historial_analisis_financiero
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Almacena las inferencias/diagnósticos producidos por la IA.
-
-INT-017: Relación explícita con la tabla `modelos_ia` y payload JSON inmutable.
-============================================================================ */
-CREATE TABLE historial_analisis_financiero (
+-- ----------------------------------------------------------------------------
+-- TABLA 16: historial_analisis_financiero
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS historial_analisis_financiero (
     id_analisis VARCHAR(36) NOT NULL,
     id_usuario VARCHAR(36) NOT NULL,
     id_modelo VARCHAR(36) NULL,
     perfil_financiero ENUM('saludable', 'en_observacion', 'en_riesgo') NOT NULL,
     probabilidad DECIMAL(5,4) NULL,
-    detalle JSON NULL COMMENT 'Foto inmutable de los 8 indicadores clave y recomendaciones',
+    detalle JSON NULL,
     fecha_analisis TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_historial_analisis PRIMARY KEY (id_analisis),
@@ -406,15 +290,10 @@ CREATE TABLE historial_analisis_financiero (
     CONSTRAINT fk_analisis_modelos FOREIGN KEY (id_modelo) REFERENCES modelos_ia (id_modelo)
 );
 
-/* ============================================================================
-TABLA 17: resumen_mensual
-----------------------------------------------------------------------------
-DESCRIPCIÓN: Dataset consolidado para Data Science y Dashboards.
-Alimentado por ETLs o tareas batch externas.
-
-INT-018: Creación estandarizada de agregado mensual.
-============================================================================ */
-CREATE TABLE resumen_mensual (
+-- ----------------------------------------------------------------------------
+-- TABLA 17: resumen_mensual
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS resumen_mensual (
     id_resumen VARCHAR(36) NOT NULL,
     id_usuario VARCHAR(36) NOT NULL,
     anio INT NOT NULL,
@@ -431,48 +310,65 @@ CREATE TABLE resumen_mensual (
 );
 
 /* ============================================================================
-VIEW 1.  Resumen de ratios
-Calcula en tiempo real los ingresos acumulados, egresos, nivel de endeudamiento (DTI) 
-y tasa de ahorro de cada cliente para determinar su perfil de riesgo predeterminado.
+CATÁLOGOS SEMILLA COMPLETO (TODAS LAS CIUDADES DEL CSV)
 ============================================================================ */
+
+INSERT INTO ciudades (id_ciudad, nombre_ciudad, estado, pais) VALUES
+('c1000000-0000-0000-0000-000000000001', 'Ciudad de México', 'CDMX', 'México'),
+('c1000000-0000-0000-0000-000000000002', 'Guadalajara', 'Jalisco', 'México'),
+('c1000000-0000-0000-0000-000000000003', 'Monterrey', 'Nuevo León', 'México'),
+('c1000000-0000-0000-0000-000000000004', 'Querétaro', 'Querétaro', 'México'),
+('c1000000-0000-0000-0000-000000000005', 'Puebla', 'Puebla', 'México'),
+('c1000000-0000-0000-0000-000000000006', 'Tijuana', 'Baja California', 'México'),
+('c1000000-0000-0000-0000-000000000007', 'Cancún', 'Quintana Roo', 'México'),
+('c1000000-0000-0000-0000-000000000008', 'Mérida', 'Yucatán', 'México'),
+('c1000000-0000-0000-0000-000000000009', 'León', 'Guanajuato', 'México'),
+('c1000000-0000-0000-0000-000000000010', 'Toluca', 'Estado de México', 'México')
+ON DUPLICATE KEY UPDATE nombre_ciudad = VALUES(nombre_ciudad);
+
+/* ============================================================================
+VISTAS CORREGIDAS
+============================================================================ */
+
+-- VIEW 1: Resumen de ratios
 CREATE OR REPLACE VIEW vw_resumen_cliente_ratios AS
 SELECT 
-    c.id_cliente,
-    c.nombre,
-    c.apellido,
-    c.ingreso_mensual,
-    COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'Egreso' THEN t.monto ELSE 0 END), 0) AS total_egresos,
-    COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'Ingreso' THEN t.monto ELSE 0 END), 0) AS total_ingresos_registrados,
-    c.deudas_totales,
-    -- Ratio Deuda-Ingreso (DTI) = Deudas Totales / Ingreso Mensual
-    ROUND(
-        (c.deudas_totales / NULLIF(c.ingreso_mensual, 0)) * 100, 2
-    ) AS ratio_dti_porcentaje,
-    -- Tasa de Ahorro = (Ingreso Mensual - Total Egresos) / Ingreso Mensual
-    ROUND(
-        ((c.ingreso_mensual - COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'Egreso' THEN t.monto ELSE 0 END), 0)) / NULLIF(c.ingreso_mensual, 0)) * 100, 2
-    ) AS tasa_ahorro_porcentaje,
-    -- Clasificación preliminar del perfil financiero
+    u.id_usuario,
+    u.nombre,
+    u.apellido,
+    u.ingreso_mensual,
+    COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'EGRESO' THEN t.monto ELSE 0 END), 0) AS total_egresos,
+    COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'INGRESO' THEN t.monto ELSE 0 END), 0) AS total_ingresos_registrados,
+    COALESCE(hb.monto_adeudado, 0.00) AS deudas_totales,
+    ROUND((COALESCE(hb.monto_adeudado, 0.00) / NULLIF(u.ingreso_mensual, 0)) * 100, 2) AS ratio_dti_porcentaje,
+    ROUND(((u.ingreso_mensual - COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'EGRESO' THEN t.monto ELSE 0 END), 0)) / NULLIF(u.ingreso_mensual, 0)) * 100, 2) AS tasa_ahorro_porcentaje,
     CASE 
-        WHEN (c.deudas_totales / NULLIF(c.ingreso_mensual, 0)) > 0.50 
-             OR (c.ingreso_mensual - COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'Egreso' THEN t.monto ELSE 0 END), 0)) < 0 
+        WHEN (COALESCE(hb.monto_adeudado, 0.00) / NULLIF(u.ingreso_mensual, 0)) > 0.50 
+             OR (u.ingreso_mensual - COALESCE(SUM(CASE WHEN t.tipo_movimiento = 'EGRESO' THEN t.monto ELSE 0 END), 0)) < 0 
         THEN 'En riesgo'
-        WHEN (c.deudas_totales / NULLIF(c.ingreso_mensual, 0)) BETWEEN 0.30 AND 0.50 
+        WHEN (COALESCE(hb.monto_adeudado, 0.00) / NULLIF(u.ingreso_mensual, 0)) BETWEEN 0.30 AND 0.50 
         THEN 'En observación'
         ELSE 'Saludable'
     END AS perfil_preliminar
-FROM clientes c
-LEFT JOIN transacciones t ON c.id_cliente = t.id_cliente
-GROUP BY c.id_cliente, c.nombre, c.apellido, c.ingreso_mensual, c.deudas_totales;
+FROM usuarios u
+LEFT JOIN cuentas_usuarios cu ON u.id_usuario = cu.id_usuario
+LEFT JOIN tarjetas tr ON cu.id_cuenta = tr.id_cuenta
+LEFT JOIN transacciones t ON tr.id_tarjeta = t.id_tarjeta
+LEFT JOIN (
+    SELECT h1.id_usuario, h1.monto_adeudado
+    FROM historial_buro h1
+    INNER JOIN (
+        SELECT id_usuario, MAX(fecha_consulta) AS max_fecha
+        FROM historial_buro
+        GROUP BY id_usuario
+    ) h2 ON h1.id_usuario = h2.id_usuario AND h1.fecha_consulta = h2.max_fecha
+) hb ON u.id_usuario = hb.id_usuario
+GROUP BY u.id_usuario, u.nombre, u.apellido, u.ingreso_mensual, hb.monto_adeudado;
 
-/* ============================================================================
-VIEW 2.  Gatos por categoria
-Agrupa los gastos por categoría para alimentar el gráfico de dona/pastel del dashboard financiero.
-============================================================================ */
-
+-- VIEW 2: Gastos por categoría
 CREATE OR REPLACE VIEW vw_gastos_por_categoria AS
 SELECT 
-    t.id_cliente,
+    cu.id_usuario,
     cat.nombre_categoria,
     COUNT(t.id_transaccion) AS cantidad_transacciones,
     SUM(t.monto) AS total_gastado,
@@ -480,49 +376,46 @@ SELECT
         (SUM(t.monto) / NULLIF((
             SELECT SUM(t2.monto) 
             FROM transacciones t2 
-            WHERE t2.id_cliente = t.id_cliente AND t2.tipo_movimiento = 'Egreso'
+            JOIN tarjetas tr2 ON t2.id_tarjeta = tr2.id_tarjeta
+            JOIN cuentas_usuarios cu2 ON tr2.id_cuenta = cu2.id_cuenta
+            WHERE cu2.id_usuario = cu.id_usuario AND t2.tipo_movimiento = 'EGRESO'
         ), 0)) * 100, 2
     ) AS porcentaje_del_total_egresos
 FROM transacciones t
+JOIN tarjetas tr ON t.id_tarjeta = tr.id_tarjeta
+JOIN cuentas_usuarios cu ON tr.id_cuenta = cu.id_cuenta
 JOIN categorias cat ON t.id_categoria = cat.id_categoria
-WHERE t.tipo_movimiento = 'Egreso'
-GROUP BY t.id_cliente, cat.nombre_categoria;
+WHERE t.tipo_movimiento = 'EGRESO'
+GROUP BY cu.id_usuario, cat.nombre_categoria;
 
-/* ============================================================================
-VIEW 3.  Gastor recurrentes por suscripciones
-Identifica posibles suscripciones fijas o gastos recurrentes
- (como Netflix, Spotify, servicios) para las recomendaciones de la IA
-============================================================================ */
-
+-- VIEW 3: Gastos recurrentes / suscripciones
 CREATE OR REPLACE VIEW vw_gastos_recurrentes_suscripciones AS
 SELECT 
-    t.id_cliente,
-    t.descripcion,
+    cu.id_usuario,
+    t.concepto,
     cat.nombre_categoria,
     t.monto,
     COUNT(*) AS frecuencia_mensual,
     MAX(t.fecha_hora) AS ultima_transaccion
 FROM transacciones t
+JOIN tarjetas tr ON t.id_tarjeta = tr.id_tarjeta
+JOIN cuentas_usuarios cu ON tr.id_cuenta = cu.id_cuenta
 JOIN categorias cat ON t.id_categoria = cat.id_categoria
-WHERE t.tipo_movimiento = 'Egreso'
+WHERE t.tipo_movimiento = 'EGRESO'
   AND (
-      cat.nombre_categoria IN ('Streaming', 'Servicios', 'Renta') 
-      OR LOWER(t.descripcion) LIKE '%netflix%'
-      OR LOWER(t.descripcion) LIKE '%prime%'
-      OR LOWER(t.descripcion) LIKE '%hbo%'
-      OR LOWER(t.descripcion) LIKE '%spotify%'
+      cat.slug IN ('ocio', 'servicios') 
+      OR LOWER(t.concepto) LIKE '%netflix%'
+      OR LOWER(t.concepto) LIKE '%prime%'
+      OR LOWER(t.concepto) LIKE '%hbo%'
+      OR LOWER(t.concepto) LIKE '%spotify%'
   )
-GROUP BY t.id_cliente, t.descripcion, cat.nombre_categoria, t.monto
+GROUP BY cu.id_usuario, t.concepto, cat.nombre_categoria, t.monto
 HAVING COUNT(*) >= 1;
 
-/* ============================================================================
-VIEW 4.  Alertas financieras.
-Filtra únicamente los clientes que presentan indicadores de riesgo financiero para el sistema de alertas.
-============================================================================ */
-
+-- VIEW 4: Alertas financieras
 CREATE OR REPLACE VIEW vw_alertas_financieras AS
 SELECT 
-    v.id_cliente,
+    v.id_usuario,
     v.nombre,
     v.apellido,
     v.ratio_dti_porcentaje,
@@ -537,8 +430,7 @@ FROM vw_resumen_cliente_ratios v
 WHERE v.perfil_preliminar IN ('En riesgo', 'En observación');
 
 /* ============================================================================
-Trigger 1:  Asegura que no se puedan insertar transacciones con montos iguales o inferiores a cero 
-(validación de entrada a nivel de BD).
+TRIGGERS
 ============================================================================ */
 
 DELIMITER //
@@ -550,31 +442,6 @@ BEGIN
     IF NEW.monto <= 0 THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Error: El monto de la transacción debe ser mayor a cero.';
-    END IF;
-END //
-
-DELIMITER ;
-
-/* ============================================================================
- Trigger 2: Actualiza la deuda del cliente
-Cuando se registra una transacción de gasto pagada con tarjeta de crédito o préstamos en estado "Adeudo"
-actualiza automáticamente el saldo total de deudas acumuladas del cliente.
-============================================================================ */
-
-DELIMITER //
-
-CREATE TRIGGER tg_actualizar_deuda_cliente
-AFTER INSERT ON transacciones
-FOR EACH ROW
-BEGIN
-    IF NEW.tipo_movimiento = 'Egreso' 
-       AND NEW.metodo_pago = 'Tarjeta de crédito' 
-       AND NEW.estatus_pago = 'Adeudo' THEN
-        
-        UPDATE clientes
-        SET deudas_totales = COALESCE(deudas_totales, 0) + NEW.monto
-        WHERE id_cliente = NEW.id_cliente;
-        
     END IF;
 END //
 
