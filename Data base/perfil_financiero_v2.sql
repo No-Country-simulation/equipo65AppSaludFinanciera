@@ -447,3 +447,71 @@ BEGIN
 END //
 
 DELIMITER ;
+
+
+-- ============================================================================
+-- DATASET DE PRUEBA / SEED DATA PARA TESTING DE BACKEND Y FRONTEND
+-- Base de datos: perfil_financiero
+-- ============================================================================
+
+USE perfil_financiero;
+
+-- 1. USUARIOS DE PRUEBA
+INSERT INTO usuarios (id_usuario, nombre, apellido, fecha_nacimiento, genero, id_ciudad, ingreso_mensual, email) VALUES
+('u1000000-0000-0000-0000-000000000001', 'Carlos', 'Mendoza', '1992-05-14', 'M', 'c1000000-0000-0000-0000-000000000001', 25000.00, 'carlos.mendoza_1@mail.com'),
+('u1000000-0000-0000-0000-000000000002', 'Ana', 'Garcia', '1995-11-20', 'F', 'c1000000-0000-0000-0000-000000000002', 18500.00, 'ana.garcia_2@mail.com'),
+('u1000000-0000-0000-0000-000000000003', 'Luis', 'Hernandez', '1988-03-08', 'M', 'c1000000-0000-0000-0000-000000000004', 32000.00, 'luis.hernandez_3@mail.com')
+ON DUPLICATE KEY UPDATE nombre = VALUES(nombre);
+
+-- 2. SEGURIDAD DE USUARIOS (Hash genérico de prueba)
+INSERT INTO usuarios_seguridad (id_usuario, password_hash) VALUES
+('u1000000-0000-0000-0000-000000000001', '$2b$12$eImiTXuWVxfM37uY4JANjO5E.12345678901234567890123'),
+('u1000000-0000-0000-0000-000000000002', '$2b$12$eImiTXuWVxfM37uY4JANjO5E.12345678901234567890123'),
+('u1000000-0000-0000-0000-000000000003', '$2b$12$eImiTXuWVxfM37uY4JANjO5E.12345678901234567890123')
+ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash);
+
+-- 3. CATEGORIAS DE PRUEBA
+INSERT INTO categorias (id_categoria, slug, nombre_categoria, tipo_categoria, descripcion) VALUES
+(1, 'nomina_ingresos', 'Nomina / Ingresos', 'INGRESO', 'Ingresos por salarios o honorarios'),
+(2, 'supermercado', 'Supermercado', 'EGRESO', 'Compras de viveres y hogar'),
+(3, 'restaurantes', 'Restaurantes', 'EGRESO', 'Comidas fuera de casa'),
+(4, 'servicios', 'Servicios', 'EGRESO', 'Pago de luz, agua, internet'),
+(5, 'streaming', 'Streaming / Ocio', 'EGRESO', 'Suscripciones digitales')
+ON DUPLICATE KEY UPDATE nombre_categoria = VALUES(nombre_categoria);
+
+-- 4. CUENTAS BANCARIAS
+INSERT INTO cuentas_bancarias (id_cuenta, numero_cuenta, fecha_apertura) VALUES
+('b1000000-0000-0000-0000-000000000001', '123456789012', '2024-01-15'),
+('b1000000-0000-0000-0000-000000000002', '987654321098', '2024-02-10'),
+('b1000000-0000-0000-0000-000000000003', '456789012345', '2024-03-01')
+ON DUPLICATE KEY UPDATE numero_cuenta = VALUES(numero_cuenta);
+
+-- 5. RELACION CUENTAS - USUARIOS
+INSERT INTO cuentas_usuarios (id_cuenta, id_usuario, rol_usuario) VALUES
+('b1000000-0000-0000-0000-000000000001', 'u1000000-0000-0000-0000-000000000001', 'TITULAR_PRINCIPAL'),
+('b1000000-0000-0000-0000-000000000002', 'u1000000-0000-0000-0000-000000000002', 'TITULAR_PRINCIPAL'),
+('b1000000-0000-0000-0000-000000000003', 'u1000000-0000-0000-0000-000000000003', 'TITULAR_PRINCIPAL')
+ON DUPLICATE KEY UPDATE rol_usuario = VALUES(rol_usuario);
+
+-- 6. TARJETAS
+INSERT INTO tarjetas (id_tarjeta, id_cuenta, numero_tarjeta, tipo_tarjeta, red_pago, fecha_vencimiento) VALUES
+('t1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001', '4152310011223344', 'DEBITO', 'VISA', '2029-12-31'),
+('t1000000-0000-0000-0000-000000000002', 'b1000000-0000-0000-0000-000000000002', '4152980099887766', 'DEBITO', 'VISA', '2029-12-31'),
+('t1000000-0000-0000-0000-000000000003', 'b1000000-0000-0000-0000-000000000003', '4152450044556677', 'DEBITO', 'VISA', '2029-12-31')
+ON DUPLICATE KEY UPDATE numero_tarjeta = VALUES(numero_tarjeta);
+
+-- 7. HISTORIAL BURO DE CREDITO
+INSERT INTO historial_buro (id_buro, id_usuario, score_crediticio, dias_atraso, monto_adeudado) VALUES
+('h1000000-0000-0000-0000-000000000001', 'u1000000-0000-0000-0000-000000000001', 720, 0, 3500.00),
+('h1000000-0000-0000-0000-000000000002', 'u1000000-0000-0000-0000-000000000002', 610, 15, 12000.00),
+('h1000000-0000-0000-0000-000000000003', 'u1000000-0000-0000-0000-000000000003', 780, 0, 1500.00)
+ON DUPLICATE KEY UPDATE score_crediticio = VALUES(score_crediticio);
+
+-- 8. TRANSACCIONES DE PRUEBA
+INSERT INTO transacciones (id_transaccion, id_tarjeta, id_categoria, fecha_hora, concepto, comercio, monto, tipo_movimiento, medio_operacion) VALUES
+('tx100000-0000-0000-0000-000000000001', 't1000000-0000-0000-0000-000000000001', 1, '2026-07-01 09:00:00', 'Pago de Nomina Quincenal', 'Empresa Tech MX', 12500.00, 'INGRESO', 'TRANSFERENCIA'),
+('tx100000-0000-0000-0000-000000000002', 't1000000-0000-0000-0000-000000000001', 2, '2026-07-02 15:30:00', 'Compra de despensa', 'Supermercado Walmart', 1450.50, 'EGRESO', 'POS'),
+('tx100000-0000-0000-0000-000000000003', 't1000000-0000-0000-0000-000000000001', 5, '2026-07-05 20:00:00', 'Suscripcion Netflix Mensual', 'Netflix Digital', 219.00, 'EGRESO', 'APP_MOVIL'),
+('tx100000-0000-0000-0000-000000000004', 't1000000-0000-0000-0000-000000000002', 1, '2026-07-01 09:00:00', 'Pago de Honorarios', 'Cliente Consultoria', 9250.00, 'INGRESO', 'TRANSFERENCIA'),
+('tx100000-0000-0000-0000-000000000005', 't1000000-0000-0000-0000-000000000002', 3, '2026-07-03 14:10:00', 'Consumo de restaurante', 'Taqueria El Pastor', 480.00, 'EGRESO', 'POS')
+ON DUPLICATE KEY UPDATE monto = VALUES(monto);
