@@ -1,0 +1,35 @@
+﻿id_categoria,slug,nombre_categoria,tipo_categoria
+1,nomina_ingresos,Nomina/Ingresos,INGRESO
+2,bus,Bus,EGRESO
+3,supermercado,Supermercado,EGRESO
+4,streaming,Streaming,EGRESO
+5,comida_rapida,Comida rapida,EGRESO
+6,taxi,Taxi,EGRESO
+7,electricidad,Electricidad,EGRESO
+8,herramientas,Herramientas,EGRESO
+9,telefonia_movil,Telefonia Movil,EGRESO
+10,compras_fisicas,Compras Fisicas,EGRESO
+11,metro,Metro,EGRESO
+12,barberia,Barberia,EGRESO
+13,zapatos_de_tacon,Zapatos de Tacon,EGRESO
+14,renta,Renta,EGRESO
+15,multas,Multas,EGRESO
+16,bolsas,Bolsas,EGRESO
+17,colegiatura,Colegiatura,EGRESO
+18,internet_y_telefonia_hogar,Internet y Telefonia Hogar,EGRESO
+19,mantenimiento,Mantenimiento,EGRESO
+20,salidas,Salidas,EGRESO
+21,metrobus,Metrobus,EGRESO
+22,gasolina,Gasolina,EGRESO
+23,seguros,Seguros,EGRESO
+24,maquillaje,Maquillaje,EGRESO
+25,ropa,Ropa,EGRESO
+26,farmacia,Farmacia,EGRESO
+27,gas,Gas,EGRESO
+28,articulos_deportivos,Articulos Deportivos,EGRESO
+29,viajes,Viajes,EGRESO
+30,salon_de_belleza,Salon de Belleza,EGRESO
+31,compras_en_linea,Compras en linea,EGRESO
+32,videojuegos_consola,Videojuegos Consola,EGRESO
+33,agua,Agua,EGRESO
+34,videojuegos,Videojuegos,EGRESO
