@@ -7,11 +7,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type ModoDatos = 'mock' | 'api';
 
-export const DATA_SOURCE: ModoDatos =
-  process.env.EXPO_PUBLIC_DATA_SOURCE === 'api' ? 'api' : 'mock';
+export const DATA_SOURCE: ModoDatos = 'api';
+ 
+// process.env.EXPO_PUBLIC_DATA_SOURCE === 'api' ? 'api' : 'mock';
 
-export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8080/api/v1';
+export const API_URL = 'http://192.168.5.249:8080/api';
+//  process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8080/api/v1';
 
 /**
  * Almacenamiento clave-valor del cliente (AsyncStorage aqui; localStorage en

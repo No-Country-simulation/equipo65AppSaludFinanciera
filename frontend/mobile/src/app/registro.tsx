@@ -12,6 +12,7 @@ import {
 import { router, type Href } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { FinanceApiError, TERMINOS_VERSION, type Moneda, type Usuario } from '@/data';
 import { Colores, Espacio, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
@@ -56,20 +57,74 @@ export default function PantallaRegistro() {
   const fallar = (causa: unknown) =>
     setError(causa instanceof FinanceApiError ? causa.message : String(causa));
 
+  // --- MÁSCARA INTELIGENTE PARA FECHA (YYYY-MM-DD) ---
+  const manejarFechaNacimiento = (texto: string) => {
+    const limpio = texto.replace(/\D/g, ''); // Solo números
+    let formateado = limpio;
+    if (limpio.length > 4) {
+      formateado = limpio.substring(0, 4) + '-' + limpio.substring(4);
+    }
+    if (limpio.length > 6) {
+      formateado = formateado.substring(0, 7) + '-' + limpio.substring(6, 8);
+    }
+    setNacimiento(formateado);
+  };
+
   const crearCuenta = async () => {
-    setEnviando(true);
     setError(null);
+
+    // 1. Validar campos vacíos
+    if (!email || !password || !nombre || !apellido || !nacimiento || !genero || !telefono || !ciudad) {
+      setError("Por favor, completa todos los campos.");
+      return;
+    }
+
+    // 2. Correo válido
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError("Ingresa un correo electrónico válido.");
+      return;
+    }
+
+    // 3. Contraseña (min 8, letras, números, símbolos)
+    const passRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    if (!passRegex.test(password)) {
+      setError("La contraseña debe tener mínimo 8 caracteres, letras, números y al menos un símbolo.");
+      return;
+    }
+
+    // 4. Fecha completa y válida
+    if (nacimiento.length !== 10) {
+      setError("La fecha debe estar completa (YYYY-MM-DD).");
+      return;
+    }
+
+    // 5. Teléfono (10 números)
+    const telRegex = /^\d{10}$/;
+    if (!telRegex.test(telefono.trim())) {
+      setError("El número de teléfono debe tener exactamente 10 dígitos.");
+      return;
+    }
+
+    // 6. Ciudad (Min 3 caracteres)
+    const ciudadRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{3,}$/;
+    if (!ciudadRegex.test(ciudad.trim())) {
+      setError("Ingresa un nombre de ciudad válido (solo letras, mínimo 3).");
+      return;
+    }
+
+    setEnviando(true);
     try {
       await ds.registro({
         email: email.trim(),
         password,
         moneda_principal: moneda,
-        nombre,
-        apellido,
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
         fecha_nacimiento: nacimiento,
         genero: genero || undefined,
-        telefono: telefono || undefined,
-        ciudad: ciudad || undefined,
+        telefono: telefono.trim() || undefined,
+        ciudad: ciudad.trim() || undefined,
         terminos_version: TERMINOS_VERSION,
       });
       const sesion = await ds.login(email.trim(), password);
@@ -126,7 +181,6 @@ export default function PantallaRegistro() {
           <BotonTema claro />
         </View>
 
-        {/* Stepper */}
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           {[t('auth.pasoCuenta'), t('auth.pasoSeguridad'), t('auth.pasoListo')].map((etiqueta, i) => (
             <View key={etiqueta} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -141,7 +195,6 @@ export default function PantallaRegistro() {
         </View>
 
         <View style={estilos.tarjetaForm}>
-          {/* Paso 1: cuenta */}
           {paso === 'cuenta' ? (
             <>
               <Text style={estilos.titulo}>{t('auth.registroTitulo')}</Text>
@@ -167,22 +220,22 @@ export default function PantallaRegistro() {
                 </View>
               </View>
 
-              {/* Datos personales (USUARIOS: nombre/apellido/fecha_nacimiento NOT NULL) */}
               <Text style={[estilos.subtitulo, { marginTop: 2 }]}>{t('auth.datosPersonalesTitulo')}</Text>
               <Campo etiqueta={t('auth.nombre')} value={nombre} onChangeText={setNombre} autoCapitalize="words" />
               <Campo etiqueta={t('auth.apellido')} value={apellido} onChangeText={setApellido} autoCapitalize="words" />
-              <Campo
-                etiqueta={t('auth.fechaNacimiento')}
-                ayuda={t('auth.fechaNacimientoAyuda')}
-                value={nacimiento}
-                onChangeText={setNacimiento}
-                placeholder="1990-01-31"
-                keyboardType="numbers-and-punctuation"
+              
+              {/* Aquí insertamos nuestro campo de fecha con máscara */}
+              <Campo 
+                etiqueta={t('auth.fechaNacimiento')} 
+                value={nacimiento} 
+                onChangeText={manejarFechaNacimiento} 
+                keyboardType="number-pad" 
+                placeholder="YYYY-MM-DD"
+                maxLength={10} 
               />
+
               <View style={{ gap: 6 }}>
-                <Text style={estilos.etiqueta}>
-                  {t('auth.genero')} ({t('auth.opcional')})
-                </Text>
+                <Text style={estilos.etiqueta}>{t('auth.genero')}</Text>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
                   {(['M', 'F'] as const).map((g) => (
                     <Pressable
@@ -197,8 +250,8 @@ export default function PantallaRegistro() {
                   ))}
                 </View>
               </View>
-              <Campo etiqueta={`${t('auth.telefono')} (${t('auth.opcional')})`} value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
-              <Campo etiqueta={`${t('auth.ciudad')} (${t('auth.opcional')})`} value={ciudad} onChangeText={setCiudad} autoCapitalize="words" />
+              <Campo etiqueta={t('auth.telefono')} value={telefono} onChangeText={setTelefono} keyboardType="number-pad" maxLength={10} />
+              <Campo etiqueta={t('auth.ciudad')} value={ciudad} onChangeText={setCiudad} autoCapitalize="words" />
 
               {error ? <Text style={estilos.error}>{error}</Text> : null}
 
@@ -229,7 +282,6 @@ export default function PantallaRegistro() {
             </>
           ) : null}
 
-          {/* Paso 2: QR */}
           {paso === 'qr' ? (
             <>
               <Text style={estilos.titulo}>{t('auth.dosfaTitulo')}</Text>
@@ -244,7 +296,6 @@ export default function PantallaRegistro() {
             </>
           ) : null}
 
-          {/* Paso 3: verificar */}
           {paso === 'verificar' ? (
             <>
               <Text style={estilos.titulo}>{t('auth.verificaTitulo')}</Text>
@@ -268,7 +319,6 @@ export default function PantallaRegistro() {
             </>
           ) : null}
 
-          {/* Paso 4: respaldo */}
           {paso === 'respaldo' ? (
             <>
               <Text style={estilos.titulo}>{t('auth.respaldoTitulo')}</Text>
@@ -311,7 +361,6 @@ const estilos = StyleSheet.create({
   secreto: { fontFamily: Fuentes.cuerpoSemi, fontSize: 14, letterSpacing: 1.5, textAlign: 'center', color: Colores.tinta, backgroundColor: Colores.canvas2, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
   respaldoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   codigoRespaldo: { fontFamily: Fuentes.cuerpoSemi, fontSize: 13, color: Colores.tinta, backgroundColor: Colores.canvas, borderColor: Colores.linea, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  // Superficie del tema (no un crema fijo): con tema oscuro el texto quedaba ilegible.
   aceptoFila: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: Colores.canvas2, borderWidth: 1, borderColor: Colores.linea, borderRadius: 14, padding: 12 },
   aceptoTexto: { flex: 1, fontFamily: Fuentes.cuerpo, fontSize: 12.5, lineHeight: 18, color: Colores.tinta },
 });

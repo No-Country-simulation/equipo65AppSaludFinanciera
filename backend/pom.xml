@@ -46,6 +46,14 @@
             <scope>runtime</scope>
         </dependency>
 
+
+        <!-- Driver para PostgreSQL -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Driver JDBC para Oracle Cloud / OCI -->
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>

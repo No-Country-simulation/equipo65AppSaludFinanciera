@@ -23,7 +23,7 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/register")
+    @PostMapping("/registro") // <--- Solo cambiamos esta palabra al español
     public ResponseEntity<?> registrar(@RequestBody Usuario request) {
         try {
             Usuario usuario = authService.registrarUsuario(request);
