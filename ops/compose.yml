@@ -1,0 +1,229 @@
+# =============================================================================
+# Fintech Vital - stack completo en contenedores
+#
+# Un solo archivo levanta base de datos + API + web. Es el mismo compose que se
+# usa en local y el que se despliega en las instancias: lo unico que cambia es
+# el archivo .env.
+#
+#   ops/stack.ps1 arriba          (Windows)
+#   ops/stack.sh  arriba          (Linux / macOS)
+#
+# Funciona igual con Docker y con Podman. Los puertos se publican en 127.0.0.1
+# a proposito: en Podman rootless sobre WSL2 el forward a 0.0.0.0 no siempre
+# llega, y ademas evita exponer la BD a la red de la maquina sin querer.
+#
+# FV_PROYECTO aisla ENTORNOS. Da nombre al proyecto de compose, a los
+# contenedores y al volumen, asi que cada entorno tiene los suyos y pueden
+# convivir en la misma maquina:
+#
+#   .env          -> FV_PROYECTO=fintechvital           (local)
+#   .env.staging  -> FV_PROYECTO=fintechvital-staging   (tunel publico)
+#
+# Sin esto los dos entornos compartian contenedores y volumen: levantar staging
+# tumbaba el local y, como las contrasenas de BD son distintas, la API no podia
+# autenticarse contra el volumen ya inicializado. Pasaba de verdad (2026-08-04).
+# =============================================================================
+name: ${FV_PROYECTO:-fintechvital}
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Base de datos. La imagen trae dentro el esquema y la semilla; las
+  # migraciones se aplican solas en el primer arranque sobre un volumen vacio.
+  # ---------------------------------------------------------------------------
+  db:
+    build:
+      context: ../db
+    image: fintechvital/db:local
+    container_name: ${FV_PROYECTO:-fintechvital}-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fintechvital}
+      POSTGRES_USER: ${POSTGRES_USER:-fintechvital}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en ops/.env (copia ops/.env.ejemplo)}
+      FV_CARGAR_DEMO: ${FV_CARGAR_DEMO:-no}
+      FV_PASSWORD_DEMO: ${FV_PASSWORD_DEMO:-}
+      FV_CARGAR_DATASET: ${FV_CARGAR_DATASET:-no}
+      # Sin esto, los locales del contenedor quedan en C y los acentos de las
+      # etiquetas i18n se ven mal en psql.
+      LANG: C.UTF-8
+    ports:
+      - "127.0.0.1:${PUERTO_DB:-5432}:5432"
+    volumes:
+      - datos_db:/var/lib/postgresql/data
+    healthcheck:
+      # -h 127.0.0.1 es DELIBERADO: sin el, pg_isready usa el socket local y
+      # responde "listo" mientras el arranque inicial todavia no escucha en TCP.
+      # Los servicios que esperan a "healthy" arrancaban y se encontraban
+      # "Connection refused".
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+    # Sin techo, PostgreSQL va tomando memoria para cache y en Windows eso se
+    # traduce en que la VM de WSL2 crece y no la suelta.
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Migrador: aplica migraciones NUEVAS sobre una BD que ya existe (el hook de
+  # primer arranque no vuelve a ejecutarse nunca). No arranca con el stack: se
+  # invoca a mano.
+  #
+  #   docker compose -f ops/compose.yml --profile migrar run --rm migrador
+  # ---------------------------------------------------------------------------
+  migrador:
+    build:
+      context: ../db
+    image: fintechvital/db:local
+    container_name: ${FV_PROYECTO:-fintechvital}-migrador
+    profiles: ["migrar"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-fintechvital}
+      PGUSER: ${POSTGRES_USER:-fintechvital}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD}
+    entrypoint: ["/opt/fintechvital/aplicar.sh"]
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # API (Spring Boot). Se conecta a PostgreSQL con el usuario y la contrasena
+  # del servicio `db`. El esquema NO lo gobierna Hibernate (SPRING_JPA_DDL=none):
+  # lo gobiernan las migraciones de db/.
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ../backend
+    image: fintechvital/api:local
+    container_name: ${FV_PROYECTO:-fintechvital}-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Los valores por defecto son H2 en memoria para que `mvn spring-boot:run`
+      # funcione sin nada montado; ops/.env los sobreescribe con PostgreSQL.
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:h2:mem:testdb}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-sa}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER:-org.h2.Driver}
+      SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DIALECT:-org.hibernate.dialect.H2Dialect}
+      # "none" contra PostgreSQL: el esquema lo gobierna db/migraciones. Con
+      # "update", Hibernate crearia sus propias tablas por detras.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_DDL:-update}
+      # Origenes que pueden llamar a la API desde un navegador. En staging la web
+      # y la API estan en dominios DISTINTOS, asi que todas las peticiones son
+      # cross-origin y sin esto el navegador las bloquea.
+      FV_CORS_ORIGINS: ${FV_CORS_ORIGINS:-http://localhost:3000,https://staging.fintechvital.com,https://fintechvital.com}
+      # Firma de los tokens. Quien tenga este valor puede emitir sesiones de
+      # cualquier usuario: fuera de local va generado y guardado como secreto.
+      #   openssl rand -base64 48
+      FV_JWT_SECRETO: ${FV_JWT_SECRETO:-desarrollo-local-cambiar-en-despliegue-32bytes-minimo!!}
+      SERVER_PORT: 8080
+      TZ: UTC
+    ports:
+      - "127.0.0.1:${PUERTO_API:-8080}:8080"
+    restart: unless-stopped
+    # La JVM del Dockerfile usa MaxRAMPercentage=75, asi que respeta este techo
+    # en vez de mirar la RAM de la maquina entera.
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+  # ---------------------------------------------------------------------------
+  # Web (Next.js). NEXT_PUBLIC_API_URL se hornea en el BUILD: cambiarla exige
+  # rebuild, no basta con reiniciar el contenedor.
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: ../frontend/web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+    image: fintechvital/web:local
+    container_name: ${FV_PROYECTO:-fintechvital}-web
+    ports:
+      - "127.0.0.1:${PUERTO_WEB:-3000}:3000"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Tasas de cambio. Refresca tasa_cambio desde ExchangeRate-API cada 6 h.
+  #
+  #   docker compose -f ops/compose.yml --profile tasas up -d
+  #
+  # Cuota: /latest/USD trae TODAS las monedas en una sola peticion, asi que son
+  # 4 llamadas al dia = ~124 al mes sobre 1500 disponibles (8 %). Sobra margen.
+  #
+  # Sin EXCHANGERATE_API_KEY el contenedor no hace nada y lo dice: la aplicacion
+  # sigue con las tasas semilla.
+  # ---------------------------------------------------------------------------
+  tasas:
+    build:
+      context: ../db
+    image: fintechvital/db:local
+    container_name: ${FV_PROYECTO:-fintechvital}-tasas
+    profiles: ["tasas"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-fintechvital}
+      PGUSER: ${POSTGRES_USER:-fintechvital}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD}
+      EXCHANGERATE_API_KEY: ${EXCHANGERATE_API_KEY:-}
+      FV_INTERVALO_TASAS: ${FV_INTERVALO_TASAS:-21600}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - 'while true; do /opt/fintechvital/tasas.sh || true; sleep "$${FV_INTERVALO_TASAS}"; done'
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # Cloudflare Tunnel - expone el stack en fintechvital.com sin abrir un solo
+  # puerto en el router. Solo arranca con el perfil "tunel":
+  #
+  #   docker compose -f ops/compose.yml --profile tunel up -d
+  #
+  # ⚠️ El token va SIEMPRE en ops/.env (gitignoreado). Nunca en este archivo:
+  # el repo es publico y un token de tunel permite publicar cualquier cosa bajo
+  # el dominio.
+  #
+  # Al correr DENTRO del compose comparte red con los demas servicios, asi que
+  # en el panel de Cloudflare los "public hostnames" apuntan a los NOMBRES DE
+  # SERVICIO, no a localhost:
+  #   staging.fintechvital.com      ->  http://web:3000
+  #   api-staging.fintechvital.com  ->  http://api:8080
+  # ---------------------------------------------------------------------------
+  tunel:
+    image: cloudflare/cloudflared:latest
+    container_name: ${FV_PROYECTO:-fintechvital}-tunel
+    profiles: ["tunel"]
+    command: tunnel --no-autoupdate run
+    environment:
+      # Sin ":?": compose interpola TODOS los servicios aunque su perfil este
+      # inactivo, y un token obligatorio aqui romperia `up` del stack normal.
+      # Si falta, falla cloudflared al arrancar - y solo con --profile tunel.
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+volumes:
+  datos_db:
+    name: ${FV_PROYECTO:-fintechvital}_datos_db
