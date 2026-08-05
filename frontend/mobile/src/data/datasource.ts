@@ -1,7 +1,7 @@
 /**
  * La UNICA puerta de datos de las pantallas (ADR-0011).
- * Las pantallas importan esta interfaz via `@/data` - jamas `mock/` ni `api/`
- * directamente. Asi, borrar `mock/` + poner DATA_SOURCE=api no toca pantallas.
+ * Las pantallas importan esta interfaz via `@/data`, jamas `api/` directamente.
+ * Gracias a eso, retirar la capa mock no obligo a tocar ni una pantalla.
  */
 import type {
   Analisis,
@@ -100,7 +100,7 @@ export interface AltaMeta {
 
 /**
  * Espejo de CONTRATO_API.md. La implementacion `api/` traduce cada metodo a su
- * endpoint; la `mock/` (temporal, se borra al integrar) lo simula en memoria.
+ * endpoint. Es la unica que queda: la capa mock se elimino.
  */
 export interface FinanceDataSource {
   // §4 Auth
@@ -118,8 +118,8 @@ export interface FinanceDataSource {
   desactivar2fa(password: string): Promise<void>;
   /**
    * Re-vincula una sesion restaurada del almacenamiento del cliente (recarga de
-   * pagina). Con la API real re-adjunta el token; en el mock rehidrata el estado
-   * en memoria para que no quede desincronizado con el localStorage.
+   * pagina). Re-adjunta el token de acceso al cliente HTTP para que las
+   * peticiones siguientes vayan autenticadas.
    */
   hidratarSesion(usuario: Usuario): void;
 

@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "fintechvital",
     "userInterfaceStyle": "automatic",
+    "primaryColor": "#0f1a20",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.fintechvital"
     },
     "web": {
       "output": "static",
@@ -34,7 +36,6 @@
         }
       ],
       "expo-localization"
-      
     ],
     "experiments": {
       "typedRoutes": true,

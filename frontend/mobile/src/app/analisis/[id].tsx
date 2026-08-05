@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Analisis, Categoria, CategoriaSlug, PerfilSlug } from '@/data';
 import { Colores, COLOR_PERFIL, Espacio, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
-import { formatearFecha, formatearPct } from '@/lib/formato';
+import { formatearFecha, formatearPct, totalGastos } from '@/lib/formato';
 import { useDatos } from '@/lib/useDatos';
 import { FichasIndicadores, ListaRecomendaciones } from '@/components/analisis';
 import { DonaGastos, porcionesGasto } from '@/components/graficos';
@@ -107,10 +107,7 @@ export default function PantallaDetalleAnalisis() {
                     etiquetas,
                     t('panel.otras'),
                   )}
-                  total={Object.values(datos.analisis.resumen_gastos).reduce(
-                    (suma, monto) => suma + (monto ?? 0),
-                    0,
-                  )}
+                  total={totalGastos(datos.analisis.resumen_gastos)}
                   moneda={datos.analisis.moneda}
                   idioma={idioma}
                   etiquetaTotal={t('panel.gastoTotal')}

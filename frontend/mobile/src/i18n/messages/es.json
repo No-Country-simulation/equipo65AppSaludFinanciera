@@ -9,7 +9,6 @@
     "guardando": "Guardando…",
     "cancelar": "Cancelar",
     "cerrar": "Cerrar",
-    "demo": "Datos de demostración",
     "proximamente": "Disponible próximamente",
     "educativo": "Las recomendaciones son educativas, no asesoría financiera regulada.",
     "avisoAlmacenamiento": "Usamos el almacenamiento de tu navegador solo para tu sesión y tus preferencias. Sin cookies publicitarias ni rastreadores.",
@@ -45,10 +44,8 @@
     "entrando": "Entrando…",
     "sinCuenta": "¿No tienes cuenta?",
     "crearCuenta": "Crear cuenta",
-    "demoAyuda": "Demo: deja ambos campos en blanco y pulsa Entrar. O demo@fintechvital.dev con cualquier contraseña de 10+ caracteres (pedirá el código 2FA)",
     "totpTitulo": "Verificación en dos pasos",
     "totpAyuda": "Ingresa el código de 6 dígitos de tu app de autenticación",
-    "totpDemoAyuda": "Demo: ingresa cualquier código de 6 dígitos",
     "codigo": "Código",
     "verificar": "Verificar",
     "registroTitulo": "Crea tu cuenta",
@@ -90,7 +87,17 @@
     },
     "telefono": "Teléfono",
     "ciudad": "Ciudad",
-    "opcional": "opcional"
+    "opcional": "opcional",
+    "val": {
+      "camposObligatorios": "Completa los campos obligatorios: correo, contraseña, nombre, apellido y fecha de nacimiento.",
+      "emailInvalido": "Ingresa un correo electrónico válido.",
+      "passwordCorta": "La contraseña debe tener al menos 10 caracteres.",
+      "fechaIncompleta": "Completa la fecha de nacimiento (AAAA-MM-DD).",
+      "fechaInvalida": "Esa fecha no existe. Revísala.",
+      "fechaFutura": "La fecha de nacimiento debe estar en el pasado.",
+      "telefonoInvalido": "El teléfono debe tener entre 6 y 15 dígitos.",
+      "ciudadInvalida": "Ingresa una ciudad válida (mínimo 3 letras, sin números)."
+    }
   },
   "panel": {
     "saludo": "Hola, {nombre}",

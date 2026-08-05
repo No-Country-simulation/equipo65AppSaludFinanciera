@@ -57,59 +57,78 @@ export default function PantallaRegistro() {
   const fallar = (causa: unknown) =>
     setError(causa instanceof FinanceApiError ? causa.message : String(causa));
 
-  // --- MÁSCARA INTELIGENTE PARA FECHA (YYYY-MM-DD) ---
+  /**
+   * Mascara de la fecha de nacimiento: el usuario teclea solo digitos y aqui se
+   * insertan los guiones (AAAA-MM-DD). El teclado es numerico, asi que sin esto
+   * el separador no esta disponible en Android.
+   */
   const manejarFechaNacimiento = (texto: string) => {
-    const limpio = texto.replace(/\D/g, ''); // Solo números
-    let formateado = limpio;
-    if (limpio.length > 4) {
-      formateado = limpio.substring(0, 4) + '-' + limpio.substring(4);
+    const digitos = texto.replace(/\D/g, '').slice(0, 8);
+    const partes = [digitos.slice(0, 4), digitos.slice(4, 6), digitos.slice(6, 8)];
+    setNacimiento(partes.filter((parte) => parte.length > 0).join('-'));
+  };
+
+  /**
+   * Validacion previa al envio. Las reglas son las del contrato
+   * (CONTRATO_API §4.1 / RegistroRequest): obligatorios email, password,
+   * nombre, apellido y fecha de nacimiento; genero, telefono y ciudad son
+   * OPCIONALES. Validar de mas aqui rechazaria altas que la API si acepta.
+   *
+   * Devuelve la clave i18n del primer fallo, o null si todo esta bien. No
+   * arma frases: el proyecto es trilingue y los textos salen de t().
+   */
+  const validarAlta = (): string | null => {
+    if (!email.trim() || !password || !nombre.trim() || !apellido.trim() || !nacimiento) {
+      return 'auth.val.camposObligatorios';
     }
-    if (limpio.length > 6) {
-      formateado = formateado.substring(0, 7) + '-' + limpio.substring(6, 8);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'auth.val.emailInvalido';
+
+    // 10 es el minimo del contrato, el mismo que exige la web y que anuncia
+    // auth.passwordAyuda. Pedir mas aqui que en la API confunde al usuario.
+    if (password.length < 10) return 'auth.val.passwordCorta';
+
+    // La mascara garantiza la forma, no que la fecha exista: 2026-02-31 encaja
+    // en el patron. Se construye la fecha y se comprueba que Date no haya
+    // tenido que desbordar el dia (31 de febrero -> 3 de marzo).
+    //
+    // Se comparan los componentes en LOCAL, sin pasar por toISOString(): esa
+    // conversion es a UTC y en una zona al este de Greenwich devolveria el dia
+    // anterior, rechazando fechas correctas.
+    if (nacimiento.length !== 10) return 'auth.val.fechaIncompleta';
+    const [anio, mes, dia] = nacimiento.split('-').map(Number);
+    const fecha = new Date(anio, mes - 1, dia);
+    const existe =
+      anio >= 1900 &&
+      fecha.getFullYear() === anio &&
+      fecha.getMonth() === mes - 1 &&
+      fecha.getDate() === dia;
+    if (!existe) return 'auth.val.fechaInvalida';
+    if (fecha >= new Date()) return 'auth.val.fechaFutura';
+
+    // Opcionales: solo se validan si el usuario los escribio. El rango 6-15
+    // cubre Mexico (10), Brasil (11) y Argentina con prefijo; el maximo es el
+    // @Size(max = 15) de la API.
+    const telefonoLimpio = telefono.replace(/\D/g, '');
+    if (telefono.trim() && (telefonoLimpio.length < 6 || telefonoLimpio.length > 15)) {
+      return 'auth.val.telefonoInvalido';
     }
-    setNacimiento(formateado);
+
+    // Sin lista blanca de letras: una regex con solo acentos del castellano
+    // rechaza "Sao Paulo", "Brasilia" o "Saint-Etienne". Basta con exigir
+    // longitud y que no venga un numero suelto.
+    const ciudadLimpia = ciudad.trim();
+    if (ciudadLimpia && (ciudadLimpia.length < 3 || /\d/.test(ciudadLimpia))) {
+      return 'auth.val.ciudadInvalida';
+    }
+    return null;
   };
 
   const crearCuenta = async () => {
     setError(null);
 
-    // 1. Validar campos vacíos
-    if (!email || !password || !nombre || !apellido || !nacimiento || !genero || !telefono || !ciudad) {
-      setError("Por favor, completa todos los campos.");
-      return;
-    }
-
-    // 2. Correo válido
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setError("Ingresa un correo electrónico válido.");
-      return;
-    }
-
-    // 3. Contraseña (min 8, letras, números, símbolos)
-    const passRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
-    if (!passRegex.test(password)) {
-      setError("La contraseña debe tener mínimo 8 caracteres, letras, números y al menos un símbolo.");
-      return;
-    }
-
-    // 4. Fecha completa y válida
-    if (nacimiento.length !== 10) {
-      setError("La fecha debe estar completa (YYYY-MM-DD).");
-      return;
-    }
-
-    // 5. Teléfono (10 números)
-    const telRegex = /^\d{10}$/;
-    if (!telRegex.test(telefono.trim())) {
-      setError("El número de teléfono debe tener exactamente 10 dígitos.");
-      return;
-    }
-
-    // 6. Ciudad (Min 3 caracteres)
-    const ciudadRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{3,}$/;
-    if (!ciudadRegex.test(ciudad.trim())) {
-      setError("Ingresa un nombre de ciudad válido (solo letras, mínimo 3).");
+    const fallo = validarAlta();
+    if (fallo) {
+      setError(t(fallo));
       return;
     }
 
@@ -223,15 +242,14 @@ export default function PantallaRegistro() {
               <Text style={[estilos.subtitulo, { marginTop: 2 }]}>{t('auth.datosPersonalesTitulo')}</Text>
               <Campo etiqueta={t('auth.nombre')} value={nombre} onChangeText={setNombre} autoCapitalize="words" />
               <Campo etiqueta={t('auth.apellido')} value={apellido} onChangeText={setApellido} autoCapitalize="words" />
-              
-              {/* Aquí insertamos nuestro campo de fecha con máscara */}
-              <Campo 
-                etiqueta={t('auth.fechaNacimiento')} 
-                value={nacimiento} 
-                onChangeText={manejarFechaNacimiento} 
-                keyboardType="number-pad" 
-                placeholder="YYYY-MM-DD"
-                maxLength={10} 
+              <Campo
+                etiqueta={t('auth.fechaNacimiento')}
+                ayuda={t('auth.fechaNacimientoAyuda')}
+                value={nacimiento}
+                onChangeText={manejarFechaNacimiento}
+                keyboardType="number-pad"
+                placeholder="1990-01-31"
+                maxLength={10}
               />
 
               <View style={{ gap: 6 }}>
@@ -250,8 +268,10 @@ export default function PantallaRegistro() {
                   ))}
                 </View>
               </View>
-              <Campo etiqueta={t('auth.telefono')} value={telefono} onChangeText={setTelefono} keyboardType="number-pad" maxLength={10} />
-              <Campo etiqueta={t('auth.ciudad')} value={ciudad} onChangeText={setCiudad} autoCapitalize="words" />
+              {/* 15 = @Size(max = 15) de RegistroRequest. Con maxLength 10 no
+                  entraba un numero brasileno (11 digitos). */}
+              <Campo etiqueta={t('auth.telefono')} ayuda={t('auth.opcional')} value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" maxLength={15} />
+              <Campo etiqueta={t('auth.ciudad')} ayuda={t('auth.opcional')} value={ciudad} onChangeText={setCiudad} autoCapitalize="words" />
 
               {error ? <Text style={estilos.error}>{error}</Text> : null}
 

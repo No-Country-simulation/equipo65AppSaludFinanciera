@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DATA_SOURCE, FinanceApiError } from '@/data';
+import { FinanceApiError } from '@/data';
 import { Colores, Espacio, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
 import { useSesion } from '@/lib/sesion';
@@ -81,7 +81,6 @@ export default function PantallaLogin() {
           {pide2fa ? (
             <Campo
               etiqueta={t('auth.codigo')}
-              ayuda={DATA_SOURCE === 'mock' ? t('auth.totpDemoAyuda') : undefined}
               value={codigoTotp}
               onChangeText={(texto) => setCodigoTotp(texto.replace(/\D/g, '').slice(0, 6))}
               keyboardType="number-pad"
@@ -93,13 +92,11 @@ export default function PantallaLogin() {
                 etiqueta={t('auth.email')}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="demo@fintechvital.dev"
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
               <Campo
                 etiqueta={t('auth.password')}
-                ayuda={t('auth.demoAyuda')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -127,9 +124,6 @@ export default function PantallaLogin() {
           ) : null}
         </View>
 
-        {DATA_SOURCE === 'mock' ? (
-          <Text style={estilos.avisoDemo}>{t('comun.demo').toUpperCase()}</Text>
-        ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );

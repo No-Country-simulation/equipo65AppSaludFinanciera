@@ -1,6 +1,6 @@
 /**
  * Implementacion REAL contra la API publica (CONTRATO_API.md).
- * Esta carpeta QUEDA despues de la integracion; la que se borra es ../mock.
+ * Es la unica implementacion de la capa de datos: la carpeta ../mock se elimino.
  */
 import type {
   AltaEvento,

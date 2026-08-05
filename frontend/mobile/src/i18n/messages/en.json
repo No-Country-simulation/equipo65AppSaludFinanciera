@@ -9,7 +9,6 @@
     "guardando": "Saving…",
     "cancelar": "Cancel",
     "cerrar": "Close",
-    "demo": "Demo data",
     "copiar": "Copy",
     "copiado": "Copied",
     "descargar": "Download",
@@ -45,10 +44,8 @@
     "entrando": "Signing in…",
     "sinCuenta": "No account yet?",
     "crearCuenta": "Create account",
-    "demoAyuda": "Demo: leave both fields blank and press Sign in. Or demo@fintechvital.dev with any password of 10+ characters (it will ask for the 2FA code)",
     "totpTitulo": "Two-step verification",
     "totpAyuda": "Enter the 6-digit code from your authenticator app",
-    "totpDemoAyuda": "Demo: enter any 6-digit code",
     "codigo": "Code",
     "verificar": "Verify",
     "registroTitulo": "Create your account",
@@ -90,7 +87,17 @@
     },
     "telefono": "Phone",
     "ciudad": "City",
-    "opcional": "optional"
+    "opcional": "optional",
+    "val": {
+      "camposObligatorios": "Fill in the required fields: email, password, first name, last name and date of birth.",
+      "emailInvalido": "Enter a valid email address.",
+      "passwordCorta": "The password must be at least 10 characters long.",
+      "fechaIncompleta": "Complete your date of birth (YYYY-MM-DD).",
+      "fechaInvalida": "That date does not exist. Please check it.",
+      "fechaFutura": "The date of birth must be in the past.",
+      "telefonoInvalido": "The phone number must have between 6 and 15 digits.",
+      "ciudadInvalida": "Enter a valid city (at least 3 letters, no numbers)."
+    }
   },
   "panel": {
     "saludo": "Hi, {nombre}",

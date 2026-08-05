@@ -8,7 +8,7 @@ import { CalendarioPagos } from '@/components/calendario';
 import { Colores, Espacio, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
 import { useTheme } from '@/context/ThemeContext';
-import { formatearFecha, formatearMoneda, formatearPct } from '@/lib/formato';
+import { formatearFecha, formatearMoneda, formatearPct, totalGastos } from '@/lib/formato';
 import { useSesion } from '@/lib/sesion';
 import { useDataSource, useDatos } from '@/lib/useDatos';
 import { ListaRecomendaciones, FichasIndicadores } from '@/components/analisis';
@@ -66,7 +66,7 @@ export default function PantallaInicio() {
   );
 
   const gastoTotal = datos?.analisis
-    ? Object.values(datos.analisis.resumen_gastos).reduce((suma, monto) => suma + (monto ?? 0), 0)
+    ? totalGastos(datos.analisis.resumen_gastos)
     : 0;
 
   const analizar = async () => {

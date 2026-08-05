@@ -29,7 +29,7 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
         if (!activo) return;
         if (crudo) {
           const restaurado = JSON.parse(crudo) as Usuario;
-          // rehidratar el datasource (el mock pierde su estado al reabrir)
+          // rehidratar el datasource (re-adjunta el token al reabrir la app)
           getDataSource(idioma).hidratarSesion(restaurado);
           setUsuario(restaurado);
         }

@@ -29,3 +29,16 @@ export function formatearMes(iso: string, idioma: Idioma): string {
     new Date(`${iso.slice(0, 10)}T12:00:00`),
   );
 }
+
+/**
+ * Suma un `resumen_gastos`.
+ *
+ * El `<number>` explicito no es adorno: como CategoriaSlug es `string` (la
+ * taxonomia ya no es cerrada), `Object.values` de un Partial devuelve
+ * `(number | undefined)[]` y TypeScript infiere el acumulador como
+ * `number | undefined`. Fijar el tipo del reduce lo resuelve en un sitio en vez
+ * de en cada pantalla.
+ */
+export function totalGastos(resumen: Record<string, number | undefined>): number {
+  return Object.values(resumen).reduce<number>((suma, monto) => suma + (monto ?? 0), 0);
+}
