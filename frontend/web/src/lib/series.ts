@@ -24,6 +24,19 @@ export const COLOR_PERFIL: Record<PerfilSlug, string> = {
   en_riesgo: 'var(--risk)',
 };
 
+/**
+ * Suma un `resumen_gastos`.
+ *
+ * El `<number>` explicito no es adorno: como CategoriaSlug es `string` (la
+ * taxonomia ya no es cerrada), `Object.values` de un Partial devuelve
+ * `(number | undefined)[]` y TypeScript infiere el acumulador como
+ * `number | undefined`. Fijar el tipo del reduce lo resuelve en un sitio en vez
+ * de en cada pantalla.
+ */
+export function totalGastos(resumen: Partial<Record<CategoriaSlug, number>>): number {
+  return Object.values(resumen).reduce<number>((suma, monto) => suma + (monto ?? 0), 0);
+}
+
 export interface PorcionGasto {
   slug: CategoriaSlug | 'otras';
   etiqueta: string;
@@ -34,12 +47,15 @@ export interface PorcionGasto {
 /** Grupos de gasto (TAXONOMIA §1.3) para la estructura del presupuesto. */
 export type GrupoGasto = 'esencial' | 'discrecional' | 'financiero' | 'educacion' | 'otros';
 
+// Espejo de la columna `categoria.grupo` en la base de datos. Antes incluia
+// tambien 'supermercado', 'comida_rapida' y 'taxi', que son SUBcategorias y ya
+// venian contadas dentro de alimentacion y transporte: sumaban dos veces.
 const MIEMBROS_GRUPO: Record<GrupoGasto, CategoriaSlug[]> = {
- esencial: ['alimentacion', 'supermercado', 'vivienda', 'servicios', 'salud', 'transporte'],
-  discrecional: ['entretenimiento', 'compras', 'comida_rapida', 'taxi'],
+  esencial: ['alimentacion', 'vivienda', 'servicios', 'salud', 'transporte'],
+  discrecional: ['entretenimiento', 'compras'],
   financiero: ['finanzas'],
   educacion: ['educacion'],
-   otros: ['otros'],
+  otros: ['otros'],
 };
 
 export const COLOR_GRUPO: Record<GrupoGasto, string> = {

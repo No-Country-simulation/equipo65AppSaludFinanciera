@@ -13,7 +13,7 @@ import type {
 } from '@/data';
 import { Link } from '@/i18n/navigation';
 import { formatearFecha, formatearMoneda, formatearPct } from '@/lib/formato';
-import { porcionesGasto } from '@/lib/series';
+import { porcionesGasto, totalGastos } from '@/lib/series';
 import { useSesion } from '@/lib/sesion';
 import { useDataSource, useDatos } from '@/lib/useDatos';
 import { GastosCategoria } from '@/components/graficos/GastosCategoria';
@@ -151,10 +151,7 @@ export default function PaginaPanel() {
                       </p>
                       <p className="cifra mt-1 text-[1.9rem] font-semibold leading-none text-warn-bg">
                         <CifraAnimada
-                          valor={Object.values(datos.analisis.resumen_gastos).reduce(
-                            (suma, monto) => suma + (monto ?? 0),
-                            0,
-                          )}
+                          valor={totalGastos(datos.analisis.resumen_gastos)}
                           formato={(n) => formatearMoneda(n, datos.analisis!.moneda, locale)}
                         />
                       </p>
@@ -187,10 +184,7 @@ export default function PaginaPanel() {
                       etiquetas,
                       t('otras'),
                     )}
-                    total={Object.values(datos.analisis.resumen_gastos).reduce(
-                      (suma, monto) => suma + (monto ?? 0),
-                      0,
-                    )}
+                    total={totalGastos(datos.analisis.resumen_gastos)}
                     moneda={datos.analisis.moneda}
                     etiquetaTotal={t('gastoTotal')}
                   />

@@ -4,6 +4,22 @@
  * Los slugs NUNCA se traducen (docs/datos/TAXONOMIA.md).
  */
 
+/**
+ * Catalogo de categorias CONOCIDO por el frontend.
+ *
+ * ⚠️ Ya NO es una lista cerrada. La taxonomia la manda la base de datos y, en
+ * ultima instancia, data science: `GET /api/v1/categorias` es la fuente de
+ * verdad y puede devolver categorias que no esten aqui.
+ *
+ * Esta lista sigue existiendo para lo que SI depende de conocer la categoria de
+ * antemano - color, icono y orden - y como respaldo si la API no responde. Para
+ * cualquier slug que no este, hay que usar el aspecto generico: ver
+ * `esCategoriaConocida()` mas abajo.
+ *
+ * Antes tenia ademas `comida_rapida`, `supermercado` y `taxi`, que no son
+ * categorias sino SUBcategorias del extracto (tabla `subcategoria`, 34 filas
+ * que cuelgan de estas 12).
+ */
 export const CATEGORIAS = [
   'alimentacion',
   'transporte',
@@ -17,11 +33,32 @@ export const CATEGORIAS = [
   'ahorro_inversion',
   'ingresos',
   'otros',
-  'comida_rapida',
-  'supermercado',
-  'taxi',
 ] as const;
-export type CategoriaSlug = (typeof CATEGORIAS)[number];
+
+/** Slug de una de las categorias que el frontend conoce de antemano. */
+export type CategoriaConocida = (typeof CATEGORIAS)[number];
+
+/**
+ * Slug de categoria tal como llega de la API.
+ *
+ * Es `string` a proposito: si data science entrega un modelo que predice `ocio`
+ * o `mascotas`, la aplicacion tiene que mostrarlo, no dejar de compilar. Lo que
+ * se pierde -que un slug mal escrito ya no se detecte al compilar- se compensa
+ * leyendo el catalogo de `GET /api/v1/categorias` y teniendo respaldo para lo
+ * desconocido.
+ */
+export type CategoriaSlug = string;
+
+/** ¿Tenemos color, icono y etiqueta propios para este slug? */
+export function esCategoriaConocida(slug: string): slug is CategoriaConocida {
+  return (CATEGORIAS as readonly string[]).includes(slug);
+}
+
+/**
+ * Detalle opcional que trae el extracto ("Barberia", "Metrobus"). Es texto
+ * libre a proposito: el catalogo lo manda la BD y crece sin tocar el frontend.
+ */
+export type SubcategoriaSlug = string;
 
 export const PERFILES = ['saludable', 'en_observacion', 'en_riesgo'] as const;
 export type PerfilSlug = (typeof PERFILES)[number];
@@ -58,7 +95,7 @@ export interface Usuario {
   frecuencia_ahorro: FrecuenciaAhorro;
   totp_activo: boolean;
   // Datos personales (USUARIOS: apellido, fecha_nacimiento, genero, telefono, id_ciudad).
-  // Los provee el banco; en la app son de solo lectura. Opcionales para no romper el mock vacio.
+  // Los provee el banco; en la app son de solo lectura. Opcionales: la API puede no traerlos todos.
   apellido?: string;
   fecha_nacimiento?: string; // ISO date - la edad se calcula, no se guarda
   genero?: 'M' | 'F';
@@ -94,7 +131,7 @@ export interface Transaccion {
   categoria: CategoriaSlug;
   confianza: number;
   categoria_origen: 'modelo' | 'usuario';
-  // Datos que trae TRANSACCIONES en la BD del equipo (opcionales: el mock viejo no los tenia)
+  // Datos que trae la tabla transaccion en la BD (opcionales: no todos los movimientos los tienen)
   comercio?: string; // TRANSACCIONES.comercio - el establecimiento
   medio_operacion?: MedioOperacion; // TRANSACCIONES.medio_operacion
   id_tarjeta?: string; // TRANSACCIONES.id_tarjeta - para filtrar por tarjeta

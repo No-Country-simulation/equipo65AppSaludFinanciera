@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { Analisis, Categoria, CategoriaSlug } from '@/data';
 import { Link } from '@/i18n/navigation';
 import { formatearFecha, formatearPct } from '@/lib/formato';
-import { porcionesGasto } from '@/lib/series';
+import { porcionesGasto, totalGastos } from '@/lib/series';
 import { useDatos } from '@/lib/useDatos';
 import { GastosCategoria } from '@/components/graficos/GastosCategoria';
 import { EstructuraGasto } from '@/components/graficos/EstructuraGasto';
@@ -110,10 +110,7 @@ export default function PaginaDetalleAnalisis({
               <TituloTarjeta>{tPanel('gastosTitulo')}</TituloTarjeta>
               <GastosCategoria
                 porciones={porcionesGasto(datos.analisis.resumen_gastos, etiquetas, tPanel('otras'))}
-                total={Object.values(datos.analisis.resumen_gastos).reduce(
-                  (suma, monto) => suma + (monto ?? 0),
-                  0,
-                )}
+                total={totalGastos(datos.analisis.resumen_gastos)}
                 moneda={datos.analisis.moneda}
                 etiquetaTotal={tPanel('gastoTotal')}
               />
@@ -130,7 +127,7 @@ export default function PaginaDetalleAnalisis({
             <EstructuraGasto
               resumen={datos.analisis.resumen_gastos}
               ingreso={
-                Object.values(datos.analisis.resumen_gastos).reduce((s, m) => s + (m ?? 0), 0) /
+                totalGastos(datos.analisis.resumen_gastos) /
                 Math.max(datos.analisis.indicadores.ratio_gasto_ingreso, 0.001)
               }
               moneda={datos.analisis.moneda}

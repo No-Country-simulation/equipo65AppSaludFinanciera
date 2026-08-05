@@ -1,20 +1,19 @@
 /**
  * Unico archivo de la capa de datos que difiere entre web y mobile
  * (alli lee EXPO_PUBLIC_*). Todo lo demas de src/data es identico (ADR-0010/0011).
+ *
+ * La capa mock se retiro: la unica fuente de datos es la API real (ADR-0011,
+ * "CERO datos mock en la demo/entrega"). Ya no hay flag NEXT_PUBLIC_DATA_SOURCE
+ * ni rama alternativa: si la API no responde, la pantalla muestra el error y el
+ * boton de reintentar, que es el comportamiento que se quiere.
  */
-export type ModoDatos = 'mock' | 'api';
-
-export const DATA_SOURCE: ModoDatos =
-  process.env.NEXT_PUBLIC_DATA_SOURCE === 'api' ? 'api' : 'mock';
-
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1';
 
 /**
  * Almacenamiento clave-valor del cliente (localStorage aqui; AsyncStorage en
  * mobile). API async para que ambas plataformas compartan el mismo consumidor.
- * Hoy lo usa el mock para sobrevivir a la recarga (F6.11); con la API real el
- * dato vive en el backend y este adaptador queda sin uso desde el mock.
+ * Lo usa la capa de sesion para conservar los tokens entre recargas.
  */
 export const almacenLocal = {
   async obtener(clave: string): Promise<string | null> {

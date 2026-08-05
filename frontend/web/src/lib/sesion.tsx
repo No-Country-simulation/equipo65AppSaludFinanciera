@@ -34,7 +34,7 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
       const crudo = window.localStorage.getItem(CLAVE_SESION);
       if (crudo) {
         const restaurado = JSON.parse(crudo) as Usuario;
-        // Re-vincular la sesion con el datasource (el mock perdio su estado al recargar)
+        // Re-vincular la sesion con el datasource (re-adjunta el token tras recargar)
         getDataSource(locale).hidratarSesion(restaurado);
         setUsuario(restaurado);
       }

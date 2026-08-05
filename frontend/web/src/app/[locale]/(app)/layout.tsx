@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DATA_SOURCE } from '@/data';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { useSesion } from '@/lib/sesion';
 import { BotonTema } from '@/components/BotonTema';
@@ -133,15 +132,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Icono nombre="cerrar" />
             </button>
           </div>
-
-          {DATA_SOURCE === 'mock' && !colapsada ? (
-            <div className="px-5 pb-4 lg:px-5">
-              <span className={`inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-mint ring-1 ring-inset ring-mint/25 ${colapsada ? 'lg:hidden' : ''}`}>
-                <span className="h-1.5 w-1.5 rounded-full bg-mint" />
-                {tComun('demo')}
-              </span>
-            </div>
-          ) : null}
 
           {/* Multi-cuenta (solo interfaz, F9) */}
           <div className={`relative px-3 pb-2 ${colapsada ? 'lg:hidden' : ''}`}>

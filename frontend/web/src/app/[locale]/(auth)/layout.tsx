@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { DATA_SOURCE } from '@/data';
 import { Link } from '@/i18n/navigation';
 import { BotonTema } from '@/components/BotonTema';
 import { Logo } from '@/components/Logo';
@@ -69,12 +68,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="flex flex-1 items-center justify-center px-5 pb-16">
           <div className="w-full max-w-md">
             {children}
-            {DATA_SOURCE === 'mock' ? (
-              <p className="mt-6 flex items-center justify-center gap-2 rounded-2xl border border-dashed border-warn-bg/50 bg-warn-bg/10 px-4 py-3 text-center text-xs text-warn">
-                <span className="h-1.5 w-1.5 rounded-full bg-warn-bg" />
-                {t('demo')}
-              </p>
-            ) : null}
             <p className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center">
               <Link
                 href="/legales"

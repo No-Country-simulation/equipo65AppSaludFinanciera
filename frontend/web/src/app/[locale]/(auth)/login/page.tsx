@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DATA_SOURCE, FinanceApiError } from '@/data';
+import { FinanceApiError } from '@/data';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useSesion } from '@/lib/sesion';
 import { useDataSource } from '@/lib/useDatos';
@@ -57,7 +57,7 @@ export default function PaginaLogin() {
       </header>
 
       {pide2fa ? (
-        <Campo etiqueta={t('codigo')} ayuda={DATA_SOURCE === 'mock' ? t('totpDemoAyuda') : undefined}>
+        <Campo etiqueta={t('codigo')}>
           <input
             className={`${claseInput} cifra text-center text-2xl tracking-[0.4em]`}
             value={codigoTotp}
@@ -69,28 +69,24 @@ export default function PaginaLogin() {
         </Campo>
       ) : (
         <>
-          {/* En modo mock los campos NO son obligatorios: dejarlos en blanco es
-              el atajo para entrar como el usuario demo (ver mockDataSource).
-              Contra la API real vuelven a ser obligatorios. */}
           <Campo etiqueta={t('email')}>
             <input
               className={claseInput}
               type="email"
               value={email}
               onChange={(evento) => setEmail(evento.target.value)}
-              placeholder="demo@fintechvital.dev"
               autoComplete="email"
-              required={DATA_SOURCE !== 'mock'}
+              required
             />
           </Campo>
-          <Campo etiqueta={t('password')} ayuda={t('demoAyuda')}>
+          <Campo etiqueta={t('password')}>
             <input
               className={claseInput}
               type="password"
               value={password}
               onChange={(evento) => setPassword(evento.target.value)}
               autoComplete="current-password"
-              required={DATA_SOURCE !== 'mock'}
+              required
             />
           </Campo>
         </>

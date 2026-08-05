@@ -13,10 +13,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Variables publicas horneadas en el build (ADR-0011): mock hasta integrar
-ARG NEXT_PUBLIC_DATA_SOURCE=mock
+# Variable publica horneada en el build (ADR-0011). La capa mock se retiro:
+# la web solo habla con la API real, asi que esta URL tiene que ser la buena
+# EN EL MOMENTO DEL BUILD (no se puede cambiar reiniciando el contenedor).
 ARG NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
-ENV NEXT_PUBLIC_DATA_SOURCE=$NEXT_PUBLIC_DATA_SOURCE
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
