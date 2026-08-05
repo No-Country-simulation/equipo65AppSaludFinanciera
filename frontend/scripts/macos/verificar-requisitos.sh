@@ -3,13 +3,17 @@
 # para trabajar con el frontend (web en contenedor y movil en emulador).
 # Uso:
 #   ./scripts/macos/verificar-requisitos.sh
+#   ./scripts/macos/verificar-requisitos.sh --instalar-podman   # instala Podman si falta
 # Salida: 0 = listo (puede haber avisos) | 1 = falta algo critico.
 # Equivalente Windows: scripts/windows/verificar-requisitos.ps1
 set -u
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO="$(cd "$RAIZ/.." && pwd)"
 FALLAS=0
 AVISOS=0
+INSTALAR_PODMAN=no
+[[ "${1:-}" == "--instalar-podman" ]] && INSTALAR_PODMAN=si
 
 ok()     { printf '\033[32m[ OK  ]\033[0m %s\n' "$1"; }
 falta()  { printf '\033[31m[FALTA]\033[0m %s\n' "$1"; FALLAS=$((FALLAS + 1)); }
@@ -82,10 +86,57 @@ fi
 
 if [[ -z "$motor" ]]; then
   if ! command -v docker >/dev/null 2>&1 && ! command -v podman >/dev/null 2>&1; then
-    falta "Ni Docker ni Podman: instala Docker Desktop -> https://docs.docker.com/desktop/setup/install/mac-install/"
+    falta "Ni Docker ni Podman. Opciones: Docker Desktop -> https://docs.docker.com/desktop/setup/install/mac-install/  o instalar Podman desde aqui."
+    instalar="$INSTALAR_PODMAN"
+    if [[ "$instalar" == "no" && -t 0 ]]; then
+      read -r -p "Quieres que instale Podman ahora con Homebrew? (s/N) " r
+      [[ "$r" == "s" || "$r" == "S" ]] && instalar=si
+    fi
+    if [[ "$instalar" == "si" ]]; then
+      if instalar_podman; then motor="podman"; FALLAS=$((FALLAS - 1)); fi
+    else
+      info "Puedes instalarlo despues con: ./scripts/macos/verificar-requisitos.sh --instalar-podman"
+    fi
   else
     aviso "Sin motor de contenedores activo. La web puede correr igual: (cd web && npm run dev) - opcion 5 del menu"
   fi
+fi
+
+# ------------------------------------------- stack completo (db + api + web) ---
+titulo "Stack completo (base de datos + API + web)"
+
+if [[ -f "$REPO/ops/compose.yml" ]]; then
+  ok "ops/compose.yml presente (stack completo en contenedores)"
+else
+  aviso "No se encontro ops/compose.yml: sin el no se puede levantar el stack completo"
+fi
+
+if [[ -f "$REPO/ops/.env" ]]; then
+  ok "ops/.env configurado"
+elif [[ -f "$REPO/ops/.env.ejemplo" ]]; then
+  aviso "Falta ops/.env: se crea solo la primera vez que corras ./ops/stack.sh arriba"
+else
+  aviso "No hay ops/.env ni ops/.env.ejemplo"
+fi
+
+if [[ -n "$motor" ]]; then
+  if "$motor" compose version >/dev/null 2>&1; then
+    ok "Subcomando 'compose' disponible en $motor"
+  else
+    aviso "$motor no tiene 'compose'. En Podman hace falta docker-compose instalado."
+  fi
+fi
+
+if command -v java >/dev/null 2>&1; then
+  ok "Java: $(java -version 2>&1 | head -1)"
+else
+  info "Java no esta instalado. No hace falta: la imagen de la API compila con su propio JDK 21."
+fi
+
+if command -v psql >/dev/null 2>&1; then
+  ok "Cliente psql presente (util para inspeccionar la BD desde la maquina)"
+else
+  info "Sin cliente psql. No hace falta: usa \"./ops/stack.sh psql\" (entra por el contenedor)."
 fi
 
 # --------------------------------------------- android (movil en emulador) ---

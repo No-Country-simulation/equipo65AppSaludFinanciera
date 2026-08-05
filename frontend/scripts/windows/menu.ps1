@@ -18,6 +18,16 @@ function Mostrar-Menu {
     Write-Host '    Fintech Vital - menu de desarrollo (frontend)' -ForegroundColor Cyan
     Write-Host '=================================================' -ForegroundColor Cyan
     Write-Host '  [1] Verificar requisitos de la maquina (doctor)'
+    Write-Host ''
+    Write-Host '  -- Stack completo (base de datos + API + web) --' -ForegroundColor DarkGray
+    Write-Host '  [S] Levantar TODO el stack       -> web :3000 · api :8080 · bd :5432'
+    Write-Host '  [P] Probar el stack (humo)'
+    Write-Host '  [E] Stack efimero (Ctrl+C borra contenedores y datos)'
+    Write-Host '  [L] Logs del stack'
+    Write-Host '  [B] Bajar el stack (conserva los datos)'
+    Write-Host '  [Q] Consola SQL de la base de datos'
+    Write-Host ''
+    Write-Host '  -- Solo frontend --' -ForegroundColor DarkGray
     Write-Host '  [2] Web: levantar en contenedor  -> http://localhost:3000'
     Write-Host '  [3] Web: rebuild del contenedor sin cache'
     Write-Host '  [4] Web: detener el contenedor'
@@ -31,8 +41,15 @@ function Mostrar-Menu {
 }
 
 function Ejecutar([string]$eleccion) {
-    switch ($eleccion) {
+    $stack = Join-Path (Split-Path -Parent $raiz) 'ops\stack.ps1'
+    switch ($eleccion.ToUpper()) {
         '1' { & (Join-Path $scripts 'verificar-requisitos.ps1') }
+        'S' { & $stack arriba }
+        'P' { & $stack probar }
+        'E' { & $stack efimero }
+        'L' { & $stack logs }
+        'B' { & $stack abajo }
+        'Q' { & $stack psql }
         '2' { & (Join-Path $scripts 'web-docker.ps1') }
         '3' { & (Join-Path $scripts 'web-docker.ps1') -Rebuild }
         '4' { & (Join-Path $scripts 'web-docker.ps1') -Down }

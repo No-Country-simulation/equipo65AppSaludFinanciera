@@ -17,6 +17,16 @@ mostrar_menu() {
     Fintech Vital - menu de desarrollo (frontend)
 =================================================
   [1] Verificar requisitos de la maquina (doctor)
+
+  -- Stack completo (base de datos + API + web) --
+  [S] Levantar TODO el stack       -> web :3000 · api :8080 · bd :5432
+  [P] Probar el stack (humo)
+  [E] Stack efimero (Ctrl+C borra contenedores y datos)
+  [L] Logs del stack
+  [B] Bajar el stack (conserva los datos)
+  [Q] Consola SQL de la base de datos
+
+  -- Solo frontend --
   [2] Web: levantar en contenedor  -> http://localhost:3000
   [3] Web: rebuild del contenedor sin cache
   [4] Web: detener el contenedor
@@ -31,8 +41,15 @@ FIN
 }
 
 ejecutar() {
-  case "$1" in
+  STACK="$(cd "$RAIZ/.." && pwd)/ops/stack.sh"
+  case "$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')" in
     1) "$DIR/verificar-requisitos.sh" ;;
+    S) "$STACK" arriba ;;
+    P) "$STACK" probar ;;
+    E) "$STACK" efimero ;;
+    L) "$STACK" logs ;;
+    B) "$STACK" abajo ;;
+    Q) "$STACK" psql ;;
     2) "$DIR/web-docker.sh" ;;
     3) "$DIR/web-docker.sh" --rebuild ;;
     4) "$DIR/web-docker.sh" --down ;;

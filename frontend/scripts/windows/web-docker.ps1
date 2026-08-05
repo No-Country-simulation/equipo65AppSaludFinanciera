@@ -134,7 +134,6 @@ if ($Down) {
 $cacheArg = if ($Rebuild) { '--no-cache' } else { $null }
 Write-Host "Construyendo imagen con $motorElegido..."
 & $motorElegido build $cacheArg `
-    --build-arg NEXT_PUBLIC_DATA_SOURCE=mock `
     --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1 `
     -t $imagen $web
 if (-not $?) { Write-Error 'Fallo el build de la imagen.'; exit 1 }
@@ -158,7 +157,7 @@ for ($i = 0; $i -lt 30; $i++) {
 if ($listo) {
     Write-Host ''
     Write-Host "Web lista ($motorElegido): http://localhost:3000 (es | pt | en)"
-    Write-Host 'Demo: demo@fintechvital.dev con cualquier password de 10+ caracteres'
+    Write-Host 'Necesita la API arriba: .\ops\stack.ps1 arriba'
 } else {
     Write-Warning "El contenedor arranco pero la web no respondio a tiempo. Revisa: $motorElegido logs $contenedor"
 }

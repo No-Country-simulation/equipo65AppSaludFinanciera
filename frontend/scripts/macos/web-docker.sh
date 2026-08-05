@@ -61,7 +61,7 @@ for _ in $(seq 1 30); do
   if curl -fsS http://127.0.0.1:3000/es/login >/dev/null 2>&1; then
     echo ""
     echo "Web lista ($motor): http://localhost:3000 (es | pt | en)"
-    echo "Demo: demo@fintechvital.dev con cualquier password de 10+ caracteres"
+    echo "Necesita la API arriba: ../../ops/stack.sh arriba"
     exit 0
   fi
 done
