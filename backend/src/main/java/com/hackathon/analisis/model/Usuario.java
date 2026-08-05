@@ -1,67 +1,94 @@
 package com.hackathon.analisis.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import java.time.LocalDateTime;
-import java.time.LocalDate;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+/**
+ * Usuario de la aplicacion. Mapea la tabla `usuario` de db/migraciones/V2.
+ *
+ * Cambios respecto a la version anterior de esta clase, y por que:
+ *
+ *  - La tabla se llama `usuario` (singular), no `usuarios`.
+ *  - La clave es UUID, no Long: asi esta en el esquema. Un id autoincremental
+ *    ademas filtra cuantos usuarios hay y permite adivinar los de al lado.
+ *  - Ya NO existe el campo `password`. Las credenciales viven en
+ *    `usuario_seguridad`. Tenerlas aqui hacia que cualquier SELECT del perfil
+ *    arrastrara el hash y que serializar la entidad devolviera la contrasena
+ *    por HTTP - que es exactamente lo que estaba pasando.
+ *  - @Getter/@Setter en vez de @Data: @Data genera equals/hashCode sobre TODOS
+ *    los campos, relaciones incluidas, y eso trae LazyInitializationException y
+ *    bucles infinitos al serializar.
+ */
 @Entity
-@Table(name = "usuarios")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "usuario")
+@Getter
+@Setter
 public class Usuario {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(nullable = false, length = 100)
-    private String nombre;
-
-    @Column(length = 100)
-    private String apellido;
-
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
-    private String password;
+    private String nombre;
 
-    // @JsonProperty hace que Spring entienda el nombre que manda React Native
-    @JsonProperty("moneda_principal")
-    @Column(name = "moneda_principal", length = 10)
-    private String monedaPrincipal;
+    @Column(nullable = false)
+    private String apellido;
 
-    @JsonProperty("fecha_nacimiento")
-    @JsonFormat(pattern = "yyyy/MM/dd")
-    @Column(name = "fecha_nacimiento")
+    @Column(name = "fecha_nacimiento", nullable = false)
     private LocalDate fechaNacimiento;
 
-    @Column(length = 20)
     private String genero;
 
-    @Column(length = 20)
     private String telefono;
 
-    @Column(length = 100)
-    private String ciudad;
+    @Column(name = "ciudad_id")
+    private UUID ciudadId;
 
-    @JsonProperty("terminos_version")
-    @Column(name = "terminos_version", length = 20)
+    @Column(name = "moneda_principal", nullable = false)
+    private String monedaPrincipal = "USD";
+
+    @Column(nullable = false)
+    private String idioma = "es";
+
+    @Column(name = "ingreso_mensual")
+    private BigDecimal ingresoMensual;
+
+    @Column(name = "nivel_endeudamiento")
+    private Short nivelEndeudamiento;
+
+    @Column(name = "frecuencia_ahorro")
+    private String frecuenciaAhorro;
+
+    @Column(nullable = false)
+    private String rol = "usuario";
+
+    @Column(nullable = false)
+    private String estado = "activo";
+
+    @Column(name = "terminos_version")
     private String terminosVersion;
 
-    // Aquí está el campo para tu Foto de Perfil
-    @Column(name = "foto_url")
-    private String fotoUrl;
+    @Column(name = "terminos_aceptados_en")
+    private OffsetDateTime terminosAceptadosEn;
 
-    @Column(name = "fecha_creacion")
-    private LocalDateTime fechaCreacion = LocalDateTime.now();
+    @Column(name = "ultima_sesion")
+    private OffsetDateTime ultimaSesion;
 
-    @Column(length = 10)
-    private String idioma = "es";
+    // Las pone la base de datos (DEFAULT now() y un trigger). Se leen, no se escriben.
+    @Column(name = "creado_en", insertable = false, updatable = false)
+    private OffsetDateTime creadoEn;
+
+    @Column(name = "actualizado_en", insertable = false, updatable = false)
+    private OffsetDateTime actualizadoEn;
 }

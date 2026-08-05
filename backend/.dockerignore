@@ -1,0 +1,12 @@
+# El build multi-stage compila dentro de la imagen: nada de lo local hace falta
+# y copiar target/ ademas mete .class de otra JDK en el contexto.
+target/
+!src/
+.idea/
+*.iml
+.mvn/
+mvnw
+mvnw.cmd
+Dockerfile
+.dockerignore
+*.log

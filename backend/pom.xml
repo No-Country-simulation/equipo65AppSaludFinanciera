@@ -18,6 +18,10 @@
 
     <properties>
         <java.version>17</java.version>
+        <!-- Sin esto, Maven usa la codificacion de la plataforma: compila en
+             Windows y falla en Linux/contenedor con MalformedInputException. -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
     <dependencies>
@@ -39,27 +43,52 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Base de datos en memoria H2 (Para desarrollo temporal) -->
+        <!-- Seguridad: BCrypt para las contrasenas y el filtro de autenticacion.
+             La configuracion esta en config/SecurityConfig.java: las rutas
+             publicas siguen abiertas, solo se protege lo que lo necesita. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- JWT (HS256). jjwt-impl y jjwt-jackson van en runtime: solo la
+             API (jjwt-api) se usa al compilar. -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Base de datos en memoria H2 (arranque sin nada montado y tests) -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-
-        <!-- Driver para PostgreSQL -->
+        <!-- Driver JDBC de PostgreSQL: es el motor del proyecto (ADR-0014).
+             Sin el, la API no puede conectarse a la base de datos real y el
+             contenedor aborta con "Cannot load driver class: org.postgresql.Driver". -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Driver JDBC para Oracle Cloud / OCI -->
-        <dependency>
-            <groupId>com.oracle.database.jdbc</groupId>
-            <artifactId>ojdbc11</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+        <!-- El driver de Oracle (ojdbc11) se retiro: Oracle dejo de ser el
+             motor y nada lo usa. -->
 
         <!-- DevTools para recarga rápida -->
         <dependency>

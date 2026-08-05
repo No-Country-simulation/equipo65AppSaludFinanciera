@@ -2,27 +2,16 @@ package com.hackathon.analisis.controller;
 
 import com.hackathon.analisis.dto.ResumenFinancieroDTO;
 import com.hackathon.analisis.model.Transaccion;
-import com.hackathon.analisis.repository.TransaccionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class AnalisisController {
 
-    @Autowired
-    private TransaccionRepository transaccionRepository;
-
-    // Cambiamos la variable a idCliente (String)
-    @GetMapping("/analisis-financiero/{idCliente}")
-    public ResumenFinancieroDTO analizarFinanzas(@PathVariable String idCliente) {
-
-        // Usamos el nuevo método que creaste en el repositorio
-        List<Transaccion> transacciones = transaccionRepository.findByIdCliente(idCliente);
-
+    @PostMapping("/analisis-financiero")
+    public ResumenFinancieroDTO analizarFinanzas(@RequestBody List<Transaccion> transacciones) {
         double ingresos = 0;
         double basicas = 0;
         double estiloVida = 0;

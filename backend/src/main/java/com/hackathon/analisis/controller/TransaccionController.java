@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/transacciones")
-@CrossOrigin(origins = "*") // Permite la comunicación con el Frontend en React
 public class TransaccionController {
 
     @Autowired

@@ -1,35 +1,54 @@
 package com.hackathon.analisis.controller;
 
-import com.hackathon.analisis.model.Usuario;
+import com.hackathon.analisis.dto.*;
 import com.hackathon.analisis.service.AuthService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Autenticacion (CONTRATO_API §4).
+ *
+ * Cambios respecto a la version anterior:
+ *  - Cuelga de /api/v1, como el contrato y como lo llama el frontend.
+ *  - Recibe DTOs validados, no la entidad Usuario.
+ *  - Devuelve DTOs. Antes devolvia la entidad, que tenia un campo `password`:
+ *    la API respondia con la contrasena del usuario.
+ *  - Los errores los traduce ManejadorErrores a la forma del contrato, en vez
+ *    de un `badRequest().body(e.getMessage())` con un String suelto.
+ *
+ * Se mantiene un alias en /api/auth para no romper lo que ya apuntaba ahi
+ * mientras se termina de migrar.
+ */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/v1/auth", "/api/auth"})
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
+    private final AuthService auth;
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Usuario request) {
-        try {
-            Usuario usuario = authService.login(request.getEmail(), request.getPassword());
-            return ResponseEntity.ok(usuario);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public AuthController(AuthService auth) {
+        this.auth = auth;
     }
 
-    @PostMapping("/registro") // <--- Solo cambiamos esta palabra al español
-    public ResponseEntity<?> registrar(@RequestBody Usuario request) {
-        try {
-            Usuario usuario = authService.registrarUsuario(request);
-            return ResponseEntity.ok(usuario);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    @PostMapping({"/registro", "/register"})
+    public ResponseEntity<UsuarioResponse> registro(@Valid @RequestBody RegistroRequest peticion) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(auth.registrar(peticion));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<SesionResponse> login(@Valid @RequestBody LoginRequest peticion) {
+        return ResponseEntity.ok(auth.login(peticion));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<SesionResponse> refresh(@Valid @RequestBody RefreshRequest peticion) {
+        return ResponseEntity.ok(auth.refrescar(peticion.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody(required = false) RefreshRequest peticion) {
+        auth.logout(peticion == null ? null : peticion.refreshToken());
+        return ResponseEntity.noContent().build();
     }
 }
