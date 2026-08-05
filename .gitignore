@@ -11,13 +11,35 @@ perfil_financiero.sql
 CAMBIOS_INTERFACES.md
 CAMBIOS_BASE_DATOS.md
 COMMITS_PENDIENTES.md
+COMMITS_PROPUESTOS.md
+
+# Doc de trabajo del equipo. Son utiles y estan vivas, pero NO se publican:
+#   REVISION_API  -> valora el estado del codigo de companeros por su nombre
+#   ENDPOINTS     -> inventario de lo que falta; en un repo publico se lee como
+#                    un mapa de lo que la aplicacion todavia no protege
+#   SINCRONIZACION-> acta de reunion, con nombres y decisiones internas
+# Se comparten por el canal del equipo, no por el repositorio.
+/docs/REVISION_API.md
+/docs/ENDPOINTS.md
+/docs/SINCRONIZACION_*.md
+
+# Generado por Spring Initializr al crear el proyecto. No aporta nada y
+# confunde: la doc real esta en README.md y docs/.
+/HELP.md
 
 # CHANGELOG.md SI se publica (es entregable del proyecto): no lo agregues aqui.
 
-# NOTA sobre /.idea/: esta TRACKEADO a proposito porque el equipo dejo ahi el
-# backend Spring (pom.xml, mvnw, src/). No se ignora para no ocultar ese codigo.
-# Cuando se mueva a /backend/, conviene dejar de trackear la config de IntelliJ
-# (workspace.xml, misc.xml, modules.xml, compiler.xml) con `git rm --cached`.
+# NOTA sobre /.idea/: sigue TRACKEADO a proposito porque el equipo dejo ahi una
+# copia del backend Spring (pom.xml, mvnw, src/). No se ignora entero para no
+# ocultar ese codigo mientras no se decida borrarlo (ya vive en /backend/).
+#
+# workspace.xml SI se ignora: es el estado local del IDE de cada persona
+# (pestanas abiertas, ejecuciones recientes, rutas de su disco). Cambia en cada
+# sesion, no aporta nada al proyecto y provoca un conflicto en cada push -
+# el 2026-08-04 llego con 48 lineas de diff. JetBrains recomienda no versionarlo.
+# Pendiente para el equipo: decidir si se borran tambien misc.xml, modules.xml,
+# compiler.xml y la copia de /.idea/src/.
+/.idea/workspace.xml
 
 # --- Secretos (defensa en profundidad; el detalle esta en frontend/.gitignore) ---
 .env
