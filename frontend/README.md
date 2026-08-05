@@ -85,28 +85,52 @@ trilingües · exportación de datos y eliminación de cuenta.
 4. Opción `[6]` arranca el emulador Android + Expo (o `[7]` para teléfono
    físico con Expo Go).
 
-**Usuario demo**: `demo@fintechvital.dev` + cualquier contraseña de 10+
-caracteres. Cualquier otro email crea una cuenta vacía.
+**Usuarios de ejemplo**: los crea la semilla de la base de datos, no el
+frontend. Son cuatro, uno por idioma y moneda — `ana.torres@ejemplo.mx` (es/MXN),
+`bruno.silva@exemplo.br` (pt/BRL), `carla.mendez@ejemplo.mx` (es/MXN) y
+`emily.carter@example.com` (en/USD).
+
+🔑 La contraseña **la decides tú** con `FV_PASSWORD_DEMO` en `ops/.env`. Si la
+dejas vacía, las cuentas existen pero **nadie puede entrar**: la semilla guarda
+un centinela que no es hash de ninguna contraseña, para que un repositorio
+público no lleve nunca una credencial válida dentro. Ver
+[`../db/README.md`](../db/README.md).
 
 ¿Máquina sin nada instalado? Guía completa paso a paso:
 [`docs/FRONTEND_DESDE_CERO.md`](docs/FRONTEND_DESDE_CERO.md).
 Detalles por app: [`web/README.md`](web/README.md) ·
 [`mobile/README.md`](mobile/README.md).
 
-## De dónde salen los datos (hoy)
+## De dónde salen los datos
 
 Las pantallas consumen **solo** la interfaz `FinanceDataSource` (`src/data/`,
-idéntica en web y móvil). La implementación se elige por variable de entorno:
-`mock` (default hoy) o `api` (al integrar el backend del equipo). El mock
-respalda su estado en el almacenamiento del cliente, así que recargar la
-página o reabrir la app **no** borra lo que cargaste. La receta para eliminar
-el mock al integrar: [`web/src/data/mock/README.md`](web/src/data/mock/README.md).
+idéntica en web y móvil). Detrás hay **una sola implementación: la API real**.
+
+La capa mock que se usó durante el desarrollo **ya se retiró** (ADR-0011): no
+existe `src/data/mock/` ni el flag `*_DATA_SOURCE`. Era el plan desde el
+principio — la regla del proyecto es **cero datos inventados en la entrega**, y
+esa indirección permitió quitarla sin tocar una sola pantalla.
+
+Consecuencia práctica: **sin API levantada, la aplicación no muestra datos**.
+Muestra un aviso y un botón *Reintentar*, que es el comportamiento correcto.
+Para levantarla, desde la raíz del repo:
+
+```bash
+./ops/stack.sh arriba      # Linux / macOS
+.\ops\stack.ps1 arriba     # Windows
+```
+
+A dónde apunta cada app se configura por entorno, y **ese archivo no se sube**:
+`web/.env.local` (`NEXT_PUBLIC_API_URL`) y `mobile/.env` (`EXPO_PUBLIC_API_URL`).
 
 ## Cómo se comparte la app móvil
 
 Para el jurado/equipo: **video demo** + **APK instalable** generado con EAS
-Build (detalle en [`mobile/README.md`](mobile/README.md)). Para desarrollo:
-Expo Go + QR en la misma red Wi-Fi.
+Build (detalle en [`mobile/README.md`](mobile/README.md)).
+
+Para desarrollo en el emulador hace falta un **dev build**
+(`cd mobile && npx expo run:android`): Expo Go se cae en bucle en Android 16
+(API 36). En un teléfono físico, Expo Go + QR en la misma Wi-Fi sigue sirviendo.
 
 ## Licencia
 
