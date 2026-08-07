@@ -8,9 +8,7 @@
     "scheme": "fintechvital",
     "userInterfaceStyle": "automatic",
     "primaryColor": "#0f1a20",
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
+    "ios": {},
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#1b262e",
