@@ -173,19 +173,26 @@ lo es. Además no dependen de una API externa el día de la demo.
 
 ## Estado real hoy
 
-```
+```text
 Web        ████████████████████  completa
 Móvil      ████████████████████  completa
 Datos      ████████████████████  esquema + migraciones + semilla
 Contenedor ████████████████████  verificado en Docker y Podman
-API        ███████░░░░░░░░░░░░░  auth real (JWT+BCrypt); faltan ~36 endpoints
-ML         ██░░░░░░░░░░░░░░░░░░  notebooks hechos, servicio sin construir
+API        ████████████░░░░░░░░  26 de 44 endpoints
+ML         ██████████████░░░░░░  servicio en pie; el clasificador, con baseline
 ```
 
-El cuello de botella es la API. Auth y perfil ya funcionan contra la base — se
-probó el login desde el navegador y desde el emulador el 2026-08-04 — pero el
-resto de rutas del frontend siguen sin responder: de los 44 endpoints del
-contrato hay 6 hechos.
+**La API ya hace un análisis financiero de punta a punta**: clasifica las
+transacciones contra el servicio de modelo, calcula los 8 indicadores, predice
+el perfil y genera recomendaciones con el motor de reglas. Auth con 2FA, perfil
+y banca también están cerrados. Falta transacciones (CRUD e importación),
+persistir el análisis con su historial, catálogos y producto.
+
+**El servicio de ML está levantado y sirve los modelos**, pero los artefactos
+entregados no bastan para clasificar por sí solos: el clasificador se apoya hoy
+en el baseline por palabras clave que el propio contrato define como referencia.
+El porqué, medido y con lo que hay que pedirle a Data Science, está en
+[`../ml/README.md`](../ml/README.md).
 
 El inventario completo y el orden sugerido para atacarlo están en los
 documentos de trabajo del equipo (`ENDPOINTS.md`, `REVISION_API.md`), que no se

@@ -1,4 +1,4 @@
-# CHANGELOG — Fintech Vital (frontend)
+# CHANGELOG — Fintech Vital
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) ·
 Versionado: [SemVer](https://semver.org/lang/es/).
@@ -6,8 +6,70 @@ Versionado: [SemVer](https://semver.org/lang/es/).
 > El proyecto esta en `0.x`: la API publica todavia no es estable, asi que los
 > cambios de contrato suben la **minor**.
 >
-> Estado de `0.2.0`: **sin commitear**. Todo esta en el arbol de trabajo; el plan
-> de commits (archivos y comandos) esta en `COMMITS_PENDIENTES.md`.
+> Hasta la `0.3.2` este archivo cubria solo el frontend, que era lo unico que
+> habia en el repositorio. Desde la `0.4.0` cubre el proyecto entero: API, base
+> de datos, servicio de modelo y operacion.
+
+---
+
+## [0.4.0] — 2026-08-07
+
+Primera version con **analisis financiero de punta a punta**: el endpoint del
+enunciado responde de verdad, contra PostgreSQL y contra un servicio de modelo.
+
+### Anadido
+
+- **`POST /api/v1/analisis-financiero`** — el endpoint del enunciado, con su
+  forma literal. Responde tambien en `/analisis-financiero` (sin prefijo),
+  porque es como aparece escrito. Los cuatro primeros campos de la respuesta
+  son exactamente los del enunciado; el resto son extensiones aditivas.
+- **`POST /api/v1/transacciones/clasificar`** — clasificacion sin diagnostico,
+  que el enunciado pide como endpoint aparte.
+- **Motor de reglas** determinista (11 reglas, maximo 5 por analisis). Devuelve
+  `codigo` + `parametros`, nunca una frase: el texto se arma al leer, con el
+  idioma de la peticion. **No es un LLM** — cada consejo se puede rastrear
+  hasta la linea que lo produjo (ADR-0007).
+- **Los 8 indicadores** de la taxonomia, calculados en la API (no en el modelo)
+  y en `BigDecimal`.
+- **Servicio de modelo (`ml/`)**: FastAPI que carga los `.pkl` de Data Science.
+  Incluye el baseline por palabras clave **trilingue** que el contrato define
+  como referencia a batir. Cada prediccion declara su `origen`.
+- **2FA TOTP completo**: alta en dos pasos, codigos de respaldo de un solo uso,
+  verificacion en el login. Implementacion propia contrastada con los vectores
+  de prueba de la RFC 6238, asi que genera los mismos codigos que Google
+  Authenticator.
+- **Banca**: cuentas, tarjetas (alta, edicion y baja) y salud crediticia.
+- **Portabilidad y baja de cuenta**: `GET /usuarios/me/exportacion` y
+  `DELETE /usuarios/me` (borrado real, con cascada).
+- **Bloqueo por fuerza bruta** sobre `intento_login` (5 fallos → `429` con
+  `Retry-After`) y **auditoria** en `evento_auditoria`.
+- **Swagger** en `/api/v1/docs` (springdoc-openapi).
+- **Textos en tres idiomas** (`mensajes_{es,pt,en}.properties`) resueltos por
+  `Accept-Language`.
+
+### Cambiado
+
+- El imagotipo **en negativo ya no se deriva** del positivo sustituyendo
+  colores: es arte propia del disenador (blanco v1). Recupera la sombra de la
+  "V" y los verdes mas claros, que la sustitucion perdia.
+- `backend/README.md`, `docs/ARQUITECTURA.md` y `README.md` puestos al dia.
+
+### Arreglado
+
+- **La baja de cuenta no borraba nada y respondia `204`.** El `delete(entidad)`
+  de Spring Data no emitia el `DELETE`; la transaccion hacia commit sin una sola
+  sentencia de borrado. Ahora es una consulta explicita que comprueba las filas
+  afectadas.
+- **`modelo_version` llegaba a `null`** desde el servicio de modelo: el nombre
+  no casaba y Jackson dejaba el campo vacio en silencio. Toda la costura entre
+  servicios va ahora con `@JsonProperty` explicito.
+- La descripcion `"Streaming"` — que esta en el ejemplo del propio enunciado —
+  caia en `otros` en vez de `entretenimiento`.
+
+### Retirado
+
+- El antiguo `POST /api/analisis-financiero`, que recibia una lista de
+  transacciones y devolvia otra forma. Lo sustituye el del enunciado.
 
 ---
 

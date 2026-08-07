@@ -3,10 +3,19 @@
 API REST en **Java 21 + Spring Boot 3**. Es la única pieza que habla con la base
 de datos y con el servicio de inferencia; toda la lógica de negocio vive aquí.
 
-> 🚧 **Estado**: **autenticación y sesión funcionando** (registro, login con
-> BCrypt, JWT con refresh, perfil del usuario) contra PostgreSQL real y
-> verificado desde la web y desde el móvil. **La mayoría de los endpoints que el
-> frontend necesita todavía no existen**: de los 44 del contrato, 6 están hechos.
+> 🚧 **Estado (2026-08-07)**: hechos **26 de los 44 endpoints** del contrato,
+> contra PostgreSQL real y verificados en contenedor.
+>
+> | Bloque | |
+> |---|---|
+> | Análisis financiero (los 2 del enunciado) | ✅ |
+> | Autenticación y sesión (JWT + refresh rotativo) | ✅ |
+> | 2FA TOTP (alta, códigos de respaldo, login) | ✅ |
+> | Perfil, exportación de datos y baja de cuenta | ✅ |
+> | Banca (cuentas, tarjetas, buró) | ✅ |
+> | Transacciones (CRUD, importar CSV) | 🔴 |
+> | Análisis persistido e historial | 🔴 |
+> | Catálogos, metas, presupuestos y eventos | 🔴 |
 >
 > El inventario endpoint por endpoint (`ENDPOINTS.md`) y la revisión con el orden
 > sugerido para atacarlo (`REVISION_API.md`) **no están en el repositorio**: son
@@ -70,31 +79,97 @@ El esquema lo gobiernan las migraciones de [`../db/`](../db/), no Hibernate.
 
 ## Estructura
 
-```
+```text
 src/main/java/com/hackathon/analisis/
-├── controller/    AnalisisController · AuthController · TransaccionController · UserController
-├── service/       AuthService · TransaccionService
+├── controller/    AnalisisFinanciero · Auth · DosFactores · Usuario · Banca · Transaccion · Salud
+├── service/       AnalisisFinanciero · Indicadores · MotorReglas · ClienteMl
+│                  Auth · Jwt · Totp · Cifrado · DosFactores · LimitadorLogin
+│                  Usuario · Exportacion · Auditoria · Banca
+├── dominio/       Taxonomia (los 12+3 slugs) · Indicadores · TransaccionClasificada
 ├── repository/    Spring Data JPA
-├── model/         Entidades: Usuario, UsuarioSeguridad, Transaccion, Categoria, PlanAhorro
-└── dto/           LoginRequestDTO · RegisterRequestDTO · UserProfileDTO · ResumenFinancieroDTO
+├── model/         Entidades JPA (⚠️ el esquema lo gobiernan las migraciones de db/)
+├── dto/           Entrada y salida de la API. Las entidades NUNCA salen por HTTP
+├── security/      JwtFiltro · UsuarioActual (el id sale del token, RN9)
+├── error/         ErrorNegocio · ManejadorErrores (la forma de error del contrato)
+└── config/        Security · Cors · I18n · OpenApi
+
+src/main/resources/
+└── mensajes_{es,pt,en}.properties   Perfiles, categorías y recomendaciones
 ```
+
+`dominio/` no tiene dependencias de Spring: son los slugs, las agrupaciones y
+los value objects. Están en un solo sitio porque los mismos 12 slugs viven en
+cuatro capas a la vez (modelo, API, base de datos y frontend), y repartidos por
+el código siempre queda alguno viejo al cambiarlos.
 
 ---
 
-## Lo que ya está resuelto (infraestructura)
+## Los endpoints del enunciado
 
-- ✅ `Dockerfile` multi-etapa: Maven + JDK 21 para compilar, JRE 21 Alpine para
-  ejecutar. Usuario sin privilegios, `MaxRAMPercentage=75`, healthcheck.
-- ✅ **Codificación UTF-8.** `application.properties` estaba en Windows-1252 y
-  Maven abortaba en Linux con `MalformedInputException`: compilaba en las
-  máquinas del equipo y fallaba en **cualquier** contenedor. Corregido, y el pom
-  fija `project.build.sourceEncoding`.
-- ✅ **Driver de PostgreSQL** añadido; `ojdbc11` de Oracle retirado (ADR-0014).
-- ✅ **Configuración por entorno** en lugar de valores fijos.
-- ✅ **Conexión verificada** en contenedor:
-  `HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection`.
+Son **públicos** (sin token): es lo que el jurado prueba con un `curl`.
 
-**No se tocó ningún endpoint, servicio ni lógica de negocio.**
+```bash
+curl -X POST http://localhost:8080/analisis-financiero \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "ingreso_mensual": 4500,
+    "nivel_endeudamiento": 25,
+    "frecuencia_ahorro": "Media",
+    "transacciones": [
+      { "descripcion": "Supermercado", "valor": 420 },
+      { "descripcion": "Combustible",  "valor": 300 },
+      { "descripcion": "Streaming",    "valor": 40 }
+    ]
+  }'
+```
+
+Responde igual en `/api/v1/analisis-financiero` y en `/analisis-financiero`
+(sin prefijo), porque el enunciado lo escribe sin él.
+
+Los **cuatro primeros campos** de la respuesta son literales del enunciado
+(`perfil_financiero`, `probabilidad`, `resumen_gastos`, `recomendaciones`); el
+resto son extensiones aditivas: `perfil_codigo` (el slug estable),
+`indicadores`, `transacciones_clasificadas` y `recomendaciones_detalle`.
+
+El otro es `POST /api/v1/transacciones/clasificar`, que clasifica sin
+diagnosticar.
+
+> Cabecera `Accept-Language: es | pt | en` para el idioma de los textos (por
+> defecto `es`). **Los slugs no se traducen nunca**; las etiquetas, siempre.
+
+---
+
+## Cómo se produce un análisis
+
+```text
+1. ML   POST /interno/v1/clasificar   -> categoría de cada transacción
+2. API  agrega los montos por categoría        -> resumen_gastos
+3. API  calcula los 8 indicadores               -> ratios
+4. ML   POST /interno/v1/perfil        -> perfil + probabilidades
+5. API  motor de reglas sobre los indicadores   -> recomendaciones
+6. API  responde
+```
+
+Los pasos **3 y 5 viven aquí a propósito**: el servicio de ML es inferencia
+pura. Si calculara indicadores, la misma fórmula existiría en Java y en Python y
+algún día divergirían.
+
+El motor de reglas (`MotorReglasService`) es **determinista y auditable, no un
+LLM**: se puede señalar la línea exacta que produjo cada consejo. Devuelve
+`codigo` + `parametros`, nunca una frase; el texto se arma al final con el
+idioma de la petición, así que el historial guardado se puede releer en otro
+idioma.
+
+Si el servicio de ML no responde, la API devuelve **503**. Nunca una predicción
+inventada ni un valor por defecto.
+
+---
+
+## Documentación de la API
+
+Swagger UI en **<http://localhost:8080/api/v1/docs>** · especificación OpenAPI
+en `/api/v1/openapi.json`. Se genera desde los controladores y los DTO, así que
+no se puede desincronizar del código.
 
 ---
 
@@ -103,31 +178,18 @@ src/main/java/com/hackathon/analisis/
 Resumen. El detalle endpoint por endpoint está en los documentos de trabajo del
 equipo (`ENDPOINTS.md`, `REVISION_API.md`), que no se publican: pídelos.
 
-**Bloqueantes**
-
-1. `POST /api/v1/analisis-financiero` — el endpoint del enunciado, el que el
-   jurado va a probar. Hoy está en otra ruta, con otra entrada y otra salida.
-2. Los controladores devuelven **entidades**, no DTOs: `AuthController` responde
-   con el objeto `Usuario`, que incluye el campo `password`.
-3. No hay autenticación real: `AuthService` compara contra credenciales escritas
-   en el código y nada se persiste. Sin JWT no hay aislamiento por usuario.
-4. `UserController` devuelve un usuario fijo escrito en el controlador.
-
-**Pendiente de construir**
-
-- ~30 endpoints del contrato (transacciones, análisis, catálogos, banca, metas,
-  presupuestos, eventos, 2FA).
-- Motor de reglas → recomendaciones (`codigo` + `parametros`, nunca frases fijas).
-- Cliente del servicio de ML.
-- `@ControllerAdvice` con la forma de error uniforme.
-- `MessageSource` para `Accept-Language` (es · pt · en).
-- CORS acotado a los dominios reales — hoy `AuthController` **no tiene**
-  `@CrossOrigin`, así que el login fallará desde el navegador en staging.
-- springdoc-openapi para Swagger en `/api/v1/docs`.
+- **Transacciones**: listado paginado, alta manual, corrección de categoría,
+  baja e importación de CSV.
+- **Análisis persistido**: ejecutar sobre las transacciones del usuario,
+  guardarlo y servir el historial y la evolución.
+- **Catálogos** (`/categorias`, `/monedas`) y **producto** (metas, presupuestos,
+  eventos de calendario).
+- **Operación**: `/salud` completo y `/auditoria` para administradores.
+- Mover los umbrales por categoría de `dominio/Taxonomia.java` a la columna
+  `categoria.umbral_ingreso`, que ya existe en la base.
 
 **La buena noticia**: la base de datos ya está migrada y **con datos dentro**.
-Endpoints como `/categorias`, `/monedas`, `/cuentas`, `/tarjetas` o `/buro/salud`
-son leer una tabla y devolverla.
+Los de catálogos y producto son leer una tabla y devolverla.
 
 ---
 

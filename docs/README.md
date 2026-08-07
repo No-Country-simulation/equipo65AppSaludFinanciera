@@ -13,6 +13,7 @@
 | Entender cómo encaja todo | [`ARQUITECTURA.md`](ARQUITECTURA.md) |
 | Trabajar en la base de datos | [`../db/README.md`](../db/README.md) |
 | Trabajar en la API | [`../backend/README.md`](../backend/README.md) |
+| Trabajar en el servicio de modelo | [`../ml/README.md`](../ml/README.md) |
 | Desplegar en staging o producción | [`DESPLIEGUE.md`](DESPLIEGUE.md) |
 | Montar solo el frontend en una máquina limpia | [`../frontend/docs/FRONTEND_DESDE_CERO.md`](../frontend/docs/FRONTEND_DESDE_CERO.md) |
 | Ramas, commits y pruebas | [`../frontend/docs/proceso/`](../frontend/docs/proceso/) |
@@ -30,8 +31,8 @@ real y en el emulador de Android. No es una estimación.
 | **Base de datos** | [`../db/README.md`](../db/README.md) | ✅ 30 tablas · 10 migraciones · semilla y dataset |
 | **Operación / contenedores** | [`../ops/README.md`](../ops/README.md) | ✅ Un comando levanta todo. Docker y Podman |
 | **Frontend** (web + móvil) | [`../frontend/README.md`](../frontend/README.md) | ✅ Interfaz completa · 🚧 sin datos reales que mostrar hasta que exista la API |
-| **API** | [`../backend/README.md`](../backend/README.md) | 🚧 **Auth y sesión funcionando**; el resto por construir |
-| **Modelo (ML)** | — | ⬜ Sin empezar |
+| **API** | [`../backend/README.md`](../backend/README.md) | 🚧 **26 de 44 endpoints**: análisis financiero, auth con 2FA, perfil y banca |
+| **Modelo (ML)** | [`../ml/README.md`](../ml/README.md) | 🚧 Servicio en pie; el clasificador se apoya en un baseline |
 
 **Lo que está probado de punta a punta**: registro de esquema, semilla, login con
 JWT contra PostgreSQL real, sesión persistida, idioma del usuario aplicado en las

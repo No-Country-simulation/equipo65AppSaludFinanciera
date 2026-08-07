@@ -78,10 +78,10 @@ contenedores (te lo pregunta primero).
 │   ├── scripts/       Por sistema operativo: menú, doctor, emulador
 │   └── docs/          Documentación del frontend + decisiones (ADR)
 ├── backend/           API REST — Java 21 + Spring Boot 3
+├── ml/                Servicio de inferencia — Python 3.11 + FastAPI
 ├── db/                PostgreSQL 16: migraciones, semilla e imagen
 ├── ops/               Stack completo en contenedores (compose + scripts)
-├── docs/              Documentación transversal del proyecto
-└── infra/             Terraform + Ansible para OCI
+└── docs/              Documentación transversal del proyecto
 ```
 
 | Módulo | Estado | Documentación |
@@ -90,8 +90,8 @@ contenedores (te lo pregunta primero).
 | **Móvil** | ✅ Completa (misma capa de datos que la web) | [`frontend/README.md`](frontend/README.md) |
 | **Base de datos** | ✅ Esquema, migraciones y datos de ejemplo | [`db/README.md`](db/README.md) |
 | **Contenedores** | ✅ Verificado con Docker **y** Podman | [`ops/README.md`](ops/README.md) |
-| **API** | 🚧 Auth y sesión funcionando contra PostgreSQL; el resto por construir | [`backend/README.md`](backend/README.md) |
-| **Modelo (ML)** | ⬜ Notebooks hechos; falta el servicio | — |
+| **API** | 🚧 Análisis financiero, autenticación con 2FA, perfil y banca listos; transacciones y catálogos por construir | [`backend/README.md`](backend/README.md) |
+| **Modelo (ML)** | 🚧 Servicio en pie y sirviendo los modelos; el clasificador todavía se apoya en un baseline | [`ml/README.md`](ml/README.md) |
 
 ---
 
@@ -129,6 +129,7 @@ puede romper por cambiar de idioma.
 | Entender la arquitectura | [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) |
 | Trabajar en la base de datos | [`db/README.md`](db/README.md) |
 | Trabajar en la API | [`backend/README.md`](backend/README.md) |
+| Trabajar en el servicio de modelo | [`ml/README.md`](ml/README.md) |
 | Desplegar (staging y producción) | [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) |
 | Ramas, commits y pruebas | [`frontend/docs/proceso/`](frontend/docs/proceso/) |
 | Montar solo el frontend | [`frontend/docs/FRONTEND_DESDE_CERO.md`](frontend/docs/FRONTEND_DESDE_CERO.md) |
