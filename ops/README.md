@@ -24,16 +24,16 @@ y, si hace falta, arranca la máquina de Podman o Docker Desktop.
 
 | Comando | Qué hace |
 |---|---|
-| `arriba` | Construye y levanta todo en segundo plano |
+| `arriba` | Construye y levanta todo en segundo plano, **túnel incluido** si el entorno trae token |
 | `efimero` | Levanta en **primer plano**; al salir con **Ctrl+C borra contenedores, red y volumen**. Para probar sin dejar nada ocupando RAM ni disco |
-| `abajo` | Para y elimina los contenedores. **Los datos se conservan** |
+| `abajo` | Para y elimina los contenedores, **túnel incluido**. **Los datos se conservan** |
 | `estado` | Qué está corriendo |
 | `logs [servicio]` | Sigue los logs (`logs db`, `logs api`, `logs web`) |
 | `probar` | Pruebas de humo: esquema, migraciones, taxonomía, semilla, API y web |
 | `rebuild` | Reconstruye las imágenes sin caché |
 | `migrar` | Aplica migraciones nuevas sobre una base que ya existe |
 | `psql` | Consola SQL (no necesitas tener `psql` instalado) |
-| `tunel` | Levanta el stack + Cloudflare Tunnel (dominio público) |
+| `tunel` | Lo mismo que `arriba`, pero **falla** si falta el token en vez de seguir sin túnel |
 | `limpiar` | Borra contenedores **y el volumen de datos**. Pide confirmación escrita |
 
 Opciones: `-Motor docker|podman` (`MOTOR=` en bash) · `-Entorno .env.staging`
@@ -129,12 +129,27 @@ datos a la red local sin querer.
 
 ## Cloudflare Tunnel (dominio público)
 
+**El túnel va pegado al ciclo de vida del stack**: se enciende con `arriba` y se
+apaga con `abajo`. No hay que acordarse de nada.
+
 ```bash
-# En ops/.env
+# En el archivo de entorno (ops/.env, ops/.env.staging...)
 CLOUDFLARE_TUNNEL_TOKEN=<el token del túnel>
 
-./ops/stack.sh tunel
+ENTORNO=.env.staging ./ops/stack.sh arriba    # levanta stack + túnel
+ENTORNO=.env.staging ./ops/stack.sh abajo     # apaga los dos
 ```
+
+La condición es tener token: **si el entorno no lo trae, el stack sube igual y
+el túnel se queda apagado**, que es justo lo que queremos en local (`ops/.env`
+no lleva token). Sin esa comprobación `cloudflared` arrancaría sin credenciales
+y entraría en bucle de reinicio.
+
+`tunel` sigue existiendo como atajo explícito: hace lo mismo que `arriba` pero
+**aborta** si falta el token, en vez de seguir en silencio sin publicar nada.
+
+> Al apagar, el perfil se pasa **siempre**, haya token o no: si alguien levantó
+> el túnel y después vació el token, sin eso el contenedor quedaría huérfano.
 
 `cloudflared` corre **dentro del compose**, así que comparte red con los demás
 servicios. En el panel de Cloudflare, los *public hostnames* apuntan a los
@@ -144,6 +159,26 @@ servicios. En el panel de Cloudflare, los *public hostnames* apuntan a los
 |---|---|
 | `staging.fintechvital.com` | `http://web:3000` |
 | `api-staging.fintechvital.com` | `http://api:8080` |
+
+### ¿Por qué el origen es `http` y no `https`?
+
+Porque son **dos tramos distintos**, y el que ve el público sí es HTTPS:
+
+```
+navegador  --HTTPS-->  borde de Cloudflare  --túnel cifrado-->  cloudflared  --HTTP-->  web:3000
+           (TLS del                          (QUIC/HTTP2 con    (mismo contenedor de
+            dominio)                          credencial mTLS)   compose que la web)
+```
+
+Cloudflare **termina el TLS en su borde**: `https://staging.fintechvital.com` es
+HTTPS de verdad, con certificado válido. Lo que va en `http://` es únicamente lo
+que `cloudflared` habla con `web` y `api`, y ese tramo **nunca sale de la red de
+compose** — de hecho los puertos ni siquiera están publicados hacia fuera.
+
+Poner HTTPS ahí no aportaría nada y empeoraría las cosas: habría que generar
+certificados autofirmados para `web` y `api` y luego decirle a `cloudflared` que
+**no los verifique** (`noTLSVerify`), que es cifrado sin autenticación. Este es
+el patrón que recomienda Cloudflare, no un atajo.
 
 **No hay que cambiar ningún puerto.** Lo que sí hay que hacer:
 

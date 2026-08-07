@@ -106,6 +106,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # `service_started` y NO `service_healthy`: el ML tarda en cargar los .pkl
+      # y la API tiene endpoints que no lo necesitan (auth, perfil, banca). Que
+      # el login espere a que un modelo termine de cargar seria acoplar de mas;
+      # si el ML no responde, lo que toca es un 503 en el analisis y nada mas.
+      ml:
+        condition: service_started
     environment:
       # Los valores por defecto son H2 en memoria para que `mvn spring-boot:run`
       # funcione sin nada montado; ops/.env los sobreescribe con PostgreSQL.
@@ -125,6 +131,10 @@ services:
       # cualquier usuario: fuera de local va generado y guardado como secreto.
       #   openssl rand -base64 48
       FV_JWT_SECRETO: ${FV_JWT_SECRETO:-desarrollo-local-cambiar-en-despliegue-32bytes-minimo!!}
+      # Servicio de modelo: se llama por NOMBRE DE SERVICIO dentro de la red del
+      # compose, no por localhost. `ml` no publica puertos a la maquina.
+      FV_ML_URL: ${FV_ML_URL:-http://ml:8000}
+      FV_CLAVE_INTERNA: ${FV_CLAVE_INTERNA:-}
       SERVER_PORT: 8080
       TZ: UTC
     ports:
@@ -136,6 +146,48 @@ services:
       resources:
         limits:
           memory: 768M
+
+  # ---------------------------------------------------------------------------
+  # Servicio de modelo (FastAPI). Carga los .pkl de Data Science y hace
+  # inferencia pura: categoria de una transaccion y perfil financiero.
+  #
+  # ⚠️ NO publica puertos a proposito. Es un servicio INTERNO: solo la API lo
+  # llama, por el nombre de servicio `ml` dentro de la red del compose. Sacarlo
+  # a 127.0.0.1 lo dejaria accesible sin la autenticacion de usuario que si
+  # tiene la API publica.
+  #
+  # Para depurarlo desde la maquina, sin tocar este archivo:
+  #   docker compose -f ops/compose.yml exec ml \
+  #     python -c "import urllib.request;print(urllib.request.urlopen('http://localhost:8000/interno/v1/salud').read())"
+  # ---------------------------------------------------------------------------
+  ml:
+    build:
+      context: ../ml
+    image: fintechvital/ml:local
+    container_name: ${FV_PROYECTO:-fintechvital}-ml
+    environment:
+      # Autenticacion entre servicios (CONTRATO_MODELO §3). Vacia = desactivada,
+      # que es lo comodo en local; en despliegue se define en ops/.env y la API
+      # manda el mismo valor.
+      FV_CLAVE_INTERNA: ${FV_CLAVE_INTERNA:-}
+      FV_LOG_NIVEL: ${FV_LOG_NIVEL:-INFO}
+      TZ: UTC
+    healthcheck:
+      # Mismo endpoint que consulta la API. Si un .pkl no cargo devuelve 503 y
+      # el contenedor queda unhealthy, en vez de servir predicciones a medias.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/interno/v1/salud').status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    # scikit-learn + numpy + pandas cargados en memoria, mas 100 arboles del
+    # RandomForest. 512M da margen de sobra y evita que el proceso crezca sin
+    # techo si alguien manda lotes grandes.
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   # ---------------------------------------------------------------------------
   # Web (Next.js). NEXT_PUBLIC_API_URL se hornea en el BUILD: cambiarla exige

@@ -93,6 +93,15 @@ leer_env() {
     if [ -n "$valor" ]; then echo "$valor"; else echo "$2"; fi
 }
 
+# El tunel va PEGADO al ciclo de vida del stack: sube con `arriba` y baja con
+# `abajo`. Solo se enciende si el entorno trae token, porque `ops/.env` (local)
+# no lo lleva y cloudflared entraria en bucle de reinicio sin el.
+token_tunel="$(leer_env CLOUDFLARE_TUNNEL_TOKEN '')"
+if [ -n "$token_tunel" ]; then perfil_arriba=(--profile tunel); else perfil_arriba=(); fi
+# Al APAGAR se pasa el perfil siempre, haya token o no: si alguien levanto el
+# tunel y despues vacio el token, sin esto el contenedor quedaria huerfano.
+perfil_abajo=(--profile tunel)
+
 puerto_web="$(leer_env PUERTO_WEB 3000)"
 puerto_api="$(leer_env PUERTO_API 8080)"
 puerto_db="$(leer_env PUERTO_DB 5432)"
@@ -184,11 +193,18 @@ probar_stack() {
 case "$accion" in
     arriba)
         titulo 'Construyendo y levantando el stack'
-        compose up -d --build || { err 'Fallo el levantamiento del stack.'; exit 1; }
-        echo; compose ps; echo
+        compose "${perfil_arriba[@]}" up -d --build || { err 'Fallo el levantamiento del stack.'; exit 1; }
+        echo; compose "${perfil_abajo[@]}" ps; echo
         ok "Web: http://localhost:$puerto_web"
         ok "API: http://localhost:$puerto_api"
         ok "BD:  localhost:$puerto_db  (base $db_nombre, usuario $db_usuario)"
+        if [ -n "$token_tunel" ]; then
+            ok 'Tunel encendido. Se apaga solo con: ./ops/stack.sh abajo'
+            echo '    https://staging.fintechvital.com      ->  http://web:3000'
+            echo '    https://api-staging.fintechvital.com  ->  http://api:8080'
+        else
+            info 'Tunel apagado: este entorno no trae CLOUDFLARE_TUNNEL_TOKEN (normal en local).'
+        fi
         echo; echo 'Comprueba que todo funciona con: ./ops/stack.sh probar'
         ;;
     efimero)
@@ -200,7 +216,7 @@ case "$accion" in
         limpiar_efimero() {
             echo
             titulo 'Limpiando'
-            compose down -v --remove-orphans
+            compose "${perfil_abajo[@]}" down -v --remove-orphans
             [ "${BORRAR_IMAGENES:-no}" = "si" ] && compose down --rmi local >/dev/null 2>&1
             ok 'Todo limpio: sin contenedores, sin volumen, sin RAM ocupada.'
         }
@@ -208,8 +224,10 @@ case "$accion" in
         compose up --build
         ;;
     tunel)
+        # Desde que `arriba` enciende el tunel solo, esta accion es un atajo
+        # explicito: hace lo mismo pero falla fuerte si falta el token.
         titulo 'Levantando el stack + Cloudflare Tunnel'
-        if [ -z "$(leer_env CLOUDFLARE_TUNNEL_TOKEN '')" ]; then
+        if [ -z "$token_tunel" ]; then
             err 'Falta CLOUDFLARE_TUNNEL_TOKEN en el archivo de entorno.'; exit 1
         fi
         compose --profile tunel up -d --build
@@ -220,10 +238,12 @@ case "$accion" in
         echo '    api-staging.fintechvital.com  ->  http://api:8080'
         aviso 'La web hornea NEXT_PUBLIC_API_URL en el build: para staging tiene que ser https://api-staging.fintechvital.com/api/v1 y hay que reconstruir.'
         ;;
-    abajo)     compose down; ok 'Stack detenido. El volumen de datos se conserva.' ;;
-    reiniciar) compose restart; compose ps ;;
-    estado)    compose ps ;;
-    logs)      if [ -n "$argumento" ]; then compose logs -f --tail 100 "$argumento"; else compose logs -f --tail 100; fi ;;
+    abajo)     compose "${perfil_abajo[@]}" down; ok 'Stack detenido (tunel incluido). El volumen de datos se conserva.' ;;
+    reiniciar) compose "${perfil_abajo[@]}" restart; compose "${perfil_abajo[@]}" ps ;;
+    # Con el perfil puesto, `ps` tambien lista el tunel; sin el, compose lo
+    # filtra y parece que no estuviera corriendo.
+    estado)    compose "${perfil_abajo[@]}" ps ;;
+    logs)      if [ -n "$argumento" ]; then compose "${perfil_abajo[@]}" logs -f --tail 100 "$argumento"; else compose "${perfil_abajo[@]}" logs -f --tail 100; fi ;;
     rebuild)   titulo 'Reconstruyendo imagenes sin cache'; compose build --no-cache; compose up -d; compose ps ;;
     migrar)    titulo 'Aplicando migraciones pendientes'; compose --profile migrar run --rm migrador ;;
     psql)      echo "Consola SQL sobre $db_nombre. Salir: \\q"; compose exec db psql -U "$db_usuario" -d "$db_nombre" ;;

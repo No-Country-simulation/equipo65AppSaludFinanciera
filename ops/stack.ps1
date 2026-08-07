@@ -173,6 +173,15 @@ function Leer-Env([string]$clave, [string]$porDefecto) {
     if ($valor) { return $valor } else { return $porDefecto }
 }
 
+# El tunel va PEGADO al ciclo de vida del stack: sube con `arriba` y baja con
+# `abajo`. Solo se enciende si el entorno trae token, porque `ops/.env` (local)
+# no lo lleva y cloudflared entraria en bucle de reinicio sin el.
+$tokenTunel = Leer-Env 'CLOUDFLARE_TUNNEL_TOKEN' ''
+$perfilArriba = if ($tokenTunel) { @('--profile', 'tunel') } else { @() }
+# Al APAGAR se pasa el perfil siempre, haya token o no: si alguien levanto el
+# tunel y despues vacio el token, sin esto el contenedor quedaria huerfano.
+$perfilAbajo = @('--profile', 'tunel')
+
 $puertoWeb = Leer-Env 'PUERTO_WEB' '3000'
 $puertoApi = Leer-Env 'PUERTO_API' '8080'
 $puertoDb  = Leer-Env 'PUERTO_DB'  '5432'
@@ -295,14 +304,28 @@ switch ($Accion) {
 
     'arriba' {
         Titulo 'Construyendo y levantando el stack'
-        if ($Solo) { Compose up -d --build @Solo } else { Compose up -d --build }
+        # Con -Solo el usuario elige servicios a mano: ahi no se cuela el tunel.
+        if ($Solo) {
+            Compose up -d --build @Solo
+        } else {
+            Compose @perfilArriba up -d --build
+        }
         if ($LASTEXITCODE -ne 0) { Escribir 'ERROR' 'Fallo el levantamiento del stack.'; exit 1 }
         Write-Host ''
-        Compose ps
+        Compose @perfilAbajo ps
         Write-Host ''
         Escribir 'OK' "Web: http://localhost:$puertoWeb"
         Escribir 'OK' "API: http://localhost:$puertoApi"
         Escribir 'OK' "BD:  localhost:$puertoDb  (base $dbNombre, usuario $dbUsuario)"
+        if ($Solo) {
+            # nada que decir del tunel: no se pidio el stack completo
+        } elseif ($tokenTunel) {
+            Escribir 'OK' 'Tunel encendido. Se apaga solo con: .\ops\stack.ps1 abajo'
+            Write-Host '    https://staging.fintechvital.com      ->  http://web:3000'
+            Write-Host '    https://api-staging.fintechvital.com  ->  http://api:8080'
+        } else {
+            Escribir 'INFO' 'Tunel apagado: este entorno no trae CLOUDFLARE_TUNNEL_TOKEN (normal en local).'
+        }
         Write-Host ''
         Write-Host 'Comprueba que todo funciona con: .\ops\stack.ps1 probar'
     }
@@ -322,7 +345,7 @@ switch ($Accion) {
         } finally {
             Write-Host ''
             Titulo 'Limpiando'
-            Compose down -v --remove-orphans
+            Compose @perfilAbajo down -v --remove-orphans
             if ($BorrarImagenes) {
                 Compose down --rmi local 2>$null | Out-Null
                 Escribir 'OK' 'Imagenes locales eliminadas.'
@@ -332,8 +355,10 @@ switch ($Accion) {
     }
 
     'tunel' {
+        # Desde que `arriba` enciende el tunel solo, esta accion es un atajo
+        # explicito: hace lo mismo pero falla fuerte si falta el token.
         Titulo 'Levantando el stack + Cloudflare Tunnel'
-        $token = Leer-Env 'CLOUDFLARE_TUNNEL_TOKEN' ''
+        $token = $tokenTunel
         if (-not $token) {
             Escribir 'ERROR' 'Falta CLOUDFLARE_TUNNEL_TOKEN en el archivo de entorno.'
             exit 1
@@ -348,22 +373,24 @@ switch ($Accion) {
     }
 
     'abajo' {
-        Compose down
-        Escribir 'OK' 'Stack detenido. El volumen de datos se conserva.'
+        Compose @perfilAbajo down
+        Escribir 'OK' 'Stack detenido (tunel incluido). El volumen de datos se conserva.'
     }
 
     'reiniciar' {
-        Compose restart
-        Compose ps
+        Compose @perfilAbajo restart
+        Compose @perfilAbajo ps
     }
 
     'estado' {
-        Compose ps
+        # Con el perfil puesto, `ps` tambien lista el tunel; sin el, compose lo
+        # filtra y parece que no estuviera corriendo.
+        Compose @perfilAbajo ps
     }
 
     'logs' {
-        if ($Servicio) { Compose logs -f --tail 100 $Servicio }
-        else { Compose logs -f --tail 100 }
+        if ($Servicio) { Compose @perfilAbajo logs -f --tail 100 $Servicio }
+        else { Compose @perfilAbajo logs -f --tail 100 }
     }
 
     'rebuild' {
