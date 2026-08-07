@@ -1,6 +1,7 @@
 package com.hackathon.analisis.error;
 
 import com.hackathon.analisis.dto.ErrorResponse;
+import com.hackathon.analisis.service.LimitadorLoginService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -37,8 +38,16 @@ public class ManejadorErrores {
         // Los errores esperados (credenciales, email duplicado) no son incidencias:
         // se registran en INFO para no llenar el log de ruido.
         log.info("[{}] {} - {}", traza, e.getCodigo(), e.getMessage());
-        return ResponseEntity.status(e.getEstado())
-                .body(new ErrorResponse(e.getCodigo(), e.getMessage(), e.getDetalles(), traza));
+
+        ResponseEntity.BodyBuilder respuesta = ResponseEntity.status(e.getEstado());
+        // 429 sin Retry-After obliga al cliente a adivinar cuando reintentar, y
+        // lo normal es que reintente en bucle. La cabecera es parte del contrato
+        // del 429, asi que se pone aqui una vez y no en cada sitio que lo lance.
+        if (e.getEstado() == HttpStatus.TOO_MANY_REQUESTS) {
+            respuesta.header("Retry-After", String.valueOf(LimitadorLoginService.segundosDeEspera()));
+        }
+        return respuesta.body(
+                new ErrorResponse(e.getCodigo(), e.getMessage(), e.getDetalles(), traza));
     }
 
     /** Fallos de @Valid: se devuelven TODOS los campos malos, no solo el primero. */
