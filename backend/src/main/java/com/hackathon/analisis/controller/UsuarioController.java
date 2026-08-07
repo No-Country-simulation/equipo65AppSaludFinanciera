@@ -1,11 +1,15 @@
 package com.hackathon.analisis.controller;
 
+import com.hackathon.analisis.dto.PasswordRequest;
 import com.hackathon.analisis.dto.PatchUsuarioRequest;
 import com.hackathon.analisis.dto.UsuarioResponse;
 import com.hackathon.analisis.service.UsuarioService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 /**
  * Perfil del usuario autenticado (CONTRATO_API §4).
@@ -34,5 +38,23 @@ public class UsuarioController {
     @PatchMapping("/me")
     public ResponseEntity<UsuarioResponse> actualizar(@Valid @RequestBody PatchUsuarioRequest cambios) {
         return ResponseEntity.ok(usuarios.actualizarPerfil(cambios));
+    }
+
+    /** Portabilidad de datos (ARCO / LGPD): todo lo que se guarda del usuario. */
+    @GetMapping("/me/exportacion")
+    public ResponseEntity<Map<String, Object>> exportar(HttpServletRequest http) {
+        return ResponseEntity.ok(usuarios.exportarDatos(http));
+    }
+
+    /**
+     * Baja definitiva. Pide la contrasena en el cuerpo aunque el token ya sea
+     * valido: es una operacion irreversible y un token robado no deberia poder
+     * ejecutarla.
+     */
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> eliminar(@Valid @RequestBody PasswordRequest peticion,
+                                         HttpServletRequest http) {
+        usuarios.eliminarCuenta(peticion.password(), http);
+        return ResponseEntity.noContent().build();
     }
 }
