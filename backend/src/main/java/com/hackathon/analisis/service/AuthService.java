@@ -2,12 +2,14 @@ package com.hackathon.analisis.service;
 
 import com.hackathon.analisis.dto.*;
 import com.hackathon.analisis.error.ErrorNegocio;
+import com.hackathon.analisis.model.EventoAuditoria;
 import com.hackathon.analisis.model.RefreshToken;
 import com.hackathon.analisis.model.Usuario;
 import com.hackathon.analisis.model.UsuarioSeguridad;
 import com.hackathon.analisis.repository.RefreshTokenRepository;
 import com.hackathon.analisis.repository.UsuarioRepository;
 import com.hackathon.analisis.repository.UsuarioSeguridadRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.Period;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,17 +49,32 @@ public class AuthService {
     private final RefreshTokenRepository refrescos;
     private final PasswordEncoder encoder;
     private final JwtService jwt;
+    private final TotpService totp;
+    private final CifradoService cifrado;
+    private final DosFactoresService dosFactores;
+    private final LimitadorLoginService limitador;
+    private final AuditoriaService auditoria;
 
     public AuthService(UsuarioRepository usuarios,
                        UsuarioSeguridadRepository seguridad,
                        RefreshTokenRepository refrescos,
                        PasswordEncoder encoder,
-                       JwtService jwt) {
+                       JwtService jwt,
+                       TotpService totp,
+                       CifradoService cifrado,
+                       DosFactoresService dosFactores,
+                       LimitadorLoginService limitador,
+                       AuditoriaService auditoria) {
         this.usuarios = usuarios;
         this.seguridad = seguridad;
         this.refrescos = refrescos;
         this.encoder = encoder;
         this.jwt = jwt;
+        this.totp = totp;
+        this.cifrado = cifrado;
+        this.dosFactores = dosFactores;
+        this.limitador = limitador;
+        this.auditoria = auditoria;
     }
 
     // ------------------------------------------------------------- registro ---
@@ -106,8 +124,16 @@ public class AuthService {
     // ---------------------------------------------------------------- login ---
 
     @Transactional
-    public SesionResponse login(LoginRequest peticion) {
+    public SesionResponse login(LoginRequest peticion, HttpServletRequest http) {
         String email = peticion.email().trim().toLowerCase();
+        String ip = AuditoriaService.ipDe(http);
+        String agente = AuditoriaService.agenteDe(http);
+
+        // Antes de tocar BCrypt: si la cuenta esta bloqueada por intentos, no
+        // tiene sentido pagar el hash (que es caro a proposito) por cuenta de
+        // quien esta atacando.
+        limitador.comprobar(email);
+
         Optional<Usuario> encontrado = usuarios.findByEmail(email);
 
         // Se verifica el hash INCLUSO si el usuario no existe, contra uno
@@ -122,6 +148,8 @@ public class AuthService {
         boolean coincide = encoder.matches(peticion.password(), hashGuardado);
 
         if (encontrado.isEmpty() || !coincide) {
+            registrarFallo(email, ip, agente,
+                    encontrado.map(Usuario::getId).orElse(null), "password");
             // Mismo mensaje en los dos casos: decir "ese usuario no existe"
             // regala informacion a quien esta probando correos.
             throw new ErrorNegocio(HttpStatus.UNAUTHORIZED, "CREDENCIALES_INVALIDAS",
@@ -136,22 +164,62 @@ public class AuthService {
 
         UsuarioSeguridad credenciales = seguridad.findByUsuarioId(usuario.getId()).orElseThrow();
 
-        // 2FA: si esta activo y no llego el codigo, se responde 200 con
-        // requiere_2fa y SIN tokens. No es un 401: la contrasena era correcta.
-        if (credenciales.isTotpActivo()
-                && (peticion.codigoTotp() == null || peticion.codigoTotp().isBlank())) {
-            return SesionResponse.pendiente2fa();
-        }
         if (credenciales.isTotpActivo()) {
-            // La verificacion TOTP todavia no esta implementada (ver
-            // docs/ENDPOINTS.md, prioridad 4). Se rechaza en vez de dejar pasar
-            // cualquier codigo: ante la duda, fallar cerrado.
-            throw new ErrorNegocio(HttpStatus.NOT_IMPLEMENTED, "TOTP_NO_DISPONIBLE",
-                    "La verificacion de dos pasos todavia no esta implementada");
+            String codigo = peticion.codigoTotp();
+
+            // Sin codigo: 200 con requiere_2fa y SIN tokens. No es un 401, la
+            // contrasena era correcta; el cliente pide el codigo y reintenta.
+            if (codigo == null || codigo.isBlank()) {
+                return SesionResponse.pendiente2fa();
+            }
+            if (!verificarSegundoFactor(usuario, credenciales, codigo)) {
+                registrarFallo(email, ip, agente, usuario.getId(), "totp");
+                throw new ErrorNegocio(HttpStatus.UNAUTHORIZED, "TOTP_INVALIDO",
+                        "El codigo de verificacion no es correcto o ya expiro");
+            }
         }
 
         usuario.setUltimaSesion(OffsetDateTime.now());
+        limitador.registrar(email, ip, true);
+        auditoria.registrar(EventoAuditoria.Tipo.LOGIN_OK, usuario.getId(), ip, agente,
+                Map.of("con_2fa", credenciales.isTotpActivo()));
+
         return emitirSesion(usuario, credenciales, UUID.randomUUID());
+    }
+
+    /**
+     * Segundo factor: primero el codigo de la app, y si no cuadra, un codigo de
+     * respaldo.
+     *
+     * Se aceptan los dos en el mismo campo porque el frontend tiene un solo
+     * input: el usuario que perdio el telefono escribe ahi su codigo de papel.
+     * El TOTP se prueba primero por ser el caso normal.
+     */
+    private boolean verificarSegundoFactor(Usuario usuario, UsuarioSeguridad credenciales,
+                                           String codigo) {
+        Long paso = totp.verificar(cifrado.descifrar(credenciales.getTotpSecreto()),
+                                   codigo, credenciales.getTotpUltimoPaso());
+        if (paso != null) {
+            // Se anota el paso consumido para que el MISMO codigo no valga dos
+            // veces dentro de su ventana de 30 s.
+            credenciales.setTotpUltimoPaso(paso);
+            seguridad.save(credenciales);
+            return true;
+        }
+        return dosFactores.consumirCodigoRespaldo(usuario.getId(), codigo);
+    }
+
+    /**
+     * Anota el intento fallido y, si con este se alcanza el limite, deja
+     * constancia del bloqueo.
+     *
+     * El registro va en transaccion propia (ver LimitadorLoginService): esta de
+     * aqui termina en excepcion y su rollback se llevaria la fila por delante.
+     */
+    private void registrarFallo(String email, String ip, String agente, UUID usuarioId, String motivo) {
+        limitador.registrar(email, ip, false);
+        auditoria.registrar(EventoAuditoria.Tipo.LOGIN_FALLIDO, usuarioId, ip, agente,
+                Map.of("email", email, "motivo", motivo));
     }
 
     // -------------------------------------------------------------- refresh ---
@@ -172,6 +240,8 @@ public class AuthService {
             refrescos.revocarFamilia(guardado.getFamiliaId(), ahora);
             log.warn("Refresh token reusado (familia {}): se revoco la familia completa",
                     guardado.getFamiliaId());
+            auditoria.registrar(EventoAuditoria.Tipo.REFRESH_REUSADO, guardado.getUsuarioId(),
+                    null, null, Map.of("familia_id", guardado.getFamiliaId().toString()));
             throw new ErrorNegocio(HttpStatus.UNAUTHORIZED, "REFRESH_REUSADO",
                     "La sesion se cerro por seguridad, vuelve a entrar");
         }

@@ -2,6 +2,7 @@ package com.hackathon.analisis.controller;
 
 import com.hackathon.analisis.dto.*;
 import com.hackathon.analisis.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,9 +37,15 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(auth.registrar(peticion));
     }
 
+    /**
+     * Recibe el HttpServletRequest para poder registrar la IP y el agente en
+     * `intento_login` y en la auditoria: sin eso no hay forma de aplicar el
+     * bloqueo por fuerza bruta ni de investigar un acceso raro despues.
+     */
     @PostMapping("/login")
-    public ResponseEntity<SesionResponse> login(@Valid @RequestBody LoginRequest peticion) {
-        return ResponseEntity.ok(auth.login(peticion));
+    public ResponseEntity<SesionResponse> login(@Valid @RequestBody LoginRequest peticion,
+                                                HttpServletRequest http) {
+        return ResponseEntity.ok(auth.login(peticion, http));
     }
 
     @PostMapping("/refresh")
