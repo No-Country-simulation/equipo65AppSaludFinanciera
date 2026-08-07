@@ -10,10 +10,8 @@
  * Uso (sharp vive en las dependencias de la web):
  *   cd frontend/web && node ../scripts/marca/generar-assets.mjs
  *
- * Hay que volver a correrlo cuando el diseno cambie; en particular cuando
- * llegue el SVG con el claim "Fintech Vital By 65" convertido a curvas (hoy
- * es texto vivo en la fuente MADE Waffle Soft, que no tenemos: por eso el
- * imagotipo que usamos va sin ese renglon).
+ * Hay que volver a correrlo cuando el diseno cambie, siempre despues de
+ * derivar-variantes.mjs.
  */
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
@@ -86,24 +84,34 @@ console.log('Marca para el movil (1x/2x/3x)');
 await tresDensidades('logo.svg', 'logo', 40);
 await tresDensidades('logo-negativo.svg', 'logo-negativo', 40);
 await tresDensidades('isotipo.svg', 'isotipo', 40);
+await tresDensidades('isotipo-circular.svg', 'isotipo-circular', 40);
 
 console.log('Iconos de app (Expo)');
-// iOS / generico: isotipo lima centrado sobre pizarra, a sangre.
+// En los iconos va el logotipo CIRCULAR, no el isotipo suelto: trae su propio
+// fondo, asi que no hay que inventarle un cuadrado de relleno y se lee igual
+// sobre cualquier fondo de escritorio.
+//
+// iOS enmascara el icono con un squircle, y el disco no llega a las esquinas:
+// debajo va fondo opaco o los angulos quedarian transparentes.
 await escribir(
   resolve(MOVIL, 'images/icon.png'),
-  await png('isotipo.svg', { ancho: 1024, alto: 1024, fondo: PIZARRA, margen: 0.42 }),
+  await png('isotipo-circular.svg', { ancho: 1024, alto: 1024, fondo: PIZARRA, margen: 0.12 }),
 );
-// Android adaptativo: el sistema recorta hasta el 33% exterior, asi que el
-// contenido se queda holgado en el centro y el fondo va en su propia capa.
+// Android adaptativo: el sistema aplica su propia mascara, que en la mayoria de
+// los lanzadores es un circulo de ~66% del lienzo. El disco se deja algo mas
+// chico que esa mascara para que no lo muerda por los bordes; el fondo va en su
+// propia capa.
 await escribir(
   resolve(MOVIL, 'images/android-icon-foreground.png'),
-  await png('isotipo.svg', { ancho: 1024, alto: 1024, margen: 0.55 }),
+  await png('isotipo-circular.svg', { ancho: 1024, alto: 1024, margen: 0.36 }),
 );
 await escribir(
   resolve(MOVIL, 'images/android-icon-background.png'),
   sharp({ create: { width: 1024, height: 1024, channels: 4, background: PIZARRA } }).png(),
 );
-// Monocromo (Android 13+): el sistema lo tinta, solo importa la silueta.
+// Monocromo (Android 13+): el sistema lo tinta de un color plano y solo queda
+// la silueta. El disco se volveria un circulo lleno sin ninguna informacion,
+// asi que aca SI va el isotipo suelto, que tiene silueta propia.
 await escribir(
   resolve(MOVIL, 'images/android-icon-monochrome.png'),
   await png('isotipo.svg', { ancho: 1024, alto: 1024, margen: 0.55 }),
@@ -113,16 +121,22 @@ await escribir(
   resolve(MOVIL, 'images/splash-icon.png'),
   await png('logo-negativo.svg', { ancho: 900 }),
 );
-await escribir(resolve(MOVIL, 'images/favicon.png'), await png('isotipo.svg', { ancho: 48 }));
+await escribir(
+  resolve(MOVIL, 'images/favicon.png'),
+  await png('isotipo-circular.svg', { ancho: 48, alto: 48 }),
+);
 
 console.log('Favicon de la web (convencion de app router: src/app/icon.png)');
+// La pestania no enmascara nada: el disco va a sangre y las esquinas quedan
+// transparentes, que es como se ve cualquier avatar redondo.
 await escribir(
   resolve(WEB, 'icon.png'),
-  await png('isotipo.svg', { ancho: 512, alto: 512, fondo: PIZARRA, margen: 0.34 }),
+  await png('isotipo-circular.svg', { ancho: 512, alto: 512 }),
 );
+// apple-icon SI lo enmascara iOS con un squircle -> fondo opaco debajo.
 await escribir(
   resolve(WEB, 'apple-icon.png'),
-  await png('isotipo.svg', { ancho: 180, alto: 180, fondo: PIZARRA, margen: 0.34 }),
+  await png('isotipo-circular.svg', { ancho: 180, alto: 180, fondo: PIZARRA, margen: 0.12 }),
 );
 
 console.log('Listo.');
