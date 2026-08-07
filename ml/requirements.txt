@@ -1,0 +1,13 @@
+# Servicio de inferencia. Versiones FIJADAS a proposito.
+#
+# scikit-learn va clavado a 1.6.1 porque es la version con la que Data Science
+# serializo los .pkl. Cargar un pickle con otra version no falla siempre, pero
+# cuando falla lo hace en tiempo de ejecucion y con un mensaje que no se
+# entiende; y cuando "funciona" puede cambiar el resultado en silencio.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+scikit-learn==1.6.1
+joblib==1.4.2
+pandas==2.2.3
+numpy==2.0.2
