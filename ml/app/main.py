@@ -114,10 +114,10 @@ async def clasificar(
     """
     Categoria de cada descripcion. Sin estado.
 
-    ⚠️ Hoy la mayoria de las descripciones las resuelve el BASELINE por palabras
-    clave, no el modelo: el encoder que entrego Data Science solo reconoce 18
-    nombres de comercio exactos. El campo ``origen`` de cada resultado dice cual
-    de los dos respondio. Ver la cabecera de ``inferencia.py``.
+    Manda el modelo cuando esta seguro (``predict_proba`` por encima del
+    umbral); si no, responde el baseline por palabras clave. El campo ``origen``
+    de cada resultado dice cual de los dos contesto. Ver la cabecera de
+    ``inferencia.py``.
     """
     if not clave_valida(x_clave_interna):
         return error("NO_AUTORIZADO", "Clave interna invalida", status.HTTP_401_UNAUTHORIZED)
@@ -145,17 +145,13 @@ async def perfil(
     """
     Perfil financiero a partir de los indicadores que YA calculo Spring.
 
-    ⚠️ Sin ``contexto`` (ingreso, ahorro y score en montos) responde la regla
-    determinista: el modelo de Data Science se entreno con montos absolutos y no
-    se pueden reconstruir desde los ratios. Ver la cabecera de ``inferencia.py``.
+    ⚠️ Hoy responde la regla determinista: el M2 entregado pide otras 8 features
+    y no predice la clase `saludable`. Ver la cabecera de ``inferencia.py``.
     """
     if not clave_valida(x_clave_interna):
         return error("NO_AUTORIZADO", "Clave interna invalida", status.HTTP_401_UNAUTHORIZED)
 
-    slug, probabilidades, origen = artefactos.perfil(
-        peticion.indicadores.model_dump(),
-        peticion.contexto.model_dump() if peticion.contexto else None,
-    )
+    slug, probabilidades, origen = artefactos.perfil(peticion.indicadores.model_dump())
 
     return esquemas.RespuestaPerfil(
         modelo_version=VERSION_MODELO,

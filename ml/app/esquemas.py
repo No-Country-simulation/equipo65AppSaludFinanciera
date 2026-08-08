@@ -66,28 +66,24 @@ class Indicadores(BaseModel):
     ratio_recurrente: float
 
 
-class ContextoPerfil(BaseModel):
-    """
-    Montos absolutos que pide el modelo .pkl de Data Science.
-
-    ⚠️ NO forma parte del CONTRATO_MODELO original, y es opcional a proposito.
-    El contrato manda solo ratios, porque la regla dura del proyecto es que el
-    modelo sea inmune a la moneda. Pero ``modelo_perfil_salud.pkl`` se entreno
-    con ingreso, ahorro y score en montos, y esos tres no se pueden reconstruir
-    desde un ratio.
-
-    Si el backend los manda, se usa el modelo. Si no, se aplica la regla
-    determinista. Asi el contrato sigue funcionando tal como esta escrito.
-    """
-
-    ingreso_mensual: float
-    ahorro_actual: float
-    score_buro: float
-
-
 class PeticionPerfil(BaseModel):
+    """
+    Solo los 8 indicadores, como manda el contrato.
+
+    Hubo aqui un campo `contexto` con montos absolutos, porque el M2 anterior se
+    habia entrenado con ingreso y ahorro en pesos. Ese modelo ya no esta y el
+    campo se retiro: el contrato dice ratios y ahora no hay ninguna razon para
+    aceptar otra cosa.
+
+    `extra="forbid"` porque por defecto Pydantic **ignora en silencio** lo que no
+    reconoce. Si alguien vuelve a mandar `contexto` creyendo que se usa, es mejor
+    un 422 que un analisis que parece tenerlo en cuenta y no lo hace. Es el mismo
+    fallo silencioso que ya costo un rato con `modelo_version`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
     indicadores: Indicadores
-    contexto: ContextoPerfil | None = None
 
 
 class RespuestaPerfil(BaseModel):

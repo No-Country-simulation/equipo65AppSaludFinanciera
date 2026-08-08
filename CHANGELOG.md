@@ -12,6 +12,31 @@ Versionado: [SemVer](https://semver.org/lang/es/).
 
 ---
 
+## [0.4.1] — 2026-08-07
+
+### Cambiado
+
+- **Modelos nuevos de Data Science integrados.** M1 pasa a ser un `Pipeline`
+  que recibe la descripcion en crudo (TF-IDF word 1-2 + `char_wb` 3-5 sobre
+  `LogisticRegression`) y devuelve los 12 slugs del proyecto con
+  `predict_proba`. Desaparecen el `LabelEncoder`, los dos `StandardScaler` y
+  toda la preparacion de features: ya no hacen falta.
+- La clasificacion pasa a ser **modelo primero, baseline si el modelo no esta
+  seguro**, en vez de "modelo solo para 18 comercios conocidos". Se ajusta solo:
+  cuando M1 se reentrene con mas datos tomara el relevo sin tocar codigo.
+- Se retira el campo `contexto` de `POST /interno/v1/perfil`. Existia porque el
+  M2 anterior pedia montos absolutos; el nuevo ya no. La peticion ahora rechaza
+  campos que no reconoce en vez de ignorarlos en silencio.
+
+### Notas
+
+- **M2 se carga pero NO se conecta**: sus 8 features no son los 8 indicadores
+  del contrato, y en su propio reporte la clase `saludable` sale con f1 = 0.00
+  (nunca la predice). El perfil lo sigue resolviendo la regla determinista.
+  Detalle y que hace falta, en [`ml/README.md`](ml/README.md).
+
+---
+
 ## [0.4.0] — 2026-08-07
 
 Primera version con **analisis financiero de punta a punta**: el endpoint del

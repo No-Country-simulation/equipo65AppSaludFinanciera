@@ -167,16 +167,19 @@ def test_perfil_sin_contexto_usa_la_regla(cliente):
     assert set(cuerpo["probabilidades"]) == set(taxonomia.PERFILES)
 
 
-def test_perfil_con_contexto_usa_el_modelo(cliente):
+def test_perfil_rechaza_campos_de_mas(cliente):
+    """
+    El contrato manda SOLO los 8 indicadores.
+
+    Hubo un campo `contexto` con montos absolutos mientras el M2 los pedia; ese
+    modelo ya no esta y el campo se retiro. Si alguien lo vuelve a mandar, mejor
+    un 422 que aceptarlo en silencio y que nadie note que se ignora.
+    """
     respuesta = cliente.post("/interno/v1/perfil", json={
         "indicadores": INDICADORES_SANOS,
-        "contexto": {"ingreso_mensual": 45000, "ahorro_actual": 20000, "score_buro": 800},
+        "contexto": {"ingreso_mensual": 45000},
     })
-    cuerpo = respuesta.json()
-
-    assert cuerpo["origen"] == "modelo"
-    assert cuerpo["perfil"] in taxonomia.PERFILES
-    assert set(cuerpo["probabilidades"]) == set(taxonomia.PERFILES)
+    assert respuesta.status_code == 422
 
 
 def test_endeudamiento_alto_da_riesgo(cliente):
@@ -210,29 +213,48 @@ def test_los_slugs_publicados_son_los_de_la_taxonomia(cliente):
 
 
 # --------------------------------------------------------------------------
-# Traduccion de etiquetas
+# Los modelos y la taxonomia
 # --------------------------------------------------------------------------
 
-def test_las_etiquetas_del_pkl_mapean_a_slugs_validos():
+def test_m1_devuelve_los_slugs_del_proyecto(cliente):
     """
-    Si Data Science renombra una clase, este test cae antes de que el servicio
-    empiece a devolver `otros` en silencio en produccion.
+    M1 ya emite los 12 slugs directamente, sin mapa de traduccion.
+
+    Si Data Science renombrara una clase, este test cae antes de que el servicio
+    empiece a descartar predicciones en silencio.
     """
-    for slug in taxonomia.ETIQUETA_A_CATEGORIA.values():
-        assert slug in taxonomia.CATEGORIAS
-    for slug in taxonomia.ETIQUETA_A_PERFIL.values():
-        assert slug in taxonomia.PERFILES
-
-
-def test_el_mapa_cubre_todas_las_clases_del_modelo(cliente):
-    """El mapa tiene que cubrir TODAS las clases que el .pkl puede devolver."""
     from app.inferencia import artefactos
 
-    if artefactos.modelo_categoria is not None:
-        for etiqueta in artefactos.modelo_categoria.classes_:
-            assert str(etiqueta) in taxonomia.ETIQUETA_A_CATEGORIA, \
-                f"clase sin mapear en ETIQUETA_A_CATEGORIA: {etiqueta!r}"
-    if artefactos.modelo_perfil is not None:
-        for etiqueta in artefactos.modelo_perfil.classes_:
-            assert str(etiqueta) in taxonomia.ETIQUETA_A_PERFIL, \
-                f"clase sin mapear en ETIQUETA_A_PERFIL: {etiqueta!r}"
+    assert artefactos.clasificador is not None, "M1 no cargo"
+    desconocidas = set(map(str, artefactos.clasificador.classes_)) - set(taxonomia.CATEGORIAS)
+    assert not desconocidas, f"M1 devuelve clases fuera de la taxonomia: {desconocidas}"
+
+
+def test_m2_esta_cargado_pero_no_conectado(cliente):
+    """
+    El M2 entregado pide otras 8 features y nunca predice `saludable`, asi que
+    el perfil lo resuelve la regla determinista. Se comprueba que siga siendo
+    asi: reconectarlo tiene que ser una decision consciente.
+    """
+    salud = cliente.get("/interno/v1/salud").json()
+    assert salud["modelo_perfil"]["cargado"] is True
+    assert salud["modelo_perfil"]["en_uso"] is False
+
+
+def test_el_modelo_contesta_cuando_esta_seguro(cliente):
+    """
+    El diseno es "modelo primero, baseline si no esta seguro".
+
+    Hoy M1 casi nunca supera el umbral -- se entreno con pocas descripciones --
+    asi que la mayoria de los resultados salen con `origen: baseline`. Este test
+    NO exige que gane uno u otro: exige que el campo `origen` sea coherente con
+    la confianza, que es lo que permite saber quien contesto cuando esto cambie.
+    """
+    respuesta = cliente.post("/interno/v1/clasificar", json={
+        "transacciones": [{"descripcion": d} for d in
+                          ["Supermercado", "IFOOD *PEDIDO", "NETFLIX.COM", "ZZQQ 99811"]]
+    })
+    for resultado in respuesta.json()["resultados"]:
+        if resultado["origen"] == "modelo":
+            assert resultado["confianza"] >= taxonomia.UMBRAL_CONFIANZA, \
+                "el modelo no deberia contestar por debajo del umbral"

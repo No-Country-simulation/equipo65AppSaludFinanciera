@@ -9,73 +9,81 @@ No se expone a internet: vive en la red interna del compose y solo lo llama la A
 
 ---
 
-## Estado del clasificador (2026-08-07)
+## Estado de los modelos (2026-08-07)
 
-Los artefactos que hay hoy en `artefactos/` **cubren una parte del problema**, y
-el servicio completa el resto con el baseline. Conviene conocer sus límites
-antes de tocar nada, porque explican por qué el código está como está.
+### M1 — categorías: arquitectura lista, falta entrenamiento
 
-**`encoder_descripcion.pkl` es un `LabelEncoder`**, no un vectorizador de texto.
-Reconoce **18 nombres de comercio exactos** y lanza `ValueError` con cualquier
-otra cadena — incluidas variantes de mayúsculas de esos mismos 18:
+`modelo_clasificador_salud_financiera.pkl` **ya tiene la forma que pide el
+contrato**: un `Pipeline` que recibe la descripción en crudo y devuelve uno de
+los 12 slugs, con `predict_proba`.
 
-```python
-enc.transform(["Burger King"])   # -> [1]
-enc.transform(["BURGER KING"])   # -> ValueError: previously unseen labels
-enc.transform(["IFOOD *PEDIDO"]) # -> ValueError: previously unseen labels
+```text
+Pipeline
+ ├─ features: FeatureUnion
+ │    ├─ word_tfidf: TfidfVectorizer(analyzer=word,    ngram=(1,2))
+ │    └─ char_tfidf: TfidfVectorizer(analyzer=char_wb, ngram=(3,5))
+ └─ classifier: LogisticRegression
 ```
 
-Las descripciones reales de un extracto (`UBER *TRIP 4821`, `WAL-MART #1234`) no
-están en esa lista, así que el modelo no puede opinar sobre ellas.
+No hay que preparar ninguna feature: se le pasa el texto y ya.
 
-**`modelo_categoria.pkl` recibe 5 features**, no solo el texto:
-`monto_scaled`, `desc_encoded`, `es_fin_de_semana`, `ratio_gasto_ingreso` y
-`score_scaled`. Dos de ellas no existen en el momento de clasificar:
-`ratio_gasto_ingreso` lo calcula la API *después*, sobre las transacciones ya
-clasificadas, y el score de buró es de la persona, no de la transacción. Se
-rellenan con el valor neutro tras el escalado, lo cual **aleja la inferencia de
-las condiciones de entrenamiento**.
+Su límite hoy es de **entrenamiento, no de diseño**: se entrenó con una lista
+corta de descripciones, así que reparte poca probabilidad y casi nunca supera el
+umbral de confianza. Medido sobre 20 descripciones reales:
 
-**Sus etiquetas son de subcategoría** (`Comida rápida`, `Supermercado`,
-`Farmacia`, `Streaming`, `Transporte/Bus`) y se mapean a los slugs del proyecto
-en `taxonomia.py`. Cubren 3 de las 12 categorías.
+| | aciertos |
+|---|---|
+| Solo el modelo | 1 / 20 |
+| Solo el baseline | 20 / 20 |
+| **Modelo + baseline (lo que hace el servicio)** | **20 / 20** |
 
-**`modelo_perfil_salud.pkl` trabaja con montos absolutos** (ingreso, ahorro y
-score de buró), no con los 8 ratios del contrato. El proyecto usa ratios a
-propósito, para que el mismo modelo sirva en cualquier moneda; esos montos no
-son derivables desde un ratio, así que el modelo solo se usa cuando la petición
-trae `contexto`.
+### M2 — perfil: cargado pero **no conectado**
+
+`modelo_perfil_salud.pkl` devuelve los 3 slugs correctos y tiene
+`predict_proba`, pero no se usa, por dos razones:
+
+1. **Sus features son otras.** Pide `ratio_ahorro`, `ratio_vivienda`,
+   `ratio_deuda`, `ratio_gasto_esencial`, `ratio_gasto_discrecional`,
+   `ratio_fondo_emergencia`, `ratio_cobertura_ingresos` y `ratio_margen_neto`.
+   De los 8 indicadores del contrato ([TAXONOMIA §3](../frontend/docs/datos/TAXONOMIA.md))
+   solo coinciden dos, y `ratio_fondo_emergencia` no se puede calcular con lo
+   que recibe la API.
+2. **Nunca predice `saludable`.** En su propio reporte esa clase sale con
+   precision, recall y f1 = `0.00`. Conectarlo significaría que a ningún usuario
+   se le puede decir que sus finanzas están bien.
+
+Mientras tanto responde la regla determinista, que es el baseline que el propio
+contrato define.
 
 ### Cómo lo resuelve el servicio
 
-Sirve el contrato **tal cual** — la integración con la API es directa — y por dentro:
-
-- Usa el modelo **cuando puede responder** (descripción entre las 18 conocidas,
-  o `contexto` presente).
-- Cae al **baseline** en el resto de los casos. No es un invento: el propio
-  `CONTRATO_MODELO` §5 define el clasificador por palabras clave y la regla
-  determinista como *"el baseline a batir"*.
-- **Declara siempre por qué camino fue**, en el campo `origen`. Una predicción
-  del modelo y una del baseline no deberían confundirse nunca.
+- **M1 primero, baseline si el modelo no está seguro.** Si
+  `max(predict_proba) >= 0.40` manda el modelo; si no, el baseline por palabras
+  clave.
+- **Esto se ajusta solo**: el día que M1 se reentrene con más datos, empezará a
+  superar el umbral y tomará el relevo **sin tocar una línea de código**.
+- El campo `origen` de cada resultado dice cuál de los dos contestó. Una
+  predicción del modelo y una del baseline no deberían confundirse nunca.
 
 > El baseline es multilingüe (es/pt/en) y resuelve `IFOOD *PEDIDO`,
 > `PIX RECEBIDO` o `CONTA DE LUZ ENEL`, que es lo que exige
 > [ADR-0009](../frontend/docs/adr/0009-multi-idioma.md).
 
-### Qué falta para que el modelo tome el relevo
+### Qué falta
 
-1. **Un M1 de texto**: `TfidfVectorizer(word 1-2gram + char_wb 3-5gram)` sobre la
-   descripción, entrenado con los tres idiomas mezclados. El `char_wb` es lo que
-   captura raíces compartidas entre lenguas romances (`supermerc-`, `farmac-`);
-   sin él, el modelo multilingüe no funciona.
-2. Que **la descripción sea su única feature obligatoria** (el `valor`, opcional).
-3. **Etiquetas = los 12 slugs** de
-   [`TAXONOMIA.md`](../frontend/docs/datos/TAXONOMIA.md), en `snake_case` y sin
-   acentos.
-4. **M2 sobre los 8 ratios**, no sobre montos.
-5. `predict_proba` calibrado, porque `confianza` es parte del contrato.
+**M1** — reentrenar con más datos. El repositorio de Data Science ya tiene un
+CSV de **5.000 transacciones reales** (`banco_transacciones.csv`) que el
+notebook todavía no usa: hoy entrena sobre una lista escrita a mano. Con ese
+dataset y `class_weight="balanced"`, el modelo debería superar el umbral solo.
 
-Cuando llegue, se cambia la carga en `app/inferencia.py` y **el resto del
+Conviene además evaluar sobre un **conjunto de prueba separado**: el reporte
+actual mide `predict` sobre los mismos datos con los que se hizo `fit`, así que
+el 1.00 de accuracy no dice todavía si el modelo generaliza.
+
+**M2** — reentrenar sobre **los 8 indicadores del contrato**, con sus nombres
+exactos, y comprobar que predice las tres clases.
+
+Cuando lleguen, se cambia la carga en `app/inferencia.py` y **el resto del
 servicio no se toca**: el contrato hacia la API ya es el definitivo.
 
 ---
@@ -107,13 +115,17 @@ curl -s localhost:8000/interno/v1/clasificar -H 'Content-Type: application/json'
 
 ```jsonc
 {
-  "modelo_version": "0.1.0",
+  "modelo_version": "0.2.0",
   "resultados": [
-    { "id": "t1", "categoria": "alimentacion", "confianza": 0.6,  "origen": "baseline" },
-    { "id": "t2", "categoria": "salud",        "confianza": 0.64, "origen": "modelo"   }
+    { "id": "t1", "categoria": "alimentacion", "confianza": 0.6, "origen": "baseline" },
+    { "id": "t2", "categoria": "salud",        "confianza": 0.6, "origen": "baseline" }
   ]
 }
 ```
+
+> Hoy casi todo sale con `origen: "baseline"`, por lo que se explica arriba.
+> Cuando M1 se reentrene empezaran a aparecer con `"modelo"` — sin cambiar nada
+> del servicio.
 
 `origen` es **aditivo** sobre el contrato: Spring puede ignorarlo sin romperse.
 
@@ -129,7 +141,7 @@ curl -s localhost:8000/interno/v1/clasificar -H 'Content-Type: application/json'
 podman build -t fintechvital-ml:dev ml/
 podman run --rm -p 8000:8000 fintechvital-ml:dev
 
-# Tests (26)
+# Tests (35)
 podman run --rm -v "$PWD/ml:/src:ro" -w /src fintechvital-ml:dev \
   sh -c "pip install -q pytest httpx && python -m pytest tests/ -q"
 ```
@@ -139,20 +151,22 @@ Science): comprueban que la costura con Spring se respeta — que los slugs son
 los del proyecto, que la forma del JSON es la del contrato y que las
 descripciones de los tres idiomas no caen en `otros`.
 
-> `test_el_mapa_cubre_todas_las_clases_del_modelo` falla **a propósito** si Data
-> Science renombra una clase. Es la red que evita que el servicio empiece a
-> devolver `otros` en silencio tras una entrega nueva.
+> `test_m1_devuelve_los_slugs_del_proyecto` falla **a propósito** si una entrega
+> nueva renombra una clase. Es la red que evita que el servicio empiece a
+> descartar predicciones en silencio.
 
 ## Estructura
 
-```
+```text
 ml/
   app/
     main.py        FastAPI: rutas, errores con la forma del contrato, auth interna
     inferencia.py  Carga de los .pkl y adaptacion  <- LEER LA CABECERA
-    taxonomia.py   Los 12+3 slugs, el mapa desde las etiquetas de DS, el baseline
+    taxonomia.py   Los 12+3 slugs y los baselines (palabras clave / regla)
     esquemas.py    Pydantic: entrada y salida del contrato
-  artefactos/      Los .pkl tal como los entrego Data Science
+  artefactos/      Los .pkl tal como los entrego Data Science:
+                     modelo_clasificador_salud_financiera.pkl  (M1, en uso)
+                     modelo_perfil_salud.pkl                   (M2, cargado sin usar)
   tests/
 ```
 

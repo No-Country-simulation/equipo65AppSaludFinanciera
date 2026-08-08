@@ -188,10 +188,12 @@ el perfil y genera recomendaciones con el motor de reglas. Auth con 2FA, perfil
 y banca también están cerrados. Falta transacciones (CRUD e importación),
 persistir el análisis con su historial, catálogos y producto.
 
-**El servicio de ML está levantado y sirve los modelos**, pero los artefactos
-entregados no bastan para clasificar por sí solos: el clasificador se apoya hoy
-en el baseline por palabras clave que el propio contrato define como referencia.
-El porqué, medido y con lo que hay que pedirle a Data Science, está en
+**El servicio de ML está levantado con los modelos cargados.** M1 ya tiene la
+arquitectura que pide el contrato (recibe la descripción en crudo y devuelve los
+12 slugs), pero se entrenó con pocos datos y casi nunca supera el umbral de
+confianza, así que el baseline por palabras clave sigue sosteniendo la
+clasificación. El diseño es *modelo primero, baseline si no está seguro*, y se
+ajusta solo cuando el modelo mejore. El detalle medido está en
 [`../ml/README.md`](../ml/README.md).
 
 El inventario completo y el orden sugerido para atacarlo están en los

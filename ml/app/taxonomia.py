@@ -1,12 +1,12 @@
 """
-Taxonomia del proyecto y traduccion desde las etiquetas de Data Science.
+Taxonomia del proyecto y baselines.
 
-Aqui viven tres cosas:
+Aqui viven dos cosas:
 
 1. Los 12 slugs de categoria y los 3 de perfil (``docs/datos/TAXONOMIA.md``).
-2. El mapa desde las etiquetas que devuelven los modelos .pkl hasta esos slugs.
-3. El **baseline por palabras clave**, que el propio CONTRATO_MODELO define como
-   la referencia que M1 tiene que superar.
+2. Los **baselines** que el propio CONTRATO_MODELO §5 define como la referencia
+   a batir: el clasificador por palabras clave para M1 y la regla determinista
+   para M2.
 
 Los slugs NUNCA se traducen. Las etiquetas legibles las pone el backend desde
 ``categoria_i18n`` segun ``Accept-Language``.
@@ -37,28 +37,14 @@ UMBRAL_CONFIANZA = 0.40
 
 
 # --------------------------------------------------------------------------
-# Traduccion de las etiquetas de los modelos entregados por Data Science
+# Normalizacion
 # --------------------------------------------------------------------------
-
-#: ``modelo_categoria.pkl`` devuelve 5 etiquetas de SUBcategoria, con acentos y
-#: barras. Se llevan a los slugs del proyecto. Es un mapeo que PIERDE
-#: informacion: "Comida rapida" y "Supermercado" caen los dos en `alimentacion`,
-#: porque el proyecto agrupa a nivel de macro-categoria.
-ETIQUETA_A_CATEGORIA = {
-    "Comida rápida": "alimentacion",
-    "Supermercado": "alimentacion",
-    "Farmacia": "salud",
-    "Streaming": "entretenimiento",
-    "Transporte/Bus": "transporte",
-}
-
-#: ``modelo_perfil_salud.pkl`` devuelve las 3 clases con otro nombre.
-ETIQUETA_A_PERFIL = {
-    "Saludable (Ahorrador)": "saludable",
-    "Equilibrado": "en_observacion",
-    "Riesgo Alto (Sobreendeudado)": "en_riesgo",
-}
-
+#
+# Hubo aqui dos mapas (ETIQUETA_A_CATEGORIA / ETIQUETA_A_PERFIL) que traducian
+# las etiquetas de los .pkl a los slugs del proyecto: el M1 anterior devolvia
+# subcategorias con acentos ("Comida rapida", "Transporte/Bus") y el M2,
+# perfiles con parentesis. Ya no hacen falta: los modelos actuales emiten los
+# slugs canonicos directamente, que es como debe ser.
 
 def normalizar(texto: str) -> str:
     """
@@ -85,8 +71,10 @@ def normalizar(texto: str) -> str:
 #
 #   1. Es la referencia contra la que se mide el modelo. Sin baseline, una
 #      metrica del modelo no dice si es bueno o solo parece bueno.
-#   2. Cubre lo que el .pkl entregado NO puede cubrir: su encoder solo conoce
-#      18 nombres de comercio EXACTOS y revienta con cualquier otro texto.
+#   2. Responde cuando el modelo no esta seguro. M1 ya tiene la arquitectura
+#      correcta, pero se entreno con pocas descripciones y casi nunca supera el
+#      umbral de confianza; hasta que se reentrene, esto es lo que sostiene la
+#      clasificacion. Ver la cabecera de `inferencia.py`.
 #
 # Es multilingue (es / pt / en) porque ADR-0009 lo exige: buena parte del jurado
 # es de Brasil y `IFOOD` devolviendo "otros" seria el peor momento de la demo.
