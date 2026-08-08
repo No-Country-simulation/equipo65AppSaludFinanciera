@@ -135,6 +135,10 @@ PALABRAS_CLAVE: dict[str, tuple[str, ...]] = {
     ),
     "salud": (
         "salud", "saude", "health",
+        # ⚠️ Los extractos abrevian. "FCIA GUADALAJARA SUC 112" es una farmacia
+        # y caia en `otros`: ni el modelo ni el baseline conocian la
+        # abreviatura. Detectado corriendo los ejemplos del CHECKLIST.
+        "fcia", "farm", "drog",
         "farmacia", "farmacias", "drogaria", "droga raia", "drogasil", "pharmacy",
         "hospital", "clinica", "medico", "dentista", "consultorio", "laboratorio",
         "seguro medico", "optica", "similares", "benavides", "cvs", "walgreens",

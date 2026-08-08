@@ -78,7 +78,10 @@ COMERCIOS: dict[str, dict[str, list[str]]] = {
                "Spectrum Cable", "Internet Service Provider"],
     },
     "salud": {
-        "es": ["Farmacias del Ahorro", "Farmacias Guadalajara", "Farmacias Similares",
+        # Las formas abreviadas van como comercios propios: un extracto escribe
+        # "FCIA GUADALAJARA SUC 112", no "Farmacias Guadalajara".
+        "es": ["FCIA Guadalajara", "FCIA del Ahorro", "FARM Similares",
+               "Farmacias del Ahorro", "Farmacias Guadalajara", "Farmacias Similares",
                "Farmacias Benavides", "Hospital Angeles", "Clinica Medica Sur",
                "Laboratorio Chopo", "Consulta Dentista", "Optica Devlyn",
                "Seguro Medico GNP", "Salud Digna", "Doctor Consulta General"],
