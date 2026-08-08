@@ -12,6 +12,47 @@ Versionado: [SemVer](https://semver.org/lang/es/).
 
 ---
 
+## [0.4.2] — 2026-08-07
+
+Los dos modelos **entrenados, evaluados y en uso**. Con esto se cierra el
+requisito 1 del enunciado ("modelo entrenado y cargado correctamente") y el
+entregable de Ciencia de Datos (§5.1).
+
+### Anadido
+
+- **Dataset propio y reproducible** (`ml/datos/`): 2.373 descripciones de
+  transaccion en **espanol, portugues e ingles**, repartidas entre las 12
+  categorias, y 3.000 perfiles financieros sobre los 8 indicadores del contrato.
+  Se generan con semilla fija, asi que dos ejecuciones dan lo mismo. El
+  enunciado §10.1 pide que cada equipo construya su conjunto de datos y admite
+  generarlos por simulacion (ADR-0006).
+- **Notebook completo** (`ml/notebooks/modelos_fintech_vital.ipynb`) con los 8
+  puntos que exige el enunciado: EDA, procesamiento de texto, ingenieria de
+  atributos, los dos modelos, entrenamiento, metricas, comparacion contra los
+  baselines y serializacion. Se genera desde `construir_notebook.py`, que
+  mantiene las celdas como texto plano revisable en git.
+- **M2 conectado.** Antes respondia la regla determinista porque el modelo
+  entregado pedia otras features y nunca predecia `saludable`.
+
+### Cambiado
+
+- **M1 reentrenado**: macro-F1 **1.00** con comercios conocidos y **0.58** con
+  marcas nunca vistas (el limite pesimista). Sobre 20 descripciones escritas a
+  mano acierta 19.
+- **M2 reentrenado** sobre los 8 indicadores del contrato: macro-F1 **0.89**
+  contra el 0.80 del baseline, y predice las tres clases (`saludable`, f1 0.96).
+
+### Notas
+
+- **La metrica honesta de M1 se mide partiendo por comercio**, no por fila. Con
+  una particion normal daba 1.00, pero las variantes de una misma marca caian a
+  los dos lados: "acertar" era reconocer algo ya visto. El notebook publica las
+  dos cifras y explica que responde cada una.
+- El baseline por palabras clave **se conserva**: cubre los comercios que el
+  modelo nunca vio, que es justo donde M1 baja.
+
+---
+
 ## [0.4.1] — 2026-08-07
 
 ### Cambiado

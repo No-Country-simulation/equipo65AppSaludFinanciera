@@ -10,37 +10,28 @@ con ``predict_proba``. Dentro lleva un ``FeatureUnion`` de dos TF-IDF (word 1-2
 y ``char_wb`` 3-5), que es justo lo que hace falta para que funcione en los tres
 idiomas. **No hay que preparar ninguna feature**: se le pasa el texto y ya.
 
-Su limitacion hoy es de ENTRENAMIENTO, no de diseno: se entreno con una lista
-corta de descripciones, asi que reparte poca probabilidad y casi nunca supera el
-umbral de confianza. Medido sobre 20 descripciones reales, el modelo por si solo
-acierta 1 y el baseline por palabras clave acierta 20.
-
-Por eso la clasificacion es **modelo primero, baseline si el modelo no esta
-seguro**:
+La clasificacion es **modelo primero, baseline si el modelo no esta seguro**:
 
 - Si ``max(predict_proba) >= UMBRAL_CONFIANZA``, manda el modelo.
 - Si no, responde el baseline por palabras clave.
 - El campo ``origen`` dice cual de los dos contesto.
 
-Esto se ajusta solo: **el dia que Data Science reentrene con mas datos, el
-modelo empieza a superar el umbral y toma el relevo sin tocar una linea de
-codigo**. Y mientras tanto la aplicacion no se queda sin clasificar.
+El baseline no es un parche temporal: es la red que cubre los comercios que el
+modelo nunca vio. Medido en el notebook sobre marcas NUEVAS, el modelo solo saca
+macro-F1 0.58 y el sistema completo 0.60 -- un nombre de marca inventado no lleva
+ninguna pista dentro. Con comercios ya conocidos, en cambio, el modelo acierta
+practicamente siempre, y ahi el baseline no interviene.
 
-**M2 (perfil) NO esta conectado**, a proposito y por dos razones:
+**M2 (perfil) SI esta conectado.** Recibe los 8 indicadores del contrato con sus
+nombres exactos (TAXONOMIA §3), predice las tres clases y le gana al baseline
+(macro-F1 0.89 contra 0.80). Se sigue cayendo a la regla determinista si el
+modelo no cargo o si la inferencia falla, nunca se inventa un perfil.
 
-1. Sus features son otras. Pide ``ratio_ahorro``, ``ratio_vivienda``,
-   ``ratio_deuda``, ``ratio_gasto_esencial``, ``ratio_gasto_discrecional``,
-   ``ratio_fondo_emergencia``, ``ratio_cobertura_ingresos`` y
-   ``ratio_margen_neto``. Los 8 indicadores del contrato (TAXONOMIA §3) son
-   otros; solo coinciden dos, y ``ratio_fondo_emergencia`` no se puede calcular
-   con lo que recibe la API.
-2. En su propio reporte, la clase ``saludable`` sale con precision, recall y
-   f1 = 0.00: el modelo **nunca predice ese perfil**. Conectarlo significaria
-   que a nadie se le puede decir que sus finanzas estan bien.
+El orden de las features importa y no se confia en el del diccionario: se
+construye el DataFrame usando ``feature_names_in_`` del propio modelo. Si algun
+dia el modelo se reentrena con otro orden, sigue funcionando.
 
-Mientras tanto responde la regla determinista, que es el baseline que el propio
-contrato define. El artefacto se carga igual para que ``/interno/v1/salud``
-informe de que esta ahi.
+Las metricas y como se obtuvieron estan en ``notebooks/modelos_fintech_vital.ipynb``.
 """
 
 from __future__ import annotations
@@ -51,6 +42,7 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+import pandas as pd
 
 from . import taxonomia
 
@@ -151,15 +143,49 @@ class Artefactos:
         """
         Perfil financiero. Devuelve ``(slug, probabilidades, origen)``.
 
-        Hoy siempre responde la regla determinista. El porque esta en la
-        cabecera del modulo: el M2 entregado pide otras 8 features y nunca
-        predice ``saludable``.
+        Manda el modelo; la regla determinista queda como red de seguridad para
+        cuando el artefacto no cargo o la inferencia falla. Nunca se inventa un
+        perfil.
         """
+        resultado = self._perfil_con_modelo(indicadores)
+        if resultado is not None:
+            return (*resultado, ORIGEN_MODELO)
+
         slug, probabilidades = taxonomia.perfil_por_reglas(
             float(indicadores.get("tasa_ahorro", 0.0)),
             float(indicadores.get("ratio_endeudamiento", 0.0)),
         )
         return slug, probabilidades, ORIGEN_BASELINE
+
+    def _perfil_con_modelo(
+        self, indicadores: dict[str, float]
+    ) -> tuple[str, dict[str, float]] | None:
+        if self.modelo_perfil is None:
+            return None
+        try:
+            # El orden lo manda el MODELO, no el diccionario que llego. Pasar las
+            # 8 columnas en otro orden no da error: da una prediccion equivocada
+            # en silencio, que es el peor fallo posible aqui.
+            columnas = list(self.modelo_perfil.feature_names_in_)
+            fila = pd.DataFrame([[float(indicadores[c]) for c in columnas]], columns=columnas)
+
+            crudas = self.modelo_perfil.predict_proba(fila)[0]
+            probabilidades = {p: 0.0 for p in taxonomia.PERFILES}
+            for etiqueta, valor in zip(self.modelo_perfil.classes_, crudas):
+                slug = str(etiqueta)
+                if slug not in taxonomia.PERFILES:
+                    log.warning("M2 devolvio un perfil fuera de la taxonomia: %r", slug)
+                    return None
+                probabilidades[slug] = round(float(valor), 3)
+
+            ganador = max(probabilidades, key=probabilidades.__getitem__)
+            return ganador, probabilidades
+        except KeyError as e:
+            log.warning("Falta el indicador %s: se usa la regla determinista", e)
+            return None
+        except Exception as e:  # noqa: BLE001
+            log.warning("Fallo la inferencia de perfil, se usa la regla: %s", e)
+            return None
 
     # --------------------------------------------------------------- salud ---
 
@@ -184,10 +210,10 @@ class Artefactos:
                 "version": VERSION_MODELO,
                 "cargado": cargados[ARCHIVO_M2],
                 "clases": len(taxonomia.PERFILES),
-                # Cargado pero NO conectado. Ver la cabecera del modulo.
-                "en_uso": False,
-                "motivo": "sus features no son los 8 indicadores del contrato "
-                          "y no predice la clase saludable",
+                "en_uso": cargados[ARCHIVO_M2],
+                # La regla determinista queda de red de seguridad si el
+                # artefacto no cargo o la inferencia falla.
+                "baseline_activo": True,
             },
             "artefactos": cargados,
             "errores": self.errores,

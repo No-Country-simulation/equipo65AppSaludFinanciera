@@ -154,13 +154,13 @@ INDICADORES_SANOS = {
 }
 
 
-def test_perfil_sin_contexto_usa_la_regla(cliente):
+def test_perfil_devuelve_la_forma_del_contrato(cliente):
     respuesta = cliente.post("/interno/v1/perfil", json={"indicadores": INDICADORES_SANOS})
     cuerpo = respuesta.json()
 
     assert respuesta.status_code == 200
     assert cuerpo["perfil"] in taxonomia.PERFILES
-    assert cuerpo["origen"] == "baseline"
+    assert cuerpo["origen"] in ("modelo", "baseline")
     # El contrato: probabilidad == probabilidades[perfil] y las 3 suman 1.0.
     assert cuerpo["probabilidad"] == cuerpo["probabilidades"][cuerpo["perfil"]]
     assert abs(sum(cuerpo["probabilidades"].values()) - 1.0) < 0.01
@@ -182,9 +182,29 @@ def test_perfil_rechaza_campos_de_mas(cliente):
     assert respuesta.status_code == 422
 
 
+#: Alguien en mala situacion, con los 8 indicadores COHERENTES entre si.
+#
+# ⚠️ La coherencia importa. Una version anterior de este test partia de
+# INDICADORES_SANOS y solo cambiaba `tasa_ahorro` a -0.05, dejando
+# `ratio_gasto_ingreso` en 0.70. Eso es imposible: si gastas el 70% de tu
+# ingreso, tu tasa de ahorro es 0.30, no -0.05. El modelo nunca vio una
+# combinacion asi -- el backend las calcula todas desde las mismas
+# transacciones, asi que siempre encajan -- y respondia con las tres
+# probabilidades repartidas, que es lo razonable ante algo fuera de rango.
+INDICADORES_EN_RIESGO = {
+    "tasa_ahorro": -0.05,             # gasta mas de lo que gana
+    "ratio_endeudamiento": 0.62,
+    "ratio_gasto_ingreso": 1.05,      # coherente con la tasa de ahorro
+    "ratio_gasto_esencial": 0.60,
+    "ratio_gasto_discrecional": 0.30,
+    "concentracion_gasto": 0.40,
+    "frecuencia_ahorro_num": 0,       # no ahorra nunca
+    "ratio_recurrente": 0.15,
+}
+
+
 def test_endeudamiento_alto_da_riesgo(cliente):
-    indicadores = {**INDICADORES_SANOS, "tasa_ahorro": -0.05, "ratio_endeudamiento": 0.62}
-    respuesta = cliente.post("/interno/v1/perfil", json={"indicadores": indicadores})
+    respuesta = cliente.post("/interno/v1/perfil", json={"indicadores": INDICADORES_EN_RIESGO})
     assert respuesta.json()["perfil"] == "en_riesgo"
 
 
@@ -230,15 +250,32 @@ def test_m1_devuelve_los_slugs_del_proyecto(cliente):
     assert not desconocidas, f"M1 devuelve clases fuera de la taxonomia: {desconocidas}"
 
 
-def test_m2_esta_cargado_pero_no_conectado(cliente):
+def test_m2_usa_los_8_indicadores_del_contrato(cliente):
     """
-    El M2 entregado pide otras 8 features y nunca predice `saludable`, asi que
-    el perfil lo resuelve la regla determinista. Se comprueba que siga siendo
-    asi: reconectarlo tiene que ser una decision consciente.
+    Los nombres de las features de M2 tienen que ser EXACTAMENTE los 8 del
+    contrato (TAXONOMIA §3).
+
+    Si no coincidieran, el servicio no fallaria: caeria a la regla determinista
+    en cada peticion y nadie se enteraria de que el modelo dejo de usarse.
     """
-    salud = cliente.get("/interno/v1/salud").json()
-    assert salud["modelo_perfil"]["cargado"] is True
-    assert salud["modelo_perfil"]["en_uso"] is False
+    from app.inferencia import artefactos
+
+    assert artefactos.modelo_perfil is not None, "M2 no cargo"
+    assert list(artefactos.modelo_perfil.feature_names_in_) == list(INDICADORES_SANOS)
+
+
+def test_m2_predice_las_tres_clases(cliente):
+    """
+    Un perfil sano tiene que poder salir `saludable`.
+
+    No es una comprobacion de metrica: es de producto. Un M2 anterior nunca
+    predecia esa clase (f1 = 0.00), y con el conectado ningun usuario podria
+    haber recibido un diagnostico bueno, ni ahorrando el 40% de su sueldo.
+    """
+    respuesta = cliente.post("/interno/v1/perfil", json={"indicadores": INDICADORES_SANOS})
+    cuerpo = respuesta.json()
+    assert cuerpo["origen"] == "modelo"
+    assert cuerpo["perfil"] == "saludable", cuerpo["probabilidades"]
 
 
 def test_el_modelo_contesta_cuando_esta_seguro(cliente):

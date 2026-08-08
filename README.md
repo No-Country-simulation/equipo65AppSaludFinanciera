@@ -91,7 +91,7 @@ contenedores (te lo pregunta primero).
 | **Base de datos** | ✅ Esquema, migraciones y datos de ejemplo | [`db/README.md`](db/README.md) |
 | **Contenedores** | ✅ Verificado con Docker **y** Podman | [`ops/README.md`](ops/README.md) |
 | **API** | 🚧 Análisis financiero, autenticación con 2FA, perfil y banca listos; transacciones y catálogos por construir | [`backend/README.md`](backend/README.md) |
-| **Modelo (ML)** | 🚧 Servicio en pie con los modelos cargados; el clasificador se apoya en un baseline hasta que M1 se reentrene | [`ml/README.md`](ml/README.md) |
+| **Modelo (ML)** | ✅ Los dos modelos entrenados y en uso, con notebook y dataset propio | [`ml/README.md`](ml/README.md) |
 
 ---
 

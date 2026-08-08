@@ -179,7 +179,7 @@ Móvil      ████████████████████  comple
 Datos      ████████████████████  esquema + migraciones + semilla
 Contenedor ████████████████████  verificado en Docker y Podman
 API        ████████████░░░░░░░░  26 de 44 endpoints
-ML         ██████████████░░░░░░  servicio en pie; el clasificador, con baseline
+ML         ████████████████████  los dos modelos entrenados y en uso
 ```
 
 **La API ya hace un análisis financiero de punta a punta**: clasifica las
@@ -188,13 +188,12 @@ el perfil y genera recomendaciones con el motor de reglas. Auth con 2FA, perfil
 y banca también están cerrados. Falta transacciones (CRUD e importación),
 persistir el análisis con su historial, catálogos y producto.
 
-**El servicio de ML está levantado con los modelos cargados.** M1 ya tiene la
-arquitectura que pide el contrato (recibe la descripción en crudo y devuelve los
-12 slugs), pero se entrenó con pocos datos y casi nunca supera el umbral de
-confianza, así que el baseline por palabras clave sigue sosteniendo la
-clasificación. El diseño es *modelo primero, baseline si no está seguro*, y se
-ajusta solo cuando el modelo mejore. El detalle medido está en
-[`../ml/README.md`](../ml/README.md).
+**Los dos modelos están entrenados y en uso**, con dataset propio trilingüe y
+un notebook que documenta todo el proceso. M1 clasifica por el texto de la
+descripción (TF-IDF de palabras + `char_wb`) y M2 predice el perfil sobre los 8
+indicadores. El diseño sigue siendo *modelo primero, baseline si no está seguro*:
+el clasificador por palabras clave cubre los comercios que el modelo nunca vio.
+Las métricas están en [`../ml/README.md`](../ml/README.md).
 
 El inventario completo y el orden sugerido para atacarlo están en los
 documentos de trabajo del equipo (`ENDPOINTS.md`, `REVISION_API.md`), que no se

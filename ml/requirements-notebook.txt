@@ -1,0 +1,6 @@
+# Solo para reconstruir y ejecutar el notebook de modelos. No entra en la
+# imagen del servicio: son ~200 MB que en produccion no hacen nada.
+-r requirements.txt
+matplotlib==3.9.4
+jupyter==1.1.1
+nbconvert==7.16.4

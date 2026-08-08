@@ -11,80 +11,85 @@ No se expone a internet: vive en la red interna del compose y solo lo llama la A
 
 ## Estado de los modelos (2026-08-07)
 
-### M1 — categorías: arquitectura lista, falta entrenamiento
+**Los dos modelos están entrenados y en uso.** Todo el proceso —datos, EDA,
+entrenamiento, métricas y serialización— está en
+[`notebooks/modelos_fintech_vital.ipynb`](notebooks/modelos_fintech_vital.ipynb),
+que se puede abrir y volver a ejecutar.
 
-`modelo_clasificador_salud_financiera.pkl` **ya tiene la forma que pide el
-contrato**: un `Pipeline` que recibe la descripción en crudo y devuelve uno de
-los 12 slugs, con `predict_proba`.
+### M1 — categorías
 
 ```text
 Pipeline
  ├─ features: FeatureUnion
  │    ├─ word_tfidf: TfidfVectorizer(analyzer=word,    ngram=(1,2))
  │    └─ char_tfidf: TfidfVectorizer(analyzer=char_wb, ngram=(3,5))
- └─ classifier: LogisticRegression
+ └─ classifier: LogisticRegression(class_weight="balanced")
 ```
 
-No hay que preparar ninguna feature: se le pasa el texto y ya.
+Recibe la descripción en crudo y devuelve uno de los 12 slugs con
+`predict_proba`. **No hay que preparar ninguna feature.**
 
-Su límite hoy es de **entrenamiento, no de diseño**: se entrenó con una lista
-corta de descripciones, así que reparte poca probabilidad y casi nunca supera el
-umbral de confianza. Medido sobre 20 descripciones reales:
-
-| | aciertos |
+| Escenario | macro-F1 |
 |---|---|
-| Solo el modelo | 1 / 20 |
-| Solo el baseline | 20 / 20 |
-| **Modelo + baseline (lo que hace el servicio)** | **20 / 20** |
+| Comercio **ya conocido** (escrito de otra forma: `WAL-MART #1234`) | 1.00 |
+| Comercio **completamente nuevo** (modelo solo) | 0.58 |
+| Comercio nuevo, **modelo + baseline** (lo que corre) | 0.60 |
 
-### M2 — perfil: cargado pero **no conectado**
+Las dos cifras son ciertas y responden preguntas distintas. La segunda es un
+**límite pesimista**: pide clasificar una marca inventada, que no lleva ninguna
+pista dentro. En producción el catálogo de comercios es finito y las marcas
+frecuentes se repiten, así que la realidad está entre las dos.
 
-`modelo_perfil_salud.pkl` devuelve los 3 slugs correctos y tiene
-`predict_proba`, pero no se usa, por dos razones:
+Sobre 20 descripciones escritas a mano (marcas y formatos que no están en el
+dataset) acierta **19/20**, y el fallo restante queda por debajo del umbral, así
+que el servicio lo sirve como `otros` — que es lo correcto.
 
-1. **Sus features son otras.** Pide `ratio_ahorro`, `ratio_vivienda`,
-   `ratio_deuda`, `ratio_gasto_esencial`, `ratio_gasto_discrecional`,
-   `ratio_fondo_emergencia`, `ratio_cobertura_ingresos` y `ratio_margen_neto`.
-   De los 8 indicadores del contrato ([TAXONOMIA §3](../frontend/docs/datos/TAXONOMIA.md))
-   solo coinciden dos, y `ratio_fondo_emergencia` no se puede calcular con lo
-   que recibe la API.
-2. **Nunca predice `saludable`.** En su propio reporte esa clase sale con
-   precision, recall y f1 = `0.00`. Conectarlo significaría que a ningún usuario
-   se le puede decir que sus finanzas están bien.
+### M2 — perfil
 
-Mientras tanto responde la regla determinista, que es el baseline que el propio
-contrato define.
+`RandomForest` sobre **los 8 indicadores del contrato**, con sus nombres exactos.
+
+| | |
+|---|---|
+| macro-F1 | **0.89** (meta del contrato: 0.80) |
+| baseline (regla determinista) | 0.80 |
+| Predice las 3 clases | Sí — `saludable` con f1 0.96 |
+
+Que prediga las tres no es una métrica más: si nunca predijera `saludable`,
+ningún usuario podría recibir un diagnóstico bueno. Hay un test que lo comprueba.
 
 ### Cómo lo resuelve el servicio
 
 - **M1 primero, baseline si el modelo no está seguro.** Si
   `max(predict_proba) >= 0.40` manda el modelo; si no, el baseline por palabras
-  clave.
-- **Esto se ajusta solo**: el día que M1 se reentrene con más datos, empezará a
-  superar el umbral y tomará el relevo **sin tocar una línea de código**.
-- El campo `origen` de cada resultado dice cuál de los dos contestó. Una
-  predicción del modelo y una del baseline no deberían confundirse nunca.
+  clave, que cubre los comercios que el modelo nunca vio.
+- **M2 manda siempre**, con la regla determinista como red de seguridad si el
+  artefacto no cargó o la inferencia falla. Nunca se inventa un perfil.
+- El campo `origen` de cada resultado dice quién contestó. Una predicción del
+  modelo y una del baseline no deberían confundirse nunca.
 
-> El baseline es multilingüe (es/pt/en) y resuelve `IFOOD *PEDIDO`,
-> `PIX RECEBIDO` o `CONTA DE LUZ ENEL`, que es lo que exige
-> [ADR-0009](../frontend/docs/adr/0009-multi-idioma.md).
+> El sistema clasifica en los tres idiomas, que es lo que exige
+> [ADR-0009](../frontend/docs/adr/0009-multi-idioma.md): `IFOOD *PEDIDO` →
+> `alimentacion` (0.93), `PIX RECEBIDO SALARIO` → `ingresos` (1.00),
+> `CONTA DE LUZ ENEL` → `servicios` (0.99).
 
-### Qué falta
+### Reentrenar
 
-**M1** — reentrenar con más datos. El repositorio de Data Science ya tiene un
-CSV de **5.000 transacciones reales** (`banco_transacciones.csv`) que el
-notebook todavía no usa: hoy entrena sobre una lista escrita a mano. Con ese
-dataset y `class_weight="balanced"`, el modelo debería superar el umbral solo.
+```bash
+# 1. Regenerar los datasets (semilla fija, reproducible)
+cd ml/datos && python generar_dataset.py
 
-Conviene además evaluar sobre un **conjunto de prueba separado**: el reporte
-actual mide `predict` sobre los mismos datos con los que se hizo `fit`, así que
-el 1.00 de accuracy no dice todavía si el modelo generaliza.
+# 2. Reconstruir y ejecutar el notebook. Deja los .pkl en ../artefactos/
+cd ../notebooks
+python construir_notebook.py
+python -m nbconvert --execute --inplace --to notebook modelos_fintech_vital.ipynb
+```
 
-**M2** — reentrenar sobre **los 8 indicadores del contrato**, con sus nombres
-exactos, y comprobar que predice las tres clases.
+Necesita `requirements-notebook.txt` (añade matplotlib y jupyter, que **no** van
+en la imagen del servicio: son ~200 MB que en producción no hacen nada).
 
-Cuando lleguen, se cambia la carga en `app/inferencia.py` y **el resto del
-servicio no se toca**: el contrato hacia la API ya es el definitivo.
+**Lo más rentable para mejorar M1 es ampliar `datos/comercios.py`**: cada marca
+nueva sube directamente el número exigente. El catálogo cubre hoy México, Brasil
+y EE. UU.
 
 ---
 
@@ -117,17 +122,14 @@ curl -s localhost:8000/interno/v1/clasificar -H 'Content-Type: application/json'
 {
   "modelo_version": "0.2.0",
   "resultados": [
-    { "id": "t1", "categoria": "alimentacion", "confianza": 0.6, "origen": "baseline" },
-    { "id": "t2", "categoria": "salud",        "confianza": 0.6, "origen": "baseline" }
+    { "id": "t1", "categoria": "alimentacion", "confianza": 0.93, "origen": "modelo" },
+    { "id": "t2", "categoria": "salud",        "confianza": 0.97, "origen": "modelo" }
   ]
 }
 ```
 
-> Hoy casi todo sale con `origen: "baseline"`, por lo que se explica arriba.
-> Cuando M1 se reentrene empezaran a aparecer con `"modelo"` — sin cambiar nada
-> del servicio.
-
 `origen` es **aditivo** sobre el contrato: Spring puede ignorarlo sin romperse.
+Sale `"baseline"` cuando el modelo no supera el umbral de confianza.
 
 ---
 
@@ -141,7 +143,7 @@ curl -s localhost:8000/interno/v1/clasificar -H 'Content-Type: application/json'
 podman build -t fintechvital-ml:dev ml/
 podman run --rm -p 8000:8000 fintechvital-ml:dev
 
-# Tests (35)
+# Tests (36)
 podman run --rm -v "$PWD/ml:/src:ro" -w /src fintechvital-ml:dev \
   sh -c "pip install -q pytest httpx && python -m pytest tests/ -q"
 ```
@@ -161,15 +163,25 @@ descripciones de los tres idiomas no caen en `otros`.
 ml/
   app/
     main.py        FastAPI: rutas, errores con la forma del contrato, auth interna
-    inferencia.py  Carga de los .pkl y adaptacion  <- LEER LA CABECERA
+    inferencia.py  Carga de los .pkl e inferencia   <- LEER LA CABECERA
     taxonomia.py   Los 12+3 slugs y los baselines (palabras clave / regla)
     esquemas.py    Pydantic: entrada y salida del contrato
-  artefactos/      Los .pkl tal como los entrego Data Science:
-                     modelo_clasificador_salud_financiera.pkl  (M1, en uso)
-                     modelo_perfil_salud.pkl                   (M2, cargado sin usar)
+  datos/
+    comercios.py         Catalogo de comercios y conceptos por categoria e idioma
+    generar_dataset.py   Genera los dos CSV, con semilla fija
+    dataset_*.csv        Los datos de entrenamiento (generados, versionados)
+  notebooks/
+    construir_notebook.py     Las celdas como texto plano, revisables en git
+    modelos_fintech_vital.ipynb  El notebook ejecutado, con salidas y graficas
+  artefactos/
+    modelo_clasificador_salud_financiera.pkl   M1
+    modelo_perfil_salud.pkl                    M2
   tests/
 ```
 
-Los `.pkl` vienen de la rama `data-science`, carpeta
-`Data science/Modelo clasificador/`. Se copian aquí a propósito en vez de
-referenciarlos: la imagen tiene que ser reproducible sin depender de otra rama.
+Los `.pkl` **se versionan a propósito**: la imagen tiene que construirse sin
+depender de que alguien reentrene primero. Se regeneran ejecutando el notebook.
+
+El notebook se genera desde `construir_notebook.py` en vez de editarse a mano
+porque un `.ipynb` es JSON con las salidas embebidas: revisarlo en git es
+ilegible y dos personas que solo lo abran ya producen un diff.
