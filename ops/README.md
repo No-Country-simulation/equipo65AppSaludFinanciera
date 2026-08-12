@@ -1,22 +1,42 @@
-# ops/ — levantar el proyecto entero
+# ops/ — encender el proyecto entero
 
-Un solo comando levanta **base de datos + API + web** en contenedores. Es el
-mismo `compose.yml` en local, en staging y en producción: lo que cambia es el
-archivo de entorno.
+Un solo comando levanta **base de datos + modelo + API + web** en contenedores.
+No hace falta instalar Java, Node, Python ni PostgreSQL en tu equipo: va todo
+dentro.
 
-```bash
-./ops/stack.sh arriba          # Linux / macOS
+```powershell
 .\ops\stack.ps1 arriba         # Windows
 ```
+```bash
+./ops/stack.sh arriba          # Linux / macOS
+```
 
-Y para comprobar que todo funciona de verdad:
+Cuando termine te dice la dirección que hay que abrir en el navegador. Y para
+comprobar que funciona de verdad (no solo que arrancó):
 
 ```bash
 ./ops/stack.sh probar
 ```
 
-Funciona igual con **Docker** y con **Podman**: el script detecta cuál hay vivo
-y, si hace falta, arranca la máquina de Podman o Docker Desktop.
+Si no sabes qué comando usar, pide la lista explicada:
+
+```bash
+./ops/stack.sh ayuda
+```
+
+## Lo único que tienes que instalar
+
+**Docker Desktop** o **Podman**, cualquiera de los dos. El script detecta el que
+tengas y, si está apagado, lo enciende él.
+
+| | |
+|---|---|
+| Docker Desktop | `winget install Docker.DockerDesktop` |
+| Podman *(más ligero, sin permisos de administrador)* | `.\frontend\scripts\windows\verificar-requisitos.ps1 -InstalarPodman` |
+
+> **Si acabas de instalarlo, no cierres la terminal ni la reabras.** El script
+> vuelve a leer el PATH por su cuenta, así que encuentra Docker aunque la
+> consola que tienes abierta todavía no lo vea.
 
 ---
 
@@ -24,26 +44,150 @@ y, si hace falta, arranca la máquina de Podman o Docker Desktop.
 
 | Comando | Qué hace |
 |---|---|
-| `arriba` | Construye y levanta todo en segundo plano, **túnel incluido** si el entorno trae token |
-| `efimero` | Levanta en **primer plano**; al salir con **Ctrl+C borra contenedores, red y volumen**. Para probar sin dejar nada ocupando RAM ni disco |
-| `abajo` | Para y elimina los contenedores, **túnel incluido**. **Los datos se conservan** |
-| `estado` | Qué está corriendo |
-| `logs [servicio]` | Sigue los logs (`logs db`, `logs api`, `logs web`) |
-| `probar` | Pruebas de humo: esquema, migraciones, taxonomía, semilla, API y web |
-| `rebuild` | Reconstruye las imágenes sin caché |
+| `arriba` | Enciende todo. **Túnel incluido** si el entorno trae token |
+| `probar` | Comprueba de verdad: esquema, migraciones, taxonomía, semilla, login real, el endpoint del enunciado y la web |
+| `abajo` | Lo apaga, **túnel incluido**. **Los datos se conservan** |
+| `estado` | Qué está encendido, y en qué direcciones responde |
+| `logs [servicio]` | Lo que dice un servicio por dentro (`db`, `api`, `ml`, `web`, `tunel`) |
+| `reiniciar` | Apaga y enciende sin reconstruir |
+| `rebuild` | Reconstruye las imágenes desde cero |
+| `efimero` | Enciende en primer plano; al pulsar **Ctrl+C borra contenedores, red y datos**. Para probar sin dejar nada |
 | `migrar` | Aplica migraciones nuevas sobre una base que ya existe |
 | `psql` | Consola SQL (no necesitas tener `psql` instalado) |
-| `tunel` | Lo mismo que `arriba`, pero **falla** si falta el token en vez de seguir sin túnel |
-| `limpiar` | Borra contenedores **y el volumen de datos**. Pide confirmación escrita |
+| `tunel` | Como `arriba`, pero **falla** si falta el token en vez de seguir sin túnel |
+| `limpiar` | **Borra los datos** y empieza de cero. Pide confirmación escrita |
+| `ayuda` | La lista completa, explicada en castellano |
 
 Opciones: `-Motor docker|podman` (`MOTOR=` en bash) · `-Entorno .env.staging`
-(`ENTORNO=` en bash) · `-Servicio` para `logs`.
+(`ENTORNO=`) · `-Solo db,api` · `-Servicio` para `logs` · `-PuertosFijos`
+(`PUERTOS_FIJOS=si`).
 
 ```bash
-# staging, con el tunel y el dominio publico
+# staging, con el túnel y el dominio público
 .\ops\stack.ps1 tunel -Entorno .env.staging
 ENTORNO=.env.staging ./ops/stack.sh tunel
 ```
+
+---
+
+## Si el puerto está ocupado, se aparta solo
+
+El motivo más común de que esto no arranque es que otro programa ya esté usando
+el 3000, el 8080 o el 5432 — un `npm run dev` olvidado, un PostgreSQL instalado
+en el equipo, otro proyecto. Antes, compose fallaba con `port is already
+allocated` sin decir quién lo ocupaba.
+
+Ahora el script lo comprueba **antes** de arrancar y, si hace falta, usa el
+siguiente puerto libre:
+
+```
+[AVISO] El puerto 3000 lo esta usando otro programa (node). Pongo la web en el 3001.
+[AVISO] El puerto 8080 lo esta usando otro programa (java). Pongo la API en el 8081.
+[ --  ] La web se construira apuntando a la API en el puerto 8081.
+```
+
+Tres detalles que importan:
+
+- **La web se reconstruye apuntando al puerto nuevo de la API.** Sin esto la web
+  cargaría pero el login daría `TypeError: Failed to fetch`, porque el navegador
+  seguiría pidiendo al 8080, donde ya no hay nadie.
+- **Si el puerto lo ocupa tu propio stack, no se mueve nada**: es el proyecto ya
+  encendido, y compose reutiliza el contenedor.
+- **`estado` y `probar` siguen los puertos de verdad**, preguntándoselos al
+  contenedor. Aunque el `.env` diga 3000 y esté corriendo en 3001, aciertan.
+
+Se comprueban dos cosas distintas, porque una sola deja huecos: que el puerto se
+pueda **abrir** en `127.0.0.1` (detecta el choque duro con otro contenedor) y
+que no haya **nadie escuchando** en él (Windows deja convivir un `0.0.0.0:3000`
+ajeno con nuestro `127.0.0.1:3000`, y entonces «localhost:3000» es ambiguo y
+acabas mirando la aplicación equivocada sin enterarte).
+
+Para desactivarlo — por ejemplo si un túnel o un proxy dependen del número
+exacto — usa `-PuertosFijos` (`PUERTOS_FIJOS=si`): entonces falla en vez de
+moverse.
+
+---
+
+## Cuando algo no va
+
+### «Docker no responde» justo después de instalarlo
+
+Ya no debería pasar. Windows solo lee el PATH al abrir una terminal **nueva**,
+así que la que tenías abierta no veía el programa recién instalado. El script
+relee el PATH del registro y mira también las carpetas de instalación
+habituales, así que lo encuentra igualmente:
+
+```
+[ --  ] Docker estaba instalado pero esta consola no lo veia (PATH antiguo). Ya lo encontre.
+```
+
+### «podman no tiene subcomando compose»
+
+Podman **no trae compose incorporado**: usa el de Docker. Si tienes Docker
+Desktop instalado, el script encuentra su `docker-compose.exe` solo. Si no:
+
+```powershell
+winget install Docker.DockerCompose      # solo esa pieza, ~10 MB
+winget install Docker.DockerDesktop      # o Docker entero
+```
+
+El script ya no elige un motor que esté encendido pero **no sepa leer el
+compose**: comprueba las dos cosas antes, en vez de fallar a mitad del build.
+
+### `failed to solve: process "/bin/sh -c npm run build"`
+
+La web no llegó a compilar. **La última línea no es el error** — es solo el
+resumen. Sube por el registro hasta la primera línea que empiece por
+`Type error`, `Error:` o `Module not found`: ahí están el archivo y la línea.
+
+Si **no hay ninguna** y el registro corta de golpe, casi siempre es falta de
+**memoria**: el equipo mata el proceso sin decir nada. Se arregla dándole más
+RAM a WSL en `%UserProfile%\.wslconfig`:
+
+```ini
+[wsl2]
+memory=4GB
+processors=4
+swap=2GB
+```
+
+Después `wsl --shutdown` y volver a abrir Docker.
+
+Para pedir ayuda al equipo, manda el registro **completo**, no una captura de la
+última línea:
+
+```powershell
+.\ops\stack.ps1 arriba *> registro-error.txt
+```
+```bash
+./ops/stack.sh arriba > registro-error.txt 2>&1
+```
+
+### `TypeError: Failed to fetch` en el navegador
+
+La web cargó, pero **no consigue hablar con la API**. Por orden de probabilidad:
+
+1. **La API no está encendida.** Compruébalo: `.\ops\stack.ps1 estado` — la
+   columna STATUS tiene que decir `healthy` en `api`. Si el stack falló al
+   construir, no hay API y esto es lo que se ve.
+2. **Estás usando `npm run dev` suelto en `frontend/web`, sin el resto.** Esa
+   web no tiene API contra la que hablar. O levantas el stack entero con
+   `arriba`, o levantas al menos la base y la API con `-Solo db,api,ml`.
+3. **La web apunta a un puerto donde no hay nadie.** `NEXT_PUBLIC_API_URL` se
+   **hornea en el build** (ver abajo). Si la cambiaste, hace falta `rebuild`.
+4. **CORS**, solo si web y API están en dominios distintos (staging). Los
+   orígenes permitidos se pasan por `FV_CORS_ORIGINS`.
+
+### La base de datos parece corrupta o quiero empezar de cero
+
+```bash
+./ops/stack.sh limpiar     # borra los datos, pide confirmación escrita
+./ops/stack.sh arriba      # se recrea vacía (con la semilla, si FV_CARGAR_DEMO=si)
+```
+
+> `limpiar` **ahora sí borra de verdad**. Hasta ahora, en Windows, el `-v` se
+> perdía por el camino y el volumen sobrevivía: parecía que había limpiado y no
+> era cierto.
 
 ---
 
@@ -60,7 +204,7 @@ Lo mínimo que hay que revisar:
 | `POSTGRES_PASSWORD` | **Obligatoria.** En local cualquier cosa; fuera de local, generada y guardada fuera del repo |
 | `FV_CARGAR_DEMO` | `si` en desarrollo · **`no` en producción** |
 | `NEXT_PUBLIC_API_URL` | ⚠️ Se **hornea en el build**. Ver abajo |
-| `PUERTO_WEB` · `PUERTO_API` · `PUERTO_DB` | Puertos del **host**. Distintos por entorno si quieres levantar varios a la vez |
+| `PUERTO_WEB` · `PUERTO_API` · `PUERTO_DB` | Puertos del **host**. Si están ocupados, el script usa otros |
 
 ### Varios entornos en la misma máquina
 
@@ -117,6 +261,7 @@ contenedores.
 |---|---|---|---|
 | `db` | `fintechvital/db:local` | 5432 | PostgreSQL 16 con esquema y semilla dentro |
 | `api` | `fintechvital/api:local` | 8080 | Spring Boot sobre JRE 21 |
+| `ml` | `fintechvital/ml:local` | *(interno)* | FastAPI + scikit-learn. **No publica puerto**: solo lo llama la API |
 | `web` | `fintechvital/web:local` | 3000 | Next.js 15 (`output: standalone`) |
 | `migrador` | *(perfil `migrar`)* | — | Un solo uso: aplica migraciones pendientes |
 | `tunel` | `cloudflare/cloudflared` | *(perfil `tunel`)* | Publica el stack en el dominio |
@@ -199,8 +344,8 @@ Si `cloudflared` se lanza suelto con `docker run`, **no puede ver** a `web` ni a
 
 ## Consumo de memoria
 
-Cada servicio tiene techo (`db` 512 MB, `api` 768 MB, `web` 512 MB), así que los
-contenedores no crecen sin control.
+Cada servicio tiene techo (`db` 512 MB, `api` 768 MB, `ml` 512 MB, `web`
+512 MB), así que los contenedores no crecen sin control.
 
 En **Windows**, sin embargo, lo que se ve en el administrador de tareas es
 `Vmmem`/`WSL`: la VM de WSL2 en la que corre el motor. Por defecto puede tomar
@@ -216,6 +361,9 @@ swap=2GB
 
 Después `wsl --shutdown` y volver a arrancar el motor. Con eso el stack completo
 se mueve cómodo en ~4 GB en vez de crecer hasta 8–16 GB.
+
+⚠️ Cuidado con bajarlo **demasiado**: por debajo de ~4 GB, el build de la web
+(Next.js compila 50 páginas) se queda sin memoria y muere sin mensaje claro.
 
 Si aun así molesta, `./ops/stack.sh efimero` deja la máquina exactamente como
 estaba al pulsar Ctrl+C.
