@@ -36,14 +36,34 @@ import type {
   Usuario,
 } from '../types';
 import { FinanceApiError } from '../types';
-import { getAccessToken, getRefreshToken, setTokens } from './token';
+import {
+  cargarTokens,
+  getAccessToken,
+  getRefreshToken,
+  guardarTokens,
+  limpiarTokens,
+} from './token';
 
 interface OpcionesPeticion {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
   auth?: boolean;
   formData?: FormData;
+  /** Uso interno: corta el bucle de reintento tras refrescar. */
+  yaReintentada?: boolean;
 }
+
+/**
+ * Refresco en curso, COMPARTIDO por todas las peticiones.
+ *
+ * Es una variable de modulo y no de instancia a proposito: hay una
+ * `ApiDataSource` por idioma y el par de tokens es uno solo. Movimientos lanza
+ * cuatro peticiones a la vez; si el access token acaba de caducar, las cuatro
+ * dan 401 a la vez. Sin esto se dispararian cuatro refrescos, y como el refresh
+ * es ROTATIVO el primero invalidaria el token de los otros tres: se cerraria la
+ * sesion sola justo cuando habia que renovarla.
+ */
+let refrescoEnCurso: Promise<boolean> | null = null;
 
 export class ApiDataSource implements FinanceDataSource {
   constructor(
@@ -52,7 +72,7 @@ export class ApiDataSource implements FinanceDataSource {
   ) {}
 
   private async pedir<T>(ruta: string, opciones: OpcionesPeticion = {}): Promise<T> {
-    const { method = 'GET', body, auth = true, formData } = opciones;
+    const { method = 'GET', body, auth = true, formData, yaReintentada = false } = opciones;
     const headers: Record<string, string> = { 'Accept-Language': this.idioma };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (auth) {
@@ -64,6 +84,16 @@ export class ApiDataSource implements FinanceDataSource {
       headers,
       body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
     });
+
+    // El access token dura 15 min: en cualquier sesion normal caduca mientras
+    // se usa la app. Se renueva y se reintenta UNA vez; si el refresco tampoco
+    // vale, el 401 se propaga y la pantalla manda a iniciar sesion.
+    if (respuesta.status === 401 && auth && !yaReintentada && getRefreshToken()) {
+      if (await this.refrescar()) {
+        return this.pedir<T>(ruta, { ...opciones, yaReintentada: true });
+      }
+    }
+
     if (!respuesta.ok) {
       const error: ErrorApi = await respuesta.json().catch(() => ({
         codigo: 'ERROR_DESCONOCIDO',
@@ -77,13 +107,50 @@ export class ApiDataSource implements FinanceDataSource {
     return (await respuesta.json()) as T;
   }
 
+  /**
+   * Renueva el par de tokens. Si ya hay un refresco en marcha, se espera a ese
+   * en vez de lanzar otro.
+   *
+   * No usa `pedir()` para evitar la recursion: un refresco que respondiera 401
+   * intentaria refrescarse a si mismo.
+   */
+  private async refrescar(): Promise<boolean> {
+    if (refrescoEnCurso) return refrescoEnCurso;
+
+    refrescoEnCurso = (async () => {
+      try {
+        const respuesta = await fetch(`${this.baseUrl}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept-Language': this.idioma },
+          body: JSON.stringify({ refresh_token: getRefreshToken() }),
+        });
+        if (!respuesta.ok) {
+          // El refresh caduco o ya se uso: la sesion se acabo de verdad.
+          await limpiarTokens();
+          return false;
+        }
+        const sesion = (await respuesta.json()) as Sesion;
+        await guardarTokens(sesion.access_token, sesion.refresh_token);
+        return true;
+      } catch {
+        // Un fallo de red no es una sesion invalida: se conservan los tokens
+        // para que el siguiente intento pueda funcionar.
+        return false;
+      } finally {
+        refrescoEnCurso = null;
+      }
+    })();
+
+    return refrescoEnCurso;
+  }
+
   async login(email: string, password: string, codigoTotp?: string): Promise<Sesion> {
     const sesion = await this.pedir<Sesion>('/auth/login', {
       method: 'POST',
       body: { email, password, ...(codigoTotp ? { codigo_totp: codigoTotp } : {}) },
       auth: false,
     });
-    if (!sesion.requiere_2fa) setTokens(sesion.access_token, sesion.refresh_token);
+    if (!sesion.requiere_2fa) await guardarTokens(sesion.access_token, sesion.refresh_token);
     return sesion;
   }
 
@@ -94,11 +161,17 @@ export class ApiDataSource implements FinanceDataSource {
   }
 
   async logout(): Promise<void> {
-    await this.pedir<void>('/auth/logout', {
-      method: 'POST',
-      body: { refresh_token: getRefreshToken() },
-    });
-    setTokens(null, null);
+    try {
+      await this.pedir<void>('/auth/logout', {
+        method: 'POST',
+        body: { refresh_token: getRefreshToken() },
+      });
+    } finally {
+      // Los tokens se borran del dispositivo pase lo que pase: si la llamada
+      // falla y se conservaran, la sesion seguiria viva en el cliente despues
+      // de que la persona pulsara "Cerrar sesion".
+      await limpiarTokens();
+    }
   }
 
   me(): Promise<Usuario> {
@@ -129,9 +202,17 @@ export class ApiDataSource implements FinanceDataSource {
     return this.pedir<void>('/auth/2fa', { method: 'DELETE', body: { password } });
   }
 
-  hidratarSesion(): void {
-    // La API real usa el token (Authorization). Si en el futuro se persiste el
-    // refresh token, aqui se re-adjunta; por ahora no-op.
+  /**
+   * Re-adjunta el par de tokens guardado tras recargar la pagina (web) o
+   * reabrir la app (movil).
+   *
+   * Es async porque el almacenamiento lo es en las dos plataformas
+   * (AsyncStorage / SecureStore en movil). Quien la llama tiene que ESPERARLA
+   * antes de dar la sesion por lista: si no, las primeras peticiones salen sin
+   * Authorization y la pantalla se pinta vacia antes de tener token.
+   */
+  async hidratarSesion(): Promise<void> {
+    await cargarTokens();
   }
 
   transacciones(filtros: FiltrosTransacciones = {}): Promise<PaginaTransacciones> {
@@ -174,7 +255,8 @@ export class ApiDataSource implements FinanceDataSource {
     return this.pedir<Analisis>('/analisis', { method: 'POST', body: rango });
   }
 
-  historialAnalisis(pagina = 1, tam = 12): Promise<ResumenAnalisis[]> {
+  /** `pagina` es 0-based, como en la API (Spring). La primera es la 0, no la 1. */
+  historialAnalisis(pagina = 0, tam = 12): Promise<ResumenAnalisis[]> {
     return this.pedir<ResumenAnalisis[]>(`/analisis?pagina=${pagina}&tam=${tam}`);
   }
 
@@ -183,7 +265,7 @@ export class ApiDataSource implements FinanceDataSource {
   }
 
   async ultimoAnalisis(): Promise<Analisis | null> {
-    const historial = await this.historialAnalisis(1, 1);
+    const historial = await this.historialAnalisis(0, 1);
     if (historial.length === 0) return null;
     return this.obtenerAnalisis(historial[0].id);
   }
@@ -292,6 +374,6 @@ export class ApiDataSource implements FinanceDataSource {
 
   async eliminarCuenta(password: string): Promise<void> {
     await this.pedir<void>('/usuarios/me', { method: 'DELETE', body: { password } });
-    setTokens(null, null);
+    await limpiarTokens();
   }
 }

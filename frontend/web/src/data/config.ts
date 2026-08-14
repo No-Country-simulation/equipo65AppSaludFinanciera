@@ -29,3 +29,18 @@ export const almacenLocal = {
     window.localStorage.removeItem(clave);
   },
 };
+
+/**
+ * Almacenamiento para lo que SI es un secreto (hoy: el refresh token).
+ *
+ * ⚠️ En el navegador no existe un llavero al que el JavaScript no llegue, asi
+ * que aqui es el mismo `localStorage`: cualquier XSS puede leerlo. En movil si
+ * es distinto -- alli este export usa `expo-secure-store`, el llavero del
+ * sistema -- y por eso son dos exports y no uno.
+ *
+ * Lo correcto en web seria una cookie `HttpOnly; Secure; SameSite`, que el
+ * JavaScript no puede leer, pero eso cambia el contrato de `/auth/login` y
+ * `/auth/refresh` y toca CORS. Es una decision consciente y esta escrita:
+ * ver `docs/adr/0015-tokens-en-el-cliente.md`.
+ */
+export const almacenSeguro = almacenLocal;

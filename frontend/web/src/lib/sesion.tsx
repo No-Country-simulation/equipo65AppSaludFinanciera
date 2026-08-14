@@ -29,25 +29,43 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [listo, setListo] = useState(false);
 
+  /**
+   * Restaura la sesion al cargar la pagina (tambien tras un F5).
+   *
+   * ⚠️ `listo` se pone a true DESPUES de hidratar, no antes. El token vive en
+   * localStorage y leerlo es async: si se marcara listo primero, las pantallas
+   * lanzarian sus peticiones sin Authorization, recibirian 401 y se pintarian
+   * vacias -- con el menu y el nombre puestos, que es lo peor de los dos mundos.
+   */
   useEffect(() => {
-    try {
-      const crudo = window.localStorage.getItem(CLAVE_SESION);
-      if (crudo) {
-        const restaurado = JSON.parse(crudo) as Usuario;
-        // Re-vincular la sesion con el datasource (re-adjunta el token tras recargar)
-        getDataSource(locale).hidratarSesion(restaurado);
-        setUsuario(restaurado);
+    let activo = true;
+
+    (async () => {
+      let restaurado: Usuario | null = null;
+      try {
+        const crudo = window.localStorage.getItem(CLAVE_SESION);
+        if (crudo) {
+          restaurado = JSON.parse(crudo) as Usuario;
+          await getDataSource(locale).hidratarSesion(restaurado);
+        }
+      } catch {
+        window.localStorage.removeItem(CLAVE_SESION);
+        restaurado = null;
       }
-    } catch {
-      window.localStorage.removeItem(CLAVE_SESION);
-    }
-    setListo(true);
+      if (!activo) return;
+      if (restaurado) setUsuario(restaurado);
+      setListo(true);
+    })();
+
+    return () => {
+      activo = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const iniciarSesion = useCallback(
     (nuevo: Usuario, tokens?: { access: string; refresh: string }) => {
-      if (tokens) setAuthTokens(tokens.access, tokens.refresh);
+      if (tokens) void setAuthTokens(tokens.access, tokens.refresh);
       window.localStorage.setItem(CLAVE_SESION, JSON.stringify(nuevo));
       setUsuario(nuevo);
     },
@@ -60,7 +78,7 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const cerrarSesion = useCallback(() => {
-    setAuthTokens(null, null);
+    void setAuthTokens(null, null);
     window.localStorage.removeItem(CLAVE_SESION);
     setUsuario(null);
   }, []);

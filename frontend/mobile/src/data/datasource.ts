@@ -36,6 +36,12 @@ export interface AltaTransaccion {
   valor: number;
   moneda?: Moneda;
   fecha?: string;
+  /**
+   * Categoria elegida a mano. OPCIONAL: si no viene, la clasifica el modelo,
+   * que es la gracia del producto. Si viene, manda la persona y la API la
+   * guarda como correccion suya (`categoria_origen = "usuario"`).
+   */
+  categoria?: CategoriaSlug;
 }
 
 export interface FiltrosTransacciones {
@@ -118,10 +124,14 @@ export interface FinanceDataSource {
   desactivar2fa(password: string): Promise<void>;
   /**
    * Re-vincula una sesion restaurada del almacenamiento del cliente (recarga de
-   * pagina). Re-adjunta el token de acceso al cliente HTTP para que las
-   * peticiones siguientes vayan autenticadas.
+   * pagina en web, reapertura de la app en movil). Re-adjunta el par de tokens
+   * al cliente HTTP para que las peticiones siguientes vayan autenticadas.
+   *
+   * Devuelve una promesa porque el almacenamiento es async en las dos
+   * plataformas. Hay que ESPERARLA antes de marcar la sesion como lista: si no,
+   * las primeras llamadas salen sin token y la pantalla parpadea vacia.
    */
-  hidratarSesion(usuario: Usuario): void;
+  hidratarSesion(usuario: Usuario): Promise<void>;
 
   // §5 Transacciones
   transacciones(filtros?: FiltrosTransacciones): Promise<PaginaTransacciones>;

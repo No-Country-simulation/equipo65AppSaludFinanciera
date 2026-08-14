@@ -8,7 +8,7 @@
  */
 import { API_URL } from './config';
 import { ApiDataSource } from './api/apiDataSource';
-import { setTokens } from './api/token';
+import { guardarTokens, limpiarTokens } from './api/token';
 import type { FinanceDataSource } from './datasource';
 import type { Idioma } from './types';
 
@@ -22,9 +22,16 @@ export function getDataSource(idioma: Idioma): FinanceDataSource {
   return instancia;
 }
 
-/** La capa de sesion guarda aqui los tokens del login. */
-export function setAuthTokens(access: string | null, refresh: string | null): void {
-  setTokens(access, refresh);
+/**
+ * La capa de sesion guarda aqui los tokens del login.
+ *
+ * Ademas de dejarlos en memoria los PERSISTE, que es lo que hace que la sesion
+ * sobreviva a un F5 o a cerrar la app. Con `null` los borra (cerrar sesion).
+ */
+export function setAuthTokens(access: string | null, refresh: string | null): Promise<void> {
+  return access === null && refresh === null
+    ? limpiarTokens()
+    : guardarTokens(access, refresh);
 }
 
 export { API_URL } from './config';

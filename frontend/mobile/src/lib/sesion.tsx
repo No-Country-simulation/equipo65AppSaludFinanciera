@@ -22,22 +22,34 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [listo, setListo] = useState(false);
 
+  /**
+   * Restaura la sesion al abrir la app.
+   *
+   * ⚠️ `listo` se pone a true DESPUES de hidratar. El refresh token vive en el
+   * llavero del sistema y leerlo es async: marcarlo listo antes haria que las
+   * pantallas pidieran datos sin Authorization, se llevaran un 401 y se
+   * pintaran vacias con la sesion aparentemente iniciada.
+   */
   useEffect(() => {
     let activo = true;
-    AsyncStorage.getItem(CLAVE_SESION)
-      .then((crudo) => {
-        if (!activo) return;
+
+    (async () => {
+      let restaurado: Usuario | null = null;
+      try {
+        const crudo = await AsyncStorage.getItem(CLAVE_SESION);
         if (crudo) {
-          const restaurado = JSON.parse(crudo) as Usuario;
-          // rehidratar el datasource (re-adjunta el token al reabrir la app)
-          getDataSource(idioma).hidratarSesion(restaurado);
-          setUsuario(restaurado);
+          restaurado = JSON.parse(crudo) as Usuario;
+          await getDataSource(idioma).hidratarSesion(restaurado);
         }
-      })
-      .catch(() => AsyncStorage.removeItem(CLAVE_SESION))
-      .finally(() => {
-        if (activo) setListo(true);
-      });
+      } catch {
+        await AsyncStorage.removeItem(CLAVE_SESION);
+        restaurado = null;
+      }
+      if (!activo) return;
+      if (restaurado) setUsuario(restaurado);
+      setListo(true);
+    })();
+
     return () => {
       activo = false;
     };
@@ -50,7 +62,7 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
 
   const iniciarSesion = useCallback(
     (nuevo: Usuario, tokens?: { access: string; refresh: string }) => {
-      if (tokens) setAuthTokens(tokens.access, tokens.refresh);
+      if (tokens) void setAuthTokens(tokens.access, tokens.refresh);
       persistir(nuevo);
       setUsuario(nuevo);
     },
@@ -66,7 +78,7 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
   );
 
   const cerrarSesion = useCallback(() => {
-    setAuthTokens(null, null);
+    void setAuthTokens(null, null);
     void AsyncStorage.removeItem(CLAVE_SESION);
     setUsuario(null);
   }, []);
