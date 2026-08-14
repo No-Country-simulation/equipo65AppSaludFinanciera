@@ -10,11 +10,11 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
-    <groupId>com.hackathon</groupId>
-    <artifactId>analisis-financiero</artifactId>
+    <groupId>com.fintechvital</groupId>
+    <artifactId>fintechvital-api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>analisis-financiero</name>
-    <description>Proyecto Analisis Financiero</description>
+    <name>fintechvital-api</name>
+    <description>Fintech Vital - API REST (analisis de salud financiera)</description>
 
     <properties>
         <java.version>17</java.version>

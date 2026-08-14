@@ -80,9 +80,11 @@ El esquema lo gobiernan las migraciones de [`../db/`](../db/), no Hibernate.
 ## Estructura
 
 ```text
-src/main/java/com/hackathon/analisis/
+src/main/java/com/fintechvital/api/
 ├── controller/    AnalisisFinanciero · Auth · DosFactores · Usuario · Banca · Transaccion · Salud
+│                  Categoria · Evento · Analisis · Resumen · Metas · Presupuesto
 ├── service/       AnalisisFinanciero · Indicadores · MotorReglas · ClienteMl
+│                  Categoria · Transaccion · Evento · Analisis · Meta · Presupuesto
 │                  Auth · Jwt · Totp · Cifrado · DosFactores · LimitadorLogin
 │                  Usuario · Exportacion · Auditoria · Banca
 ├── dominio/       Taxonomia (los 12+3 slugs) · Indicadores · TransaccionClasificada
