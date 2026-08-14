@@ -1,0 +1,15 @@
+{
+  "name": "fintechvital-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tests E2E de Fintech Vital: contrato (web+movil) y navegador (web)",
+  "scripts": {
+    "contrato": "node contrato.mjs",
+    "navegador": "playwright test",
+    "navegador:ver": "playwright test --headed",
+    "instalar-navegador": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

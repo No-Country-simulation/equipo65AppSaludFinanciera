@@ -18,10 +18,16 @@ COMMITS_PROPUESTOS.md
 #   ENDPOINTS     -> inventario de lo que falta; en un repo publico se lee como
 #                    un mapa de lo que la aplicacion todavia no protege
 #   SINCRONIZACION-> acta de reunion, con nombres y decisiones internas
+#   E2E_HALLAZGOS -> diagnostico de lo que esta roto, con el commit y el autor
+#                    senalados; en un repo publico es un mapa de por donde
+#                    entrar mientras no este arreglado
+#   PROMPT_ARREGLOS-> el encargo para arreglarlo, derivado del anterior
 # Se comparten por el canal del equipo, no por el repositorio.
 /docs/REVISION_API.md
 /docs/ENDPOINTS.md
 /docs/SINCRONIZACION_*.md
+/docs/E2E_HALLAZGOS.md
+/docs/PROMPT_ARREGLOS.md
 
 # Generado por Spring Initializr al crear el proyecto. No aporta nada y
 # confunde: la doc real esta en README.md y docs/.
@@ -82,3 +88,10 @@ desktop.ini
 logs/
 tmp/
 temp/
+
+# Artefactos de los tests E2E (frontend/e2e). El codigo de los tests SI se sube;
+# los informes, trazas, videos y capturas de cada corrida no.
+frontend/e2e/test-results/
+frontend/e2e/informe/
+frontend/e2e/playwright-report/
+frontend/e2e/package-lock.json

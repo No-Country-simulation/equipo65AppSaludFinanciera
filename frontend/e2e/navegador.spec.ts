@@ -1,0 +1,313 @@
+import { test, expect, type Page } from '@playwright/test';
+
+/**
+ * E2E de navegador de la web, con el stack real detras.
+ *
+ * Lo que aporta sobre contrato.mjs: comprueba lo que solo existe PINTADO. Un
+ * desplegable puede tener sus <option> en el DOM y aun asi verse vacio si la
+ * API no manda `etiqueta`. Eso no lo caza una prueba de API.
+ *
+ * Correr con el stack arriba:
+ *     cd frontend/e2e && npm run navegador
+ */
+
+const EMAIL = process.env.FV_E2E_EMAIL ?? 'ana.torres@ejemplo.mx';
+const PASSWORD = process.env.FV_E2E_PASSWORD ?? 'Demo1234!';
+
+/** Texto del estado de error de EstadoCarga ("No pudimos conectar con el servicio"). */
+const ERROR_CARGA = /No pudimos conectar|Reintentar/i;
+
+async function entrar(page: Page) {
+  await page.goto('/es/login');
+  await page.getByRole('textbox', { name: /email/i }).fill(EMAIL);
+  await page.locator('input[type="password"]').fill(PASSWORD);
+  await page.getByRole('button', { name: /^Entrar$/ }).click();
+  // El login redirige a /<idioma>/panel con el idioma preferido del usuario.
+  await page.waitForURL(/\/(es|pt|en)\/panel/, { timeout: 15_000 });
+}
+
+/**
+ * Navega COMO NAVEGA UNA PERSONA: pulsando el menu, sin recargar.
+ *
+ * No es un capricho: el token de sesion vive solo en memoria (data/api/token.ts)
+ * y `hidratarSesion()` es un no-op, asi que un `page.goto()` -- que es una carga
+ * completa, igual que un F5 -- lo pierde y TODO responde 401. Si estos tests
+ * entraran por `goto`, fallarian todos por ese unico motivo y taparian lo que
+ * cada uno quiere comprobar. Ese fallo tiene su propio test en "Sesion".
+ */
+async function irA(page: Page, enlace: RegExp) {
+  // En pantalla de telefono el menu lateral es un drawer fuera de pantalla
+  // (`lg:translate-x-0`): los enlaces estan en el DOM pero no se pueden pulsar
+  // hasta abrirlo con el boton "Menu". En escritorio ese boton no se ve.
+  const menu = page.getByRole('button', { name: 'Menú' });
+  if (await menu.isVisible().catch(() => false)) await menu.click();
+
+  await page.getByRole('link', { name: enlace }).first().click();
+  await page.waitForLoadState('networkidle');
+}
+
+/**
+ * Recoge las llamadas a la API que falla la pagina. Sirve para que, cuando un
+ * test falle, el motivo salga en el mensaje y no haya que abrir devtools.
+ */
+function vigilarApi(page: Page) {
+  const fallos: string[] = [];
+  page.on('response', (r) => {
+    const url = r.url();
+    if (url.includes('/api/v1/') && !r.ok()) {
+      fallos.push(`${r.status()} ${r.request().method()} ${url.split('/api/v1')[1]}`);
+    }
+  });
+  return fallos;
+}
+
+/**
+ * El filtro de categoria de Movimientos.
+ *
+ * No vale `page.locator('select').first()`: el layout monta el selector de
+ * idioma (es/pt/en), que va antes en el DOM. Se ancla por su opcion fija
+ * "Todas las categorias", que es la unica que no depende de la API.
+ *
+ * (Ese <select> no tiene `aria-label`, al contrario que el de tarjeta; con uno
+ * este ancla seria un `getByRole('combobox', { name: ... })` y de paso lo
+ * anunciaria un lector de pantalla.)
+ */
+function filtroCategoria(page: Page) {
+  return page.locator('select').filter({ has: page.locator('option', { hasText: /^Todas las categor/ }) });
+}
+
+test.beforeEach(async ({ page }) => {
+  await entrar(page);
+});
+
+// ---------------------------------------------------------------- movimientos
+
+test.describe('Movimientos', () => {
+  test('la pantalla carga sin quedarse en el estado de error', async ({ page }) => {
+    const fallos = vigilarApi(page);
+    await irA(page, /^Movimientos$/);
+    await expect(page.getByRole('heading', { name: 'Movimientos' })).toBeVisible();
+
+    await expect(
+      page.getByText(ERROR_CARGA),
+      `La pantalla se quedo en error. Llamadas fallidas: ${fallos.join(' | ') || 'ninguna'}`,
+    ).toHaveCount(0);
+  });
+
+  test('el filtro de categoria tiene opciones y se ven (fallo reportado)', async ({ page }) => {
+    const fallos = vigilarApi(page);
+    await irA(page, /^Movimientos$/);
+
+    const filtro = filtroCategoria(page);
+    await expect(filtro).toBeVisible();
+
+    const opciones = filtro.locator('option');
+    const total = await opciones.count();
+
+    // "Todas" existe siempre porque esta hardcodeada; las demas vienen de
+    // GET /categorias. Si solo hay una, el catalogo no llego.
+    expect(
+      total,
+      `El desplegable de categoria solo tiene ${total} opcion(es): llega "Todas" y nada mas. ` +
+        `Llamadas fallidas: ${fallos.join(' | ') || 'ninguna'}`,
+    ).toBeGreaterThan(1);
+
+    // Y las opciones tienen que tener texto legible: un <option> con `etiqueta`
+    // vacia esta en el DOM pero se ve en blanco, que es como se reporto el fallo.
+    const textos = await opciones.allTextContents();
+    const vacias = textos.filter((t) => t.trim().length === 0);
+    expect(
+      vacias.length,
+      `${vacias.length} de ${total} opciones se pintan en blanco: la API no manda "etiqueta"`,
+    ).toBe(0);
+  });
+
+  test('el desplegable de categoria trae las 12 de la taxonomia', async ({ page }) => {
+    await irA(page, /^Movimientos$/);
+    const filtro = filtroCategoria(page);
+    await expect(filtro).toBeVisible();
+    const valores = await filtro.locator('option').evaluateAll((os) =>
+      os.map((o) => (o as HTMLOptionElement).value).filter(Boolean),
+    );
+    expect(valores.length, `solo llegan ${valores.length} categorias`).toBeGreaterThanOrEqual(12);
+  });
+
+  test('filtrar por una categoria recarga la lista', async ({ page }) => {
+    await irA(page, /^Movimientos$/);
+    const filtro = filtroCategoria(page);
+    await expect(filtro).toBeVisible();
+    const valores = await filtro.locator('option').evaluateAll((os) =>
+      os.map((o) => (o as HTMLOptionElement).value).filter(Boolean),
+    );
+    test.skip(valores.length === 0, 'sin catalogo no hay nada que filtrar');
+
+    await filtro.selectOption(valores[0]);
+    await expect(page.getByText(ERROR_CARGA)).toHaveCount(0);
+  });
+
+  test('la lista muestra movimientos con su categoria traducida, no el slug', async ({ page }) => {
+    await irA(page, /^Movimientos$/);
+    await expect(page.getByRole('heading', { name: 'Movimientos' })).toBeVisible();
+
+    const filas = page.locator('ul > li');
+    const n = await filas.count();
+    expect(n, 'la lista de movimientos llega vacia').toBeGreaterThan(0);
+
+    // Si se pinta el slug crudo (`ahorro_inversion`) es que la etiqueta no llego.
+    const texto = await filas.first().innerText();
+    expect(texto, `la fila pinta el slug crudo en vez de la etiqueta: "${texto}"`).not.toMatch(/_/);
+  });
+
+  test('"Corregir" abre el selector de categoria con opciones', async ({ page }) => {
+    await irA(page, /^Movimientos$/);
+    const corregir = page.getByRole('button', { name: 'Corregir' }).first();
+    await expect(corregir).toBeVisible();
+    await corregir.click();
+
+    // Al corregir, el boton de la fila se sustituye por un <select> de categorias.
+    const selector = page.locator('li select');
+    const opciones = await selector.locator('option').allTextContents();
+    expect(opciones.length, 'el selector de correccion abre sin opciones').toBeGreaterThan(0);
+    expect(
+      opciones.filter((t) => t.trim().length === 0).length,
+      'el selector de correccion tiene opciones en blanco',
+    ).toBe(0);
+  });
+
+  test('el alta de movimiento deja elegir la categoria', async ({ page }) => {
+    await irA(page, /^Movimientos$/);
+    await page.getByRole('button', { name: 'Agregar movimiento' }).click();
+
+    const formulario = page.locator('form');
+    await expect(formulario).toBeVisible();
+
+    // Quien da de alta un movimiento tiene que poder decir de que es. Hoy el
+    // formulario solo pide descripcion, monto, fecha y nota.
+    await expect(
+      formulario.locator('select'),
+      'el formulario de alta no tiene ningun campo para elegir la categoria',
+    ).toHaveCount(1);
+  });
+});
+
+// -------------------------------------------------------------------- tarjetas
+
+test.describe('Tarjetas', () => {
+  test('la pantalla carga sin quedarse en el estado de error', async ({ page }) => {
+    const fallos = vigilarApi(page);
+    await irA(page, /^Tarjetas$/);
+    await expect(page.getByRole('heading', { name: 'Tarjetas y cuentas' })).toBeVisible();
+    await expect(
+      page.getByText(ERROR_CARGA),
+      `La pantalla se quedo en error. Llamadas fallidas: ${fallos.join(' | ') || 'ninguna'}`,
+    ).toHaveCount(0);
+  });
+
+  test('se pintan las cuentas con el numero enmascarado', async ({ page }) => {
+    await irA(page, /^Tarjetas$/);
+    await expect(page.getByText(/Cuenta \*+/)).not.toHaveCount(0);
+  });
+
+  test('se pintan las tarjetas con red, ultimos 4 y estado', async ({ page }) => {
+    await irA(page, /^Tarjetas$/);
+    await expect(page.getByText(/VISA|Mastercard|AMEX/)).not.toHaveCount(0);
+    await expect(page.getByText(/•{4} \d{4}/)).not.toHaveCount(0);
+    // El estado sale de un diccionario: si llegara en mayusculas o con otro
+    // slug, next-intl pintaria la clave cruda en vez de "Activa".
+    await expect(page.getByText(/^(Activa|Bloqueada|Cancelada)$/)).not.toHaveCount(0);
+    await expect(page.getByText(/estados\./)).toHaveCount(0);
+  });
+
+  test('la tarjeta de credito muestra su barra de utilizacion', async ({ page }) => {
+    await irA(page, /^Tarjetas$/);
+    await expect(page.getByText('Utilización de crédito')).not.toHaveCount(0);
+    await expect(page.getByText(/Corte día \d+/)).not.toHaveCount(0);
+  });
+
+  test('"Ver movimientos" de una tarjeta lleva a una pantalla que carga', async ({ page }) => {
+    const fallos = vigilarApi(page);
+    await irA(page, /^Tarjetas$/);
+    await page.getByRole('button', { name: 'Ver movimientos' }).first().click();
+    await page.waitForURL(/\/movimientos\?tarjeta=/);
+    await expect(
+      page.getByText(ERROR_CARGA),
+      `Desde tarjetas se llega a movimientos y revienta. Llamadas fallidas: ${fallos.join(' | ') || 'ninguna'}`,
+    ).toHaveCount(0);
+  });
+
+  test('"Agregar" abre el formulario con la cuenta a elegir', async ({ page }) => {
+    await irA(page, /^Tarjetas$/);
+    await page.getByRole('button', { name: 'Agregar' }).click();
+    await page.waitForURL(/\/tarjetas\/nueva/);
+    // red_pago, cuenta y estado son desplegables: los tres tienen que traer opciones.
+    const selects = page.locator('select');
+    await expect(selects).not.toHaveCount(0);
+    const n = await selects.count();
+    for (let i = 0; i < n; i++) {
+      const textos = await selects.nth(i).locator('option').allTextContents();
+      expect(textos.length, `el desplegable ${i} del alta de tarjeta esta vacio`).toBeGreaterThan(0);
+      expect(
+        textos.filter((t) => t.trim().length === 0).length,
+        `el desplegable ${i} del alta de tarjeta tiene opciones en blanco`,
+      ).toBe(0);
+    }
+  });
+});
+
+// ----------------------------------------------------- el resto de la navegacion
+
+test.describe('Resto de pantallas', () => {
+  for (const [nombre, enlace, encabezado] of [
+    ['Panel', /^Panel$/, /Hola|Panel/i],
+    ['Analisis', /^Análisis$/, /Análisis/i],
+    ['Credito', /^Crédito$/, /Crédito|Salud/i],
+    ['Metas', /^Metas$/, /Metas/i],
+    ['Presupuestos', /^Presupuestos$/, /Presupuestos/i],
+    ['Perfil', /^Perfil$/, /Perfil/i],
+  ] as [string, RegExp, RegExp][]) {
+    test(`${nombre} carga sin quedarse en el estado de error`, async ({ page }) => {
+      const fallos = vigilarApi(page);
+      await irA(page, enlace);
+      await expect(page.getByRole('heading', { name: encabezado }).first()).toBeVisible();
+      await expect(
+        page.getByText(ERROR_CARGA),
+        `${nombre} se quedo en error. Llamadas fallidas: ${fallos.join(' | ') || 'ninguna'}`,
+      ).toHaveCount(0);
+    });
+  }
+});
+
+// --------------------------------------------------------------------- sesion
+
+test.describe('Sesion', () => {
+  test('la sesion sobrevive a una recarga (F5)', async ({ page }) => {
+    const fallos = vigilarApi(page);
+    await irA(page, /^Tarjetas$/);
+    await expect(page.getByText(/Cuenta \*+/)).not.toHaveCount(0);
+
+    fallos.length = 0;
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Sigue "dentro" -- el menu esta, el usuario esta en localStorage -- pero
+    // el token solo vivia en memoria, asi que la API rechaza todo. La pantalla
+    // se ve iniciada y vacia a la vez, que es lo peor de los dos mundos.
+    const noAutorizadas = fallos.filter((f) => f.startsWith('401'));
+    expect(
+      noAutorizadas,
+      `tras F5 la API responde 401: ${noAutorizadas.join(', ')}. ` +
+        'El token no se persiste (data/api/token.ts) y hidratarSesion() es un no-op.',
+    ).toHaveLength(0);
+  });
+
+  test('entrar por una URL directa (enlace compartido, marcador) carga los datos', async ({ page }) => {
+    const fallos = vigilarApi(page);
+    await page.goto('/es/tarjetas');
+    await page.waitForLoadState('networkidle');
+    const noAutorizadas = fallos.filter((f) => f.startsWith('401'));
+    expect(
+      noAutorizadas,
+      `abrir la URL directa da 401: ${noAutorizadas.join(', ')}`,
+    ).toHaveLength(0);
+  });
+});
