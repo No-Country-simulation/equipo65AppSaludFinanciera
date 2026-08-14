@@ -47,6 +47,7 @@ function MovimientosVista() {
   const [descripcion, setDescripcion] = useState('');
   const [monto, setMonto] = useState('');
   const [fecha, setFecha] = useState('');
+  const [categoriaAlta, setCategoriaAlta] = useState<CategoriaSlug | ''>('');
   const [nota, setNota] = useState(''); // solo interfaz (F9: etiquetas/notas)
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; tipo: 'ok' | 'info' } | null>(null);
@@ -148,10 +149,18 @@ function MovimientosVista() {
     evento.preventDefault();
     setGuardando(true);
     try {
-      await ds.crearTransaccion({ descripcion, valor: Number(monto), fecha: fecha || undefined });
+      await ds.crearTransaccion({
+        descripcion,
+        valor: Number(monto),
+        fecha: fecha || undefined,
+        // Vacia = que clasifique el modelo. Si se elige una, la API la guarda
+        // como correccion de la persona (categoria_origen = "usuario").
+        categoria: categoriaAlta || undefined,
+      });
       setDescripcion('');
       setMonto('');
       setFecha('');
+      setCategoriaAlta('');
       setNota('');
       setMostrandoAlta(false);
       recargar();
@@ -247,7 +256,7 @@ function MovimientosVista() {
 
       {mostrandoAlta ? (
         <Tarjeta className="aparece">
-          <form onSubmit={agregar} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_2fr_auto] lg:items-end">
+          <form onSubmit={agregar} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.5fr_1.5fr_auto] lg:items-end">
             <Campo etiqueta={t('descripcion')}>
               <input className={claseInput} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} maxLength={200} required autoFocus />
             </Campo>
@@ -256,6 +265,20 @@ function MovimientosVista() {
             </Campo>
             <Campo etiqueta={t('fecha')}>
               <input className={claseInput} type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            </Campo>
+            <Campo etiqueta={t('categoria')} ayuda={t('categoriaAyuda')}>
+              <select
+                className={claseInput}
+                value={categoriaAlta}
+                onChange={(e) => setCategoriaAlta(e.target.value as CategoriaSlug | '')}
+              >
+                <option value="">{t('categoriaAutomatica')}</option>
+                {datos?.categorias.map((categoria) => (
+                  <option key={categoria.slug} value={categoria.slug}>
+                    {categoria.etiqueta}
+                  </option>
+                ))}
+              </select>
             </Campo>
             <Campo etiqueta={t('nota')}>
               <input className={claseInput} value={nota} onChange={(e) => setNota(e.target.value)} maxLength={120} />

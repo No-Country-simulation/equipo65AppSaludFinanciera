@@ -175,6 +175,8 @@
     "montoAyuda": "Negativo = gasto · positivo = receita",
     "fecha": "Data",
     "categoria": "Categoria",
+    "categoriaAutomatica": "Automática (classificada pelo modelo)",
+    "categoriaAyuda": "Se deixar em automática, o modelo a deduz da descrição",
     "todas": "Todas as categorias",
     "corregir": "Corrigir categoria",
     "eliminar": "Excluir",

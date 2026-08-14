@@ -58,6 +58,7 @@ export default function PantallaMovimientos() {
   const [corrigiendo, setCorrigiendo] = useState<Transaccion | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [monto, setMonto] = useState('');
+  const [categoriaAlta, setCategoriaAlta] = useState<CategoriaSlug | ''>('');
   const [nota, setNota] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [importando, setImportando] = useState(false);
@@ -112,9 +113,16 @@ export default function PantallaMovimientos() {
   const agregar = async () => {
     setGuardando(true);
     try {
-      await ds.crearTransaccion({ descripcion, valor: Number(monto) });
+      await ds.crearTransaccion({
+        descripcion,
+        valor: Number(monto),
+        // Vacia = que clasifique el modelo. Si se elige una, la API la guarda
+        // como correccion de la persona (categoria_origen = "usuario").
+        categoria: categoriaAlta || undefined,
+      });
       setDescripcion('');
       setMonto('');
+      setCategoriaAlta('');
       setNota('');
       setModalAlta(false);
       recargar();
@@ -364,6 +372,51 @@ export default function PantallaMovimientos() {
               onChangeText={setMonto}
               keyboardType="numbers-and-punctuation"
             />
+            {/* Categoria: opcional. "Automatica" deja que la deduzca el modelo,
+                que es lo normal; elegir una la fija como correccion de la persona
+                y ahorra tener que guardar primero y corregir despues. */}
+            <Text style={[estilos.filaMeta, { color: temaActivo.apagado, marginBottom: 6 }]}>
+              {t('movimientos.categoria')}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
+            >
+              {[
+                { slug: '' as CategoriaSlug | '', etiqueta: t('movimientos.categoriaAutomatica') },
+                ...(datos?.categorias ?? []).map((categoria) => ({
+                  slug: categoria.slug as CategoriaSlug | '',
+                  etiqueta: categoria.etiqueta,
+                })),
+              ].map((opcion) => {
+                const sel = categoriaAlta === opcion.slug;
+                return (
+                  <Pressable
+                    key={opcion.slug || 'automatica'}
+                    onPress={() => setCategoriaAlta(opcion.slug)}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: sel ? temaActivo.acento : temaActivo.linea,
+                      backgroundColor: sel ? `${temaActivo.acento}1a` : 'transparent',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: sel ? Fuentes.cuerpoSemi : Fuentes.cuerpo,
+                        fontSize: 13,
+                        color: sel ? temaActivo.acento : temaActivo.tinta,
+                      }}
+                    >
+                      {opcion.etiqueta}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
             <Campo etiqueta={t('movimientos.nota')} value={nota} onChangeText={setNota} maxLength={120} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>

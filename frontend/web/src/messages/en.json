@@ -175,6 +175,8 @@
     "montoAyuda": "Negative = expense · positive = income",
     "fecha": "Date",
     "categoria": "Category",
+    "categoriaAutomatica": "Automatic (classified by the model)",
+    "categoriaAyuda": "Leave it on automatic and the model infers it from the description",
     "todas": "All categories",
     "corregir": "Fix category",
     "eliminar": "Delete",
