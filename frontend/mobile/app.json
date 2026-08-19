@@ -17,7 +17,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.fintechvital"
+      "package": "com.fintechvital.app"
     },
     "web": {
       "output": "static",
