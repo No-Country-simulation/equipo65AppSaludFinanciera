@@ -35,17 +35,12 @@ COMMITS_PROPUESTOS.md
 
 # CHANGELOG.md SI se publica (es entregable del proyecto): no lo agregues aqui.
 
-# NOTA sobre /.idea/: sigue TRACKEADO a proposito porque el equipo dejo ahi una
-# copia del backend Spring (pom.xml, mvnw, src/). No se ignora entero para no
-# ocultar ese codigo mientras no se decida borrarlo (ya vive en /backend/).
-#
-# workspace.xml SI se ignora: es el estado local del IDE de cada persona
-# (pestanas abiertas, ejecuciones recientes, rutas de su disco). Cambia en cada
-# sesion, no aporta nada al proyecto y provoca un conflicto en cada push -
-# el 2026-08-04 llego con 48 lineas de diff. JetBrains recomienda no versionarlo.
-# Pendiente para el equipo: decidir si se borran tambien misc.xml, modules.xml,
-# compiler.xml y la copia de /.idea/src/.
-/.idea/workspace.xml
+# /.idea/ va ENTERO fuera del repo (2026-08-19). Era configuracion local del IDE
+# de cada persona -- workspace.xml solo ya llego a traer 48 lineas de diff en un
+# push -- y ademas escondia una COPIA del backend Spring (pom.xml, mvnw, src/ con
+# el paquete viejo com.hackathon.analisis) que duplicaba lo que vive en /backend/
+# con el paquete bueno com.fintechvital.api. Nadie compilaba desde ahi.
+/.idea/
 
 # --- Secretos (defensa en profundidad; el detalle esta en frontend/.gitignore) ---
 .env
