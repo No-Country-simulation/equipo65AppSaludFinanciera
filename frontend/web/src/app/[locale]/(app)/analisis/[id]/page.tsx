@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useMemo, useEffect, useState } from 'react';
+import { use, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { Analisis, Categoria, CategoriaSlug } from '@/data';
 import { Link } from '@/i18n/navigation';
@@ -29,15 +29,7 @@ export default function PaginaDetalleAnalisis({
   const tPerfil = useTranslations('perfil');
   const locale = useLocale();
 
-  const [tieneDemo, setTieneDemo] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('demo_saldo') !== null) {
-      setTieneDemo(true);
-    }
-  }, []);
-
-  const { datos: datosBackend, cargando, error, recargar } = useDatos<Detalle>(
+  const { datos, cargando, error, recargar } = useDatos<Detalle>(
     async (fuente) => {
       const [analisis, categorias] = await Promise.all([
         fuente.obtenerAnalisis(id),
@@ -48,62 +40,13 @@ export default function PaginaDetalleAnalisis({
     [id],
   );
 
-  const datosMock: Detalle = useMemo(() => ({
-    analisis: {
-      id: 'demo-analisis-id',
-      usuario_id: 'demo-user',
-      perfil_codigo: 'saludable',
-      perfil_financiero: 'Saludable',
-      probabilidad: 0.76,
-      analizado_en: new Date().toISOString(),
-      modelo_version: 'v2.4',
-      moneda: 'MXN',
-      probabilidades: {
-        saludable: 0.76,
-        en_observacion: 0.18,
-        critico: 0.06,
-      },
-      indicadores: {
-        tasa_ahorro: 0.528,
-        cobertura_emergencia_meses: 6.5,
-        ratio_endeudamiento: 0.12,
-        gastos_fijos_pct: 0.35,
-        gastos_discrecionales_pct: 0.12,
-        frecuencia_ahorro_num: 1,
-        ratio_recurrente: 0.85,
-        ratio_gasto_ingreso: 0.45,
-      },
-      resumen_gastos: {
-        vivienda: 8500,
-        alimentacion: 4500,
-        compras: 2200,
-        transporte: 1800,
-        servicios: 1200,
-      },
-      recomendaciones_detalle: [
-        {
-          id: 'rec-1',
-          categoria: 'ahorro',
-          prioridad: 'alta',
-          titulo: 'Mantén tu fondo de emergencia activo',
-          mensaje: 'Tu ratio de ahorro te permite cubrir meses ante contingencias de forma óptima.',
-          impacto: 'alto',
-          texto: 'Mantén el buen ritmo de ahorro mensual.',
-        },
-      ],
-    },
-    categorias: datosBackend?.categorias ?? [],
-  }), [datosBackend?.categorias]) as unknown as Detalle;
-
-  const datos = (datosBackend && datosBackend.analisis) || !tieneDemo ? datosBackend : datosMock;
-
   const etiquetas = useMemo(
     () => new Map<CategoriaSlug, string>(datos?.categorias.map((c) => [c.slug, c.etiqueta]) ?? []),
     [datos?.categorias],
   );
 
   return (
-    <EstadoCarga cargando={cargando} error={!tieneDemo ? error : null} recargar={recargar}>
+    <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
       {datos ? (
         <div className="space-y-5">
           <header className="aparece">
@@ -129,6 +72,7 @@ export default function PaginaDetalleAnalisis({
             </p>
           </header>
 
+          {/* Explicabilidad (P11): distribucion de probabilidades del modelo */}
           <Tarjeta className="aparece aparece-2">
             <TituloTarjeta>{t('indicadoresQueEmpujaron')}</TituloTarjeta>
             <div className="space-y-2">

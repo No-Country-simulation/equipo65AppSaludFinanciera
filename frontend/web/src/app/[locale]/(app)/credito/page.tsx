@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useId, useMemo, useEffect } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useId } from 'react';
 import {
   Area,
   AreaChart,
@@ -14,7 +14,7 @@ import {
 import type { RegistroBuro, SaludCrediticia } from '@/data';
 import { formatearFecha, formatearMoneda } from '@/lib/formato';
 import { useDatos } from '@/lib/useDatos';
-import { Boton, EstadoCarga, Tarjeta, TituloTarjeta } from '@/components/ui';
+import { EstadoCarga, Tarjeta, TituloTarjeta } from '@/components/ui';
 import { Icono } from '@/components/Icono';
 
 const SCORE_MIN = 300;
@@ -63,61 +63,22 @@ export default function PaginaCredito() {
   const locale = useLocale();
   const gradId = useId().replace(/:/g, '');
 
-  // 🚀 Detección automática del modo demo mediante el localStorage del registro
-  const [usarDemo, setUsarDemo] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('demo_saldo') !== null) {
-      setUsarDemo(true);
-    }
-  }, []);
-
-  const { datos: datosBackend, cargando, error, recargar } = useDatos<SaludCrediticia>((fuente) =>
+  const { datos, cargando, error, recargar } = useDatos<SaludCrediticia>((fuente) =>
     fuente.saludCrediticia(),
   );
 
-  const datosDemoCredito: SaludCrediticia = useMemo(() => ({
-    actual: {
-      id: 'buro-actual',
-      fecha: new Date().toISOString(),
-      score_crediticio: 742,
-      dias_atraso: 0,
-      monto_adeudado: 1250,
-    },
-    historial: [
-      { id: 'b-1', fecha: '2026-03-15', score_crediticio: 670, dias_atraso: 0, monto_adeudado: 4500 },
-      { id: 'b-2', fecha: '2026-04-15', score_crediticio: 685, dias_atraso: 0, monto_adeudado: 3800 },
-      { id: 'b-3', fecha: '2026-05-15', score_crediticio: 700, dias_atraso: 0, monto_adeudado: 3100 },
-      { id: 'b-4', fecha: '2026-06-15', score_crediticio: 715, dias_atraso: 0, monto_adeudado: 2400 },
-      { id: 'b-5', fecha: '2026-07-15', score_crediticio: 730, dias_atraso: 0, monto_adeudado: 1800 },
-      { id: 'b-6', fecha: '2026-08-15', score_crediticio: 742, dias_atraso: 0, monto_adeudado: 1250 },
-    ],
-    moneda: 'MXN',
-  }), []);
-
-  const datos = usarDemo ? datosDemoCredito : datosBackend;
-
   return (
     <div className="space-y-5">
-      <header className="aparece flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="cifra text-3xl font-semibold text-ink">{t('titulo')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('subtitulo')}</p>
-        </div>
-        {!datos && (
-          <Boton onClick={() => setUsarDemo(true)} className="bg-emerald-600 hover:bg-emerald-700">
-            📊 Simular Historial de Buró
-          </Boton>
-        )}
+      <header className="aparece">
+        <h1 className="cifra text-3xl font-semibold text-ink">{t('titulo')}</h1>
+        <p className="mt-1 text-sm text-muted">{t('subtitulo')}</p>
       </header>
 
-      {datos ? (
-        <ScoreContenido datos={datos} gradId={gradId} locale={locale} />
-      ) : (
-        <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
-          {null}
-        </EstadoCarga>
-      )}
+      <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
+        {datos ? (
+          <ScoreContenido datos={datos} gradId={gradId} locale={locale} />
+        ) : null}
+      </EstadoCarga>
     </div>
   );
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import type { Categoria, CategoriaSlug, EventoCalendario, MedioOperacion, PaginaTransacciones, Tarjeta as TarjetaBanco } from '@/data';
@@ -48,24 +48,14 @@ function MovimientosVista() {
   const [monto, setMonto] = useState('');
   const [fecha, setFecha] = useState('');
   const [categoriaAlta, setCategoriaAlta] = useState<CategoriaSlug | ''>('');
-  const [nota, setNota] = useState('');
+  const [nota, setNota] = useState(''); // solo interfaz (F9: etiquetas/notas)
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; tipo: 'ok' | 'info' } | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const [corrigiendo, setCorrigiendo] = useState<string | null>(null);
   const inputCsv = useRef<HTMLInputElement>(null);
 
-  // 🚀 Detección inteligente del modo demo
-  const [tieneDemo, setTieneDemo] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('demo_saldo') !== null) {
-      setTieneDemo(true);
-    }
-  }, []);
-
-  // 1. Llamada original al backend con alias para evitar conflictos
-  const { datos: datosOriginales, cargando, error, recargar } = useDatos<DatosMovimientos>(
+  const { datos, cargando, error, recargar } = useDatos<DatosMovimientos>(
     async (fuente) => {
       const [pagina, categorias, tarjetas, eventos] = await Promise.all([
         fuente.transacciones({
@@ -81,57 +71,6 @@ function MovimientosVista() {
     },
     [filtro, filtroTarjeta],
   );
-
-  // 2. Datos mock para la demo en vivo
-  const datosMock: DatosMovimientos = {
-    pagina: {
-      items: [
-        {
-          id: 'mov-demo-1',
-          descripcion: 'Supermercado Local',
-          comercio: 'Walmart',
-          valor: -1350.00,
-          moneda: 'MXN',
-          fecha: new Date().toISOString().slice(0, 10),
-          categoria: 'alimentacion',
-          categoria_origen: 'modelo',
-          confianza: 0.95,
-          medio_operacion: 'pos',
-          id_tarjeta: 'tarjeta-demo-1',
-        },
-        {
-          id: 'mov-demo-2',
-          descripcion: 'Depósito de Nómina',
-          comercio: 'Empresa SA',
-          valor: 45000.00,
-          moneda: 'MXN',
-          fecha: new Date().toISOString().slice(0, 10),
-          categoria: 'salario',
-          categoria_origen: 'modelo',
-          confianza: 0.99,
-          medio_operacion: 'portal_web',
-        }
-      ],
-      total: 2,
-      pagina: 1,
-    },
-    categorias: datosOriginales?.categorias ?? [],
-    tarjetas: [
-      {
-        id: 'tarjeta-demo-1',
-        tipo: 'debito',
-        red_pago: 'visa',
-        ultimos4: '4589',
-        fecha_vencimiento: '12/28',
-        estado: 'activa',
-        etiqueta: 'Cuenta Principal',
-      },
-    ],
-    eventos: [],
-  } as unknown as DatosMovimientos;
-
-  // 3. Variable unificada 'datos' para que todo el componente funcione sin cambios
-  const datos = (datosOriginales && datosOriginales.tarjetas && datosOriginales.tarjetas.length > 0) || !tieneDemo ? datosOriginales : datosMock;
 
   const nombreTarjeta = useMemo(
     () => new Map((datos?.tarjetas ?? []).map((tarjeta) => [tarjeta.id, tarjeta.etiqueta ?? `•••• ${tarjeta.ultimos4}`])),
@@ -214,6 +153,8 @@ function MovimientosVista() {
         descripcion,
         valor: Number(monto),
         fecha: fecha || undefined,
+        // Vacia = que clasifique el modelo. Si se elige una, la API la guarda
+        // como correccion de la persona (categoria_origen = "usuario").
         categoria: categoriaAlta || undefined,
       });
       setDescripcion('');
@@ -262,6 +203,7 @@ function MovimientosVista() {
         if (archivo && archivo.name.toLowerCase().endsWith('.csv')) void importar(archivo);
       }}
     >
+      {/* Overlay de drag & drop del CSV */}
       {arrastrando ? (
         <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-accent/10 backdrop-blur-[2px]">
           <div className="rounded-[var(--radio)] border-2 border-dashed border-accent bg-card px-10 py-8 text-center shadow-[var(--sombra-lg)]">
@@ -288,6 +230,7 @@ function MovimientosVista() {
               evento.target.value = '';
             }}
           />
+          {/* Export solo-UI (F9.15): se activa al conectar el backend */}
           <Boton variante="fantasma" onClick={() => avisar(tComun('proximamente'))}>
             {t('exportPdf')}
           </Boton>
@@ -352,6 +295,7 @@ function MovimientosVista() {
         </Tarjeta>
       ) : null}
 
+      {/* Búsqueda + filtros + orden + vista */}
       <div className="aparece aparece-2 flex flex-wrap gap-3">
         <input
           className={`${claseInput} min-w-[200px] flex-1`}
@@ -416,6 +360,7 @@ function MovimientosVista() {
         </div>
       </div>
 
+      {/* Resumen entradas/salidas del set visible */}
       <div className="aparece aparece-2 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-ok/[0.06] px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t('entra')}</p>
@@ -431,6 +376,7 @@ function MovimientosVista() {
         </div>
       </div>
 
+      {/* Barra de acciones en lote (vista tabla) */}
       {vista === 'tabla' && seleccion.size > 0 ? (
         <div className="aparece flex items-center justify-between gap-3 rounded-2xl border border-accent/30 bg-accent/8 px-4 py-2.5">
           <span className="text-sm font-semibold text-accent">{t('seleccionadas', { n: seleccion.size })}</span>
@@ -447,6 +393,7 @@ function MovimientosVista() {
               {busqueda ? t('sinResultados') : t('vacio')}
             </p>
           ) : vista === 'tabla' ? (
+            /* ── Vista tabla: columnas ordenables + selección múltiple ── */
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -533,6 +480,7 @@ function MovimientosVista() {
               </table>
             </div>
           ) : (
+            /* ── Vista lista ── */
             <ul className="divide-y divide-line">
               {visibles.map((transaccion) => (
                 <li key={transaccion.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
@@ -608,6 +556,7 @@ function MovimientosVista() {
           )}
         </Tarjeta>
 
+        {/* Actividad del mes (mapa de calor de gasto diario, NO calendario de pagos) */}
         <Tarjeta className="aparece aparece-4 max-w-md">
           <TituloTarjeta>{t('actividadMes')}</TituloTarjeta>
           <p className="-mt-2 mb-3 text-xs text-muted">{t('actividadAyuda')}</p>
@@ -625,6 +574,7 @@ function MovimientosVista() {
   );
 }
 
+/** useSearchParams (filtro por tarjeta via ?tarjeta=) exige un limite de Suspense. */
 export default function PaginaMovimientos() {
   return (
     <Suspense>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { MetaAhorro } from '@/data';
 import { formatearMoneda } from '@/lib/formato';
@@ -15,34 +15,7 @@ export default function PaginaMetas() {
   const locale = useLocale();
   const ds = useDataSource();
 
-  // 🚀 Detección automática del modo demo mediante el localStorage
-  const [tieneDemo, setTieneDemo] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('demo_saldo') !== null) {
-      setTieneDemo(true);
-    }
-  }, []);
-
-  const { datos: datosBackend, cargando, error, recargar } = useDatos<MetaAhorro[]>((fuente) => fuente.metas());
-
-  // Meta de ahorro inteligente para la demo en vivo
-  const datosMock: MetaAhorro[] = useMemo(() => [
-    {
-      id: 'meta-demo-1',
-      usuario_id: 'demo-user',
-      nombre: 'Fondo de Emergencia',
-      objetivo: 20000,
-      ahorrado: 8500,
-      fecha_limite: '2026-12-31',
-      icono: 'ahorro',
-      color: 'var(--accent)',
-      moneda: 'MXN',
-    },
-  ], []);
-
-  // Si el backend tiene metas o no estamos en modo demo, usamos backend; si no, el mock
-  const datos = (datosBackend && datosBackend.length > 0) || !tieneDemo ? datosBackend : datosMock;
+  const { datos, cargando, error, recargar } = useDatos((fuente) => fuente.metas());
 
   const [creando, setCreando] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -170,7 +143,7 @@ export default function PaginaMetas() {
         </Tarjeta>
       ) : null}
 
-     <EstadoCarga cargando={cargando} error={!tieneDemo ? error : null} recargar={recargar}>
+      <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
         {datos && datos.length === 0 ? (
           <Tarjeta className="aparece aparece-2 py-14 text-center">
             <p className="mx-auto max-w-sm text-sm text-muted">{t('vacio')}</p>
