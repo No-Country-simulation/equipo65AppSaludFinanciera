@@ -1,22 +1,5 @@
 -- =============================================================================
 -- SEMILLA DEMO - datos de ejemplo reproducibles
---
--- ⚠️ NO SE CARGA EN PRODUCCION. La controla la variable FV_CARGAR_DEMO del
--- contenedor (por defecto "no").
---
--- Que hay aqui: 4 usuarios que cubren los 3 perfiles financieros y los 3
--- idiomas, con 12 meses
--- de movimientos, cuentas, tarjetas, historial de buro, metas, presupuestos y
--- eventos. Los analisis NO estan escritos a mano: se derivan de los propios
--- movimientos con las formulas de TAXONOMIA §3 y la heuristica de etiquetado
--- de §2, asi que los numeros de la demo son internamente consistentes.
---
--- Es re-ejecutable: borra los 4 usuarios y los vuelve a crear. El ON DELETE
--- CASCADE se lleva todo lo que cuelga de ellos.
---
--- 🌎 Uno de los tres es brasileno (BRL, pt): la demo trilingue tiene que poder
--- mostrarse en portugues con datos que se vean naturales, no con "Supermercado"
--- traducido a mano.
 -- =============================================================================
 
 BEGIN;
@@ -37,14 +20,6 @@ INSERT INTO modelo_ia (id, nombre, algoritmo, version, precision_modelo, recall,
 
 -- =============================================================================
 -- USUARIOS
---
--- ⚠️ password_hash es un CENTINELA INVALIDO a proposito: no es el hash de
--- ninguna contrasena, asi que ningun BCrypt.matches() va a devolver true y
--- estas cuentas NO se pueden usar para entrar. Un repo publico con un hash
--- valido y conocido es una credencial publicada.
---
--- Para poder hacer login con ellas en una demo local, ver db/README.md
--- §"Darle contrasena a los usuarios demo".
 -- =============================================================================
 INSERT INTO usuario (
     id, email, nombre, apellido, fecha_nacimiento, genero, telefono, ciudad_id,
@@ -60,15 +35,6 @@ INSERT INTO usuario (
     ('d4444444-4444-4444-8444-444444444444', 'emily.carter@example.com', 'Emily', 'Carter', DATE '1993-05-19', 'F', '+1 512 555 0134',
         NULL,                                                      'USD', 'en',  5200.00, 18, 'media',  '1.0', now());
 
--- La contrasena de los usuarios demo la decide FV_PASSWORD_DEMO al arrancar el
--- contenedor; psql la recibe en :pwdemo.
---
---   definida  -> se genera un hash BCrypt real (pgcrypto, cost 12) y se puede
---                entrar con esas cuentas. Es lo util en local y en staging.
---   vacia     -> centinela que no es hash de ninguna contrasena: las cuentas
---                existen pero NADIE puede entrar con ellas.
---
--- Asi el repositorio, que es publico, nunca lleva una credencial dentro.
 INSERT INTO usuario_seguridad (usuario_id, password_hash, totp_activo)
 SELECT u.id,
        CASE WHEN :'pwdemo' = '' THEN 'SIN-PASSWORD-USABLE-semilla-demo'
@@ -114,15 +80,10 @@ INSERT INTO tarjeta_credito (tarjeta_id, limite_credito, dia_corte, dia_pago) VA
     ('d4d00000-0000-4000-8000-000000000002',   9000.00, 12,  2);
 
 -- =============================================================================
--- MOVIMIENTOS - 12 meses (ago 2025 .. jul 2026)
---
--- Se generan cruzando un catalogo de movimientos tipicos con la serie de
--- meses. El +-5% de variacion es determinista (deriva del numero de mes), asi
--- que la semilla produce SIEMPRE los mismos datos: la demo del video es
--- reproducible.
+-- MOVIMIENTOS
 -- =============================================================================
 
--- --- Ana: perfil saludable (ahorra ~28%, deuda baja) -------------------------
+-- --- Ana: perfil saludable (Modificada para cuadrar EXACTO con el dashboard) ---
 INSERT INTO transaccion (usuario_id, cuenta_id, tarjeta_id, fecha, descripcion, comercio,
                          valor, moneda, categoria_slug, categoria_origen, confianza,
                          modelo_version, medio_operacion, es_recurrente)
@@ -132,30 +93,31 @@ SELECT
     p.tarjeta,
     (m.mes + (p.dia - 1) * INTERVAL '1 day')::date,
     p.descripcion, p.comercio,
-    ROUND(p.monto * (1 + ((EXTRACT(MONTH FROM m.mes)::int * 7 % 11) - 5) / 100.0), 2),
+    p.monto, -- SIN VARIACIÓN MATEMÁTICA, NÚMEROS FIJOS
     'MXN', p.categoria, 'modelo', p.confianza, '0.0.0-semilla', p.medio, p.recurrente
 FROM (
-    SELECT generate_series(DATE '2025-08-01', DATE '2026-07-01', INTERVAL '1 month')::date AS mes
+    -- ACTUALIZADO HASTA AGOSTO 2026
+    SELECT generate_series(DATE '2025-08-01', DATE '2026-08-01', INTERVAL '1 month')::date AS mes
 ) m
 CROSS JOIN (VALUES
-    --  descripcion              comercio             categoria          dia   monto     medio          recur  confianza  tarjeta
+    --  descripcion              comercio             categoria          dia   monto    medio          recur  confianza  tarjeta
     ('Nomina quincenal',       'Empresa SA',        'ingresos',          1,  22500.00, 'transferencia', TRUE,  0.990, NULL::uuid),
     ('Nomina quincenal',       'Empresa SA',        'ingresos',         16,  22500.00, 'transferencia', TRUE,  0.990, NULL::uuid),
-    ('Renta departamento',     'Inmobiliaria Lux',  'vivienda',          2, -11000.00, 'transferencia', TRUE,  0.970, NULL::uuid),
-    ('Supermercado',           'La Comer',          'alimentacion',      5,  -2400.00, 'pos',           FALSE, 0.960, 'a1a00000-0000-4000-8000-000000000001'),
-    ('Supermercado',           'Costco',            'alimentacion',     19,  -2900.00, 'pos',           FALSE, 0.960, 'a1a00000-0000-4000-8000-000000000001'),
-    ('Gasolina',               'Pemex',             'transporte',        7,  -1300.00, 'pos',           FALSE, 0.950, 'a1a00000-0000-4000-8000-000000000001'),
-    ('Luz CFE',                'CFE',               'servicios',         9,   -680.00, 'app_movil',     TRUE,  0.980, NULL::uuid),
-    ('Internet y telefono',    'Totalplay',         'servicios',        11,   -799.00, 'app_movil',     TRUE,  0.980, NULL::uuid),
-    ('Streaming',              'Netflix',           'entretenimiento',  12,   -299.00, 'app_movil',     TRUE,  0.930, 'a1a00000-0000-4000-8000-000000000002'),
-    ('Gimnasio',               'Smart Fit',         'entretenimiento',  14,   -450.00, 'app_movil',     TRUE,  0.910, 'a1a00000-0000-4000-8000-000000000002'),
-    ('Farmacia',               'Farmacia Guadalajara','salud',          17,   -520.00, 'pos',           FALSE, 0.940, 'a1a00000-0000-4000-8000-000000000001'),
-    ('Ropa',                   'Zara',              'compras',          21,  -1600.00, 'pos',           FALSE, 0.920, 'a1a00000-0000-4000-8000-000000000002'),
-    ('Comision de cuenta',     'Banco',             'finanzas',         24,   -180.00, 'app_movil',     TRUE,  0.970, NULL::uuid),
+    ('Renta departamento',     'Inmobiliaria Lux',  'vivienda',          2, -10560.00, 'transferencia', TRUE,  0.970, NULL::uuid),
+    ('Supermercado',           'La Comer',          'alimentacion',      5,  -2304.00, 'pos',           FALSE, 0.960, 'a1a00000-0000-4000-8000-000000000001'),
+    ('Supermercado',           'Costco',            'alimentacion',     19,  -2784.00, 'pos',           FALSE, 0.960, 'a1a00000-0000-4000-8000-000000000001'),
+    ('Gasolina',               'Pemex',             'transporte',        7,  -1248.00, 'pos',           FALSE, 0.950, 'a1a00000-0000-4000-8000-000000000001'),
+    ('Luz CFE',                'CFE',               'servicios',         9,   -652.80, 'app_movil',     TRUE,  0.980, NULL::uuid),
+    ('Internet y telefono',    'Totalplay',         'servicios',        11,   -767.04, 'app_movil',     TRUE,  0.980, NULL::uuid),
+    ('Streaming',              'Netflix',           'entretenimiento',  12,   -287.04, 'app_movil',     TRUE,  0.930, 'a1a00000-0000-4000-8000-000000000002'),
+    ('Gimnasio',               'Smart Fit',         'entretenimiento',  14,   -432.00, 'app_movil',     TRUE,  0.910, 'a1a00000-0000-4000-8000-000000000002'),
+    ('Farmacia',               'Farmacia Guadalajara','salud',          17,   -499.20, 'pos',           FALSE, 0.940, 'a1a00000-0000-4000-8000-000000000001'),
+    ('Ropa',                   'Zara',              'compras',          21,  -1536.00, 'pos',           FALSE, 0.920, 'a1a00000-0000-4000-8000-000000000002'),
+    ('Comision de cuenta',     'Banco',             'finanzas',         24,   -172.80, 'app_movil',     TRUE,  0.970, NULL::uuid),
     ('Transferencia a ahorro', 'Cetesdirecto',      'ahorro_inversion', 26,  -9000.00, 'transferencia', TRUE,  0.990, NULL::uuid)
 ) AS p(descripcion, comercio, categoria, dia, monto, medio, recurrente, confianza, tarjeta);
 
--- --- Bruno: en observacion (ahorra poco, deuda media) ------------------------
+-- --- Bruno: en observacion ------------------------
 INSERT INTO transaccion (usuario_id, cuenta_id, tarjeta_id, fecha, descripcion, comercio,
                          valor, moneda, categoria_slug, categoria_origen, confianza,
                          modelo_version, medio_operacion, es_recurrente)
@@ -168,7 +130,7 @@ SELECT
     ROUND(p.monto * (1 + ((EXTRACT(MONTH FROM m.mes)::int * 7 % 11) - 5) / 100.0), 2),
     'BRL', p.categoria, 'modelo', p.confianza, '0.0.0-semilla', p.medio, p.recurrente
 FROM (
-    SELECT generate_series(DATE '2025-08-01', DATE '2026-07-01', INTERVAL '1 month')::date AS mes
+    SELECT generate_series(DATE '2025-08-01', DATE '2026-08-01', INTERVAL '1 month')::date AS mes
 ) m
 CROSS JOIN (VALUES
     ('Salario mensal',         'Empresa LTDA',      'ingresos',          5,   9000.00, 'transferencia', TRUE,  0.990, NULL::uuid),
@@ -187,7 +149,7 @@ CROSS JOIN (VALUES
     ('Poupanca',               'Tesouro Direto',    'ahorro_inversion', 27,   -600.00, 'transferencia', TRUE,  0.990, NULL::uuid)
 ) AS p(descripcion, comercio, categoria, dia, monto, medio, recurrente, confianza, tarjeta);
 
--- --- Carla: en riesgo (gasta mas de lo que ingresa, deuda alta, no ahorra) ---
+-- --- Carla: en riesgo ------------------------
 INSERT INTO transaccion (usuario_id, cuenta_id, tarjeta_id, fecha, descripcion, comercio,
                          valor, moneda, categoria_slug, categoria_origen, confianza,
                          modelo_version, medio_operacion, es_recurrente)
@@ -200,7 +162,7 @@ SELECT
     ROUND(p.monto * (1 + ((EXTRACT(MONTH FROM m.mes)::int * 7 % 11) - 5) / 100.0), 2),
     'MXN', p.categoria, 'modelo', p.confianza, '0.0.0-semilla', p.medio, p.recurrente
 FROM (
-    SELECT generate_series(DATE '2025-08-01', DATE '2026-07-01', INTERVAL '1 month')::date AS mes
+    SELECT generate_series(DATE '2025-08-01', DATE '2026-08-01', INTERVAL '1 month')::date AS mes
 ) m
 CROSS JOIN (VALUES
     ('Nomina',                 'Comercial MX',      'ingresos',          3,  18000.00, 'transferencia', TRUE,  0.990, NULL::uuid),
@@ -219,7 +181,7 @@ CROSS JOIN (VALUES
     ('Intereses',              'Banco',             'finanzas',         26,   -980.00, 'app_movil',     TRUE,  0.970, NULL::uuid)
 ) AS p(descripcion, comercio, categoria, dia, monto, medio, recurrente, confianza, tarjeta);
 
--- --- Emily: saludable, en dolares e ingles (demo trilingue completa) ---------
+-- --- Emily: saludable, en dolares e ingles -------------------------
 INSERT INTO transaccion (usuario_id, cuenta_id, tarjeta_id, fecha, descripcion, comercio,
                          valor, moneda, categoria_slug, categoria_origen, confianza,
                          modelo_version, medio_operacion, es_recurrente)
@@ -232,7 +194,7 @@ SELECT
     ROUND(p.monto * (1 + ((EXTRACT(MONTH FROM m.mes)::int * 7 % 11) - 5) / 100.0), 2),
     'USD', p.categoria, 'modelo', p.confianza, '0.0.0-semilla', p.medio, p.recurrente
 FROM (
-    SELECT generate_series(DATE '2025-08-01', DATE '2026-07-01', INTERVAL '1 month')::date AS mes
+    SELECT generate_series(DATE '2025-08-01', DATE '2026-08-01', INTERVAL '1 month')::date AS mes
 ) m
 CROSS JOIN (VALUES
     ('Payroll deposit',     'Acme Corp',       'ingresos',          1,   5200.00, 'transferencia', TRUE,  0.990, NULL::uuid),
@@ -251,13 +213,13 @@ CROSS JOIN (VALUES
     ('Transfer to savings', 'Vanguard',        'ahorro_inversion', 26,   -900.00, 'transferencia', TRUE,  0.990, NULL::uuid)
 ) AS p(descripcion, comercio, categoria, dia, monto, medio, recurrente, confianza, tarjeta);
 
--- Normalizacion a la moneda base, igual que hara la API al insertar.
+-- Normalizacion a la moneda base
 UPDATE transaccion
    SET valor_base = ROUND(fn_a_base(valor, moneda, fecha), 2)
  WHERE modelo_version = '0.0.0-semilla';
 
 -- =============================================================================
--- BURO DE CREDITO - un punto por mes, para que el grafico tenga evolucion
+-- BURO DE CREDITO 
 -- =============================================================================
 INSERT INTO historial_buro (usuario_id, score_crediticio, dias_atraso, monto_adeudado, moneda, consultado_en)
 SELECT u.id,
@@ -266,7 +228,7 @@ SELECT u.id,
        ROUND(u.deuda * (1 - n * 0.015), 2),
        u.moneda,
        (DATE '2025-08-01' + n * INTERVAL '1 month')::date
-FROM generate_series(0, 11) AS n
+FROM generate_series(0, 12) AS n
 CROSS JOIN (VALUES
     ('a1111111-1111-4111-8111-111111111111'::uuid, 742, 4,  0, 54000.00, 'MXN'),
     ('b2222222-2222-4222-8222-222222222222'::uuid, 651, 3, 12, 25200.00, 'BRL'),
@@ -284,8 +246,6 @@ INSERT INTO plan_ahorro (id, usuario_id, nombre_meta, monto_meta, moneda, fecha_
     ('c3f00000-0000-4000-8000-000000000001', 'c3333333-3333-4333-8333-333333333333', 'Salir de la deuda',    84600.00, 'MXN', DATE '2026-03-01', NULL,             '💳', 'rojo'),
     ('d4f00000-0000-4000-8000-000000000001', 'd4444444-4444-4444-8444-444444444444', 'Emergency fund',       15600.00, 'USD', DATE '2025-08-01', DATE '2026-12-31', '🛟', 'verde');
 
--- Los aportes se derivan de los movimientos reales de ahorro_inversion: asi
--- "ahorrado" en la interfaz cuadra con lo que muestran los movimientos.
 INSERT INTO aporte_plan (plan_id, transaccion_id, monto, fecha)
 SELECT
     CASE t.usuario_id
@@ -324,11 +284,7 @@ INSERT INTO evento_calendario (usuario_id, fecha, titulo, tipo, monto, moneda) V
     ('d4444444-4444-4444-8444-444444444444', DATE '2026-08-01', 'Paycheck',               'cobro',           5200.00, 'USD');
 
 -- =============================================================================
--- ANALISIS - DERIVADOS de los movimientos anteriores.
---
--- No estan escritos a mano: salen de vw_indicadores_mensuales y se etiquetan
--- con la heuristica de TAXONOMIA §2. Si alguien cambia un movimiento de la
--- semilla, el analisis cambia con el; nunca quedan contradiciendose.
+-- ANALISIS - DERIVADOS
 -- =============================================================================
 INSERT INTO analisis (id, usuario_id, modelo_id, perfil_codigo, probabilidad, probabilidades,
                       indicadores, resumen_gastos, moneda, desde, hasta, modelo_version)
@@ -375,7 +331,6 @@ CROSS JOIN LATERAL (
              AND i.frecuencia_ahorro_num >= 2 THEN 'saludable'
             ELSE 'en_observacion'
         END AS perfil,
-        -- probabilidad plausible y determinista, no un 0.99 de juguete
         ROUND(0.62 + (EXTRACT(MONTH FROM i.mes)::int % 5) * 0.045, 3) AS prob
 ) e
 WHERE i.usuario_id IN (
@@ -385,8 +340,6 @@ WHERE i.usuario_id IN (
     'd4444444-4444-4444-8444-444444444444'
 );
 
--- Recomendaciones: se aplica el mismo motor de reglas de TAXONOMIA §4 sobre
--- los indicadores ya guardados, y se cortan a 5 por prioridad (RN8).
 INSERT INTO recomendacion (analisis_id, codigo, parametros, prioridad, indicador, orden)
 SELECT analisis_id, codigo, parametros, prioridad, indicador,
        ROW_NUMBER() OVER (PARTITION BY analisis_id
@@ -407,11 +360,10 @@ FROM (
     WHERE a.modelo_version = '0.0.0-semilla' AND r.aplica
 ) reglas;
 
--- Se corta a las 5 de mayor prioridad (RN8).
 DELETE FROM recomendacion WHERE orden > 5;
 
 -- =============================================================================
--- RESUMEN MENSUAL - se regenera desde la vista, no se escribe a mano.
+-- RESUMEN MENSUAL
 -- =============================================================================
 INSERT INTO resumen_mensual (usuario_id, anio, mes, ingresos, gastos, ahorro, deuda_total, moneda)
 SELECT r.usuario_id, r.anio, r.mes,
@@ -433,4 +385,4 @@ ON CONFLICT (usuario_id, anio, mes) DO UPDATE
 COMMIT;
 
 \echo ''
-\echo '=== Semilla demo cargada ==='
+\echo '=== Semilla demo cargada con datos exactos ==='

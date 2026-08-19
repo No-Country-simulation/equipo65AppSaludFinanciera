@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { Evolucion, ResumenAnalisis } from '@/data';
 import { Link } from '@/i18n/navigation';
@@ -22,13 +22,48 @@ export default function PaginaAnalisis() {
   const tComun = useTranslations('comun');
   const locale = useLocale();
 
-  const { datos, cargando, error, recargar } = useDatos<DatosAnalisis>(async (fuente) => {
+  const [tieneDemo, setTieneDemo] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('demo_saldo') !== null) {
+      setTieneDemo(true);
+    }
+  }, []);
+
+  const { datos: datosBackend, cargando, error, recargar } = useDatos<DatosAnalisis>(async (fuente) => {
     const [historial, evolucion] = await Promise.all([
       fuente.historialAnalisis(1, 24),
       fuente.evolucion(),
     ]);
     return { historial, evolucion };
   });
+
+  const datosMock: DatosAnalisis = useMemo(() => ({
+    historial: [
+      {
+        id: 'demo-analisis-id',
+        usuario_id: 'demo-user',
+        perfil_codigo: 'saludable',
+        perfil_financiero: 'Saludable',
+        probabilidad: 0.76,
+        analizado_en: new Date().toISOString(),
+        modelo_version: 'v2.4',
+        moneda: 'MXN',
+      },
+    ],
+    evolucion: {
+      puntos: [
+        { fecha: '2026-03-01', score: 680, probabilidad: 0.65, perfil: 'en_observacion', tasa_ahorro: 0.40, perfil_codigo: 'en_observacion' },
+        { fecha: '2026-04-01', score: 695, probabilidad: 0.68, perfil: 'en_observacion', tasa_ahorro: 0.43, perfil_codigo: 'en_observacion' },
+        { fecha: '2026-05-01', score: 710, probabilidad: 0.71, perfil: 'saludable', tasa_ahorro: 0.46, perfil_codigo: 'saludable' },
+        { fecha: '2026-06-01', score: 720, probabilidad: 0.73, perfil: 'saludable', tasa_ahorro: 0.48, perfil_codigo: 'saludable' },
+        { fecha: '2026-07-01', score: 735, probabilidad: 0.74, perfil: 'saludable', tasa_ahorro: 0.50, perfil_codigo: 'saludable' },
+        { fecha: '2026-08-01', score: 750, probabilidad: 0.76, perfil: 'saludable', tasa_ahorro: 0.528, perfil_codigo: 'saludable' },
+      ],
+    },
+  }), []) as unknown as DatosAnalisis;
+
+  const datos = (datosBackend && datosBackend.historial.length > 0) || !tieneDemo ? datosBackend : datosMock;
 
   const [aviso, setAviso] = useState<string | null>(null);
   const avisar = (texto: string) => {
@@ -43,7 +78,6 @@ export default function PaginaAnalisis() {
           <h1 className="cifra text-3xl font-semibold text-ink">{t('titulo')}</h1>
           <p className="mt-1 text-sm text-muted">{t('subtitulo')}</p>
         </div>
-        {/* Export solo-UI (F9.15) */}
         <div className="flex gap-2">
           <Boton variante="fantasma" onClick={() => avisar(tComun('proximamente'))}>
             {tMov('exportPdf')}
@@ -58,7 +92,7 @@ export default function PaginaAnalisis() {
         <p className="aparece rounded-xl bg-canvas-2 px-4 py-2.5 text-sm font-medium text-ink-soft">{aviso}</p>
       ) : null}
 
-      <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
+      <EstadoCarga cargando={cargando} error={!tieneDemo ? error : null} recargar={recargar}>
         {datos ? (
           <>
             <Tarjeta className="aparece aparece-2">
@@ -70,7 +104,6 @@ export default function PaginaAnalisis() {
               )}
             </Tarjeta>
 
-            {/* Comparativa multi-mes (grilla) */}
             {datos.evolucion.puntos.length > 1 ? (
               <Tarjeta className="aparece aparece-3">
                 <TituloTarjeta>{t('comparativaTitulo')}</TituloTarjeta>

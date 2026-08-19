@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { Categoria, CategoriaSlug, Presupuesto } from '@/data';
 import { formatearMoneda, formatearPct } from '@/lib/formato';
@@ -19,13 +19,68 @@ export default function PaginaPresupuestos() {
   const locale = useLocale();
   const ds = useDataSource();
 
-  const { datos, cargando, error, recargar } = useDatos<DatosPresupuestos>(async (fuente) => {
+  // 🚀 Detección automática del modo demo mediante el localStorage
+  const [tieneDemo, setTieneDemo] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('demo_saldo') !== null) {
+      setTieneDemo(true);
+    }
+  }, []);
+
+  const { datos: datosBackend, cargando, error, recargar } = useDatos<DatosPresupuestos>(async (fuente) => {
     const [presupuestos, categorias] = await Promise.all([
       fuente.presupuestos(),
       fuente.categorias(),
     ]);
     return { presupuestos, categorias };
   });
+
+  // Datos mock inteligentes para la demo en vivo
+  const datosMock: DatosPresupuestos = useMemo(() => ({
+    presupuestos: [
+      {
+        id: 'p-1',
+        usuario_id: 'demo-user',
+        categoria: 'alimentacion' as CategoriaSlug,
+        limite: 6000,
+        gastos_mes: 4500,
+        gastado: 4500,
+        mes: '2026-08',
+        moneda: 'MXN',
+      },
+      {
+        id: 'p-2',
+        usuario_id: 'demo-user',
+        categoria: 'vivienda' as CategoriaSlug,
+        limite: 10000,
+        gastos_mes: 8500,
+        gastado: 8500,
+        mes: '2026-08',
+        moneda: 'MXN',
+      },
+      {
+        id: 'p-3',
+        usuario_id: 'demo-user',
+        categoria: 'transporte' as CategoriaSlug,
+        limite: 3000,
+        gastos_mes: 1800,
+        gastado: 1800,
+        mes: '2026-08',
+        moneda: 'MXN',
+      },
+    ],
+    categorias: datosBackend?.categorias ?? [
+      { slug: 'alimentacion', etiqueta: 'Alimentación', tipo: 'gasto' },
+      { slug: 'vivienda', etiqueta: 'Vivienda', tipo: 'gasto' },
+      { slug: 'transporte', etiqueta: 'Transporte', tipo: 'gasto' },
+      { slug: 'servicios', etiqueta: 'Servicios', tipo: 'gasto' },
+      { slug: 'compras', etiqueta: 'Compras', tipo: 'gasto' },
+    ],
+  }), [datosBackend?.categorias]);
+
+  // Si el backend tiene presupuestos o no estamos en modo demo, usamos backend; si no, el mock
+  const datos = (datosBackend && datosBackend.presupuestos.length > 0) || !tieneDemo ? datosBackend : datosMock;
 
   const etiquetas = useMemo(
     () => new Map(datos?.categorias.map((c) => [c.slug, c.etiqueta]) ?? []),
@@ -127,7 +182,7 @@ export default function PaginaPresupuestos() {
                 {/* la categoría en edición + las disponibles */}
                 {[
                   ...(categoria && !disponibles.some((c) => c.slug === categoria)
-                    ? [{ slug: categoria, etiqueta: etiquetas.get(categoria) ?? categoria }]
+                    ? [{ slug: categoria, etiqueta: etiquetas.get(categoria) ?? categoria, tipo: 'gasto' as const }]
                     : []),
                   ...disponibles,
                 ].map((c) => (
@@ -146,7 +201,7 @@ export default function PaginaPresupuestos() {
         </Tarjeta>
       ) : null}
 
-      <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
+      <EstadoCarga cargando={cargando} error={!tieneDemo ? error : null} recargar={recargar}>
         {datos && datos.presupuestos.length === 0 ? (
           <Tarjeta className="aparece aparece-2 py-14 text-center">
             <p className="mx-auto max-w-sm text-sm text-muted">{t('vacio')}</p>

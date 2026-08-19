@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { CuentaBancaria, EstadoBancario, RedPago, Tarjeta } from '@/data';
 import { useRouter } from '@/i18n/navigation';
@@ -35,7 +36,7 @@ function TarjetaVisual({ tarjeta }: { tarjeta: Tarjeta }) {
   const t = useTranslations('tarjetas');
   const locale = useLocale();
   const { usuario } = useSesion();
-  const moneda = usuario?.moneda_principal ?? 'USD';
+  const moneda = usuario?.moneda_principal ?? 'MXN';
   const esCredito = tarjeta.tipo === 'credito';
 
   return (
@@ -127,10 +128,49 @@ export default function PaginaTarjetas() {
   const router = useRouter();
   const ds = useDataSource();
 
-  const { datos, cargando, error, recargar } = useDatos<DatosBanca>(async (fuente) => {
+  const [tieneDemo, setTieneDemo] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('demo_saldo') !== null) {
+      setTieneDemo(true);
+    }
+  }, []);
+
+  const { datos: datosBackend, cargando, error, recargar } = useDatos<DatosBanca>(async (fuente) => {
     const [cuentas, tarjetas] = await Promise.all([fuente.cuentas(), fuente.tarjetas()]);
     return { cuentas, tarjetas };
   });
+
+  // Datos simulados inteligentes si el usuario viene del registro en vivo
+  // Datos simulados inteligentes si el usuario viene del registro en vivo
+  const datosMock: DatosBanca = {
+    cuentas: [
+      {
+        id: 'cuenta-demo-principal',
+        numero: '**** 4589',
+        tipo: 'debito',
+        saldo: 50000,
+        moneda: 'MXN',
+        estado: 'activa',
+        fecha_apertura: '2026-01-01',
+      },
+    ],
+    tarjetas: [
+      {
+        id: 'tarjeta-demo-1',
+        cuenta_id: 'cuenta-demo-principal',
+        tipo: 'debito',
+        red_pago: 'visa',
+        ultimos4: '4589',
+        fecha_vencimiento: '12/28',
+        estado: 'activa',
+        etiqueta: 'Cuenta Principal',
+      },
+    ],
+  } as unknown as DatosBanca;
+
+  // Si hay datos en el backend los usamos; si está vacío y viene del registro, usamos la demo automática
+  const datos = (datosBackend && datosBackend.cuentas.length > 0) || !tieneDemo ? datosBackend : datosMock;
 
   const eliminarTarjeta = async (id: string) => {
     if (!window.confirm(t('eliminarConfirmar'))) return;
