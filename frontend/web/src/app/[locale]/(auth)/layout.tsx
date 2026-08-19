@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { BotonTema } from '@/components/BotonTema';
+import { DescargaApk } from '@/components/DescargaApk';
 import { Logo } from '@/components/Logo';
 import { SelectorIdioma } from '@/components/SelectorIdioma';
 
@@ -68,6 +69,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="flex flex-1 items-center justify-center px-5 pb-16">
           <div className="w-full max-w-md">
             {children}
+            {/* Va en el layout y no en cada pagina: se ve tanto al entrar como
+                al registrarse, que son los dos momentos en que alguien decide
+                con que dispositivo va a usar la app. */}
+            <DescargaApk />
             <p className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center">
               <Link
                 href="/legales"

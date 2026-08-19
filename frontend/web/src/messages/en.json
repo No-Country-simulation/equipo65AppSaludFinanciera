@@ -22,7 +22,11 @@
     "apariencia": "Appearance",
     "cambiarTema": "Switch theme",
     "temaClaro": "Light mode",
-    "temaOscuro": "Dark mode"
+    "temaOscuro": "Dark mode",
+    "apkTitulo": "Rather have it on your phone?",
+    "apkAyuda": "Download the Android app and install it on your device.",
+    "apkBoton": "Download APK",
+    "apkAviso": "Since it does not come from Google Play, Android will ask for permission to install it."
   },
   "nav": {
     "panel": "Dashboard",

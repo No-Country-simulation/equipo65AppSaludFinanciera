@@ -22,7 +22,11 @@
     "apariencia": "Apariencia",
     "cambiarTema": "Cambiar tema",
     "temaClaro": "Modo claro",
-    "temaOscuro": "Modo oscuro"
+    "temaOscuro": "Modo oscuro",
+    "apkTitulo": "¿La prefieres en el móvil?",
+    "apkAyuda": "Descarga la app de Android e instálala en tu teléfono.",
+    "apkBoton": "Descargar APK",
+    "apkAviso": "Al no venir de Google Play, Android te pedirá permiso para instalarla."
   },
   "nav": {
     "panel": "Panel",
