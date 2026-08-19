@@ -2,6 +2,7 @@ package com.fintechvital.api.repository;
 
 import com.fintechvital.api.model.CuentaBancaria;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -41,4 +42,17 @@ public interface CuentaBancariaRepository extends JpaRepository<CuentaBancaria, 
                AND cu.desvinculado_en IS NULL
             """, nativeQuery = true)
     boolean esDelUsuario(@Param("cuenta") UUID cuenta, @Param("usuario") UUID usuario);
+
+    /**
+     * Cuelga una cuenta de un usuario como titular principal.
+     *
+     * Va en SQL nativo porque `cuenta_usuario` no tiene entidad JPA: es una
+     * N:M con datos propios, y el resto del repositorio ya la lee asi.
+     */
+    @Modifying
+    @Query(value = """
+            INSERT INTO cuenta_usuario (cuenta_id, usuario_id, rol_titular)
+            VALUES (:cuenta, :usuario, 'titular_principal')
+            """, nativeQuery = true)
+    void vincularTitular(@Param("cuenta") UUID cuenta, @Param("usuario") UUID usuario);
 }

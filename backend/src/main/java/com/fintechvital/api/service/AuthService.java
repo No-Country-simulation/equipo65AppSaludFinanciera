@@ -4,8 +4,10 @@ import com.fintechvital.api.dto.*;
 import com.fintechvital.api.error.ErrorNegocio;
 import com.fintechvital.api.model.EventoAuditoria;
 import com.fintechvital.api.model.RefreshToken;
+import com.fintechvital.api.model.CuentaBancaria;
 import com.fintechvital.api.model.Usuario;
 import com.fintechvital.api.model.UsuarioSeguridad;
+import com.fintechvital.api.repository.CuentaBancariaRepository;
 import com.fintechvital.api.repository.RefreshTokenRepository;
 import com.fintechvital.api.repository.UsuarioRepository;
 import com.fintechvital.api.repository.UsuarioSeguridadRepository;
@@ -55,6 +57,7 @@ public class AuthService {
     private final LimitadorLoginService limitador;
     private final AuditoriaService auditoria;
     private final CiudadService ciudades;
+    private final CuentaBancariaRepository cuentas;
 
     public AuthService(UsuarioRepository usuarios,
                        UsuarioSeguridadRepository seguridad,
@@ -66,7 +69,8 @@ public class AuthService {
                        DosFactoresService dosFactores,
                        LimitadorLoginService limitador,
                        AuditoriaService auditoria,
-                       CiudadService ciudades) {
+                       CiudadService ciudades,
+                       CuentaBancariaRepository cuentas) {
         this.usuarios = usuarios;
         this.seguridad = seguridad;
         this.refrescos = refrescos;
@@ -78,6 +82,7 @@ public class AuthService {
         this.limitador = limitador;
         this.auditoria = auditoria;
         this.ciudades = ciudades;
+        this.cuentas = cuentas;
     }
 
     // ------------------------------------------------------------- registro ---
@@ -123,10 +128,33 @@ public class AuthService {
         credenciales.setPasswordHash(encoder.encode(peticion.password()));
         credenciales.setPasswordCambiadoEn(OffsetDateTime.now());
         seguridad.save(credenciales);
+        abrirCuentaPrincipal(usuario);
 
         log.info("Usuario registrado: {}", usuario.getId());
         return UsuarioResponse.de(usuario, false,
                 ciudades.porId(usuario.getCiudadId()).orElse(null));
+    }
+
+    /**
+     * Abre la cuenta con la que nace todo usuario.
+     *
+     * Sin esto, quien se registraba se quedaba sin ninguna cuenta y la
+     * pantalla de Tarjetas respondia 'necesitas una cuenta activa para crear
+     * una tarjeta', sin ofrecer forma de conseguirla: un callejon sin salida
+     * en el que solo funcionaban los usuarios de la semilla.
+     *
+     * El numero NO es un dato bancario real: son 4 digitos derivados del id
+     * para que la interfaz tenga algo que enseñar y el UNIQUE no choque.
+     */
+    private void abrirCuentaPrincipal(Usuario usuario) {
+        CuentaBancaria cuenta = new CuentaBancaria();
+        cuenta.setNumeroCuenta("FV" + usuario.getId().toString().replace("-", "").substring(0, 14).toUpperCase());
+        cuenta.setTipoCuenta("debito");
+        cuenta.setMoneda(usuario.getMonedaPrincipal());
+        cuenta.setEstado("activa");
+        cuenta.setFechaApertura(LocalDate.now());
+        cuenta = cuentas.saveAndFlush(cuenta);
+        cuentas.vincularTitular(cuenta.getId(), usuario.getId());
     }
 
     // ---------------------------------------------------------------- login ---

@@ -51,7 +51,12 @@ public class BuroController {
     public ResponseEntity<Void> simular(@Valid @RequestBody SimularBuroRequest peticion) {
         UUID usuarioId = UsuarioActual.id();
 
-        HistorialBuro consulta = new HistorialBuro();
+        // Una consulta por usuario y dia (UNIQUE en la tabla): si ya hay una de
+        // hoy se actualiza en vez de insertar otra. Pulsar el boton dos veces
+        // tiene que refrescar el dato, no dar un error.
+        LocalDate hoy = LocalDate.now();
+        HistorialBuro consulta = historial.findByUsuarioIdAndConsultadoEn(usuarioId, hoy)
+                .orElseGet(HistorialBuro::new);
         consulta.setUsuarioId(usuarioId);
         consulta.setScoreCrediticio(peticion.score());
         consulta.setDiasAtraso(peticion.atraso());
@@ -61,7 +66,7 @@ public class BuroController {
         consulta.setMoneda(peticion.moneda() != null
                 ? peticion.moneda()
                 : usuarios.findById(usuarioId).map(u -> u.getMonedaPrincipal()).orElse("MXN"));
-        consulta.setConsultadoEn(LocalDate.now());
+        consulta.setConsultadoEn(hoy);
 
         historial.save(consulta);
         return ResponseEntity.status(HttpStatus.CREATED).build();
