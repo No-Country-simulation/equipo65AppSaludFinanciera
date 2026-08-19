@@ -94,8 +94,9 @@ export interface Usuario {
   nivel_endeudamiento: number; // 0-100
   frecuencia_ahorro: FrecuenciaAhorro;
   totp_activo: boolean;
-  // Datos personales (USUARIOS: apellido, fecha_nacimiento, genero, telefono, id_ciudad).
-  // Los provee el banco; en la app son de solo lectura. Opcionales: la API puede no traerlos todos.
+  // Datos personales (USUARIOS: apellido, fecha_nacimiento, genero, telefono, ciudad_id).
+  // Se rellenan en el alta y despues son de solo lectura. Opcionales: la API los
+  // omite cuando estan vacios (`default-property-inclusion=non_null`).
   apellido?: string;
   fecha_nacimiento?: string; // ISO date - la edad se calcula, no se guarda
   genero?: 'M' | 'F';
@@ -106,6 +107,22 @@ export interface Usuario {
   // Prueba de consentimiento (feature de producto - extiende el contrato; ver ROADMAP)
   terminos_version?: string;
   terminos_aceptados_en?: string; // ISO-8601
+}
+
+/**
+ * Una ciudad del catalogo (`GET /api/v1/ciudades`, tabla `ciudad`).
+ *
+ * `usuario.ciudad_id` es una FK a esta tabla, asi que el alta NO admite texto
+ * libre: hay que mandar uno de estos `nombre`. Por eso el formulario de
+ * registro ofrece un selector y no un input.
+ */
+export interface Ciudad {
+  id: string;
+  nombre: string;
+  /** Estado/provincia/departamento (columna `region` en la BD). */
+  estado_region: string;
+  /** ISO-3166-1 alfa-2. */
+  pais: string;
 }
 
 export interface Sesion {

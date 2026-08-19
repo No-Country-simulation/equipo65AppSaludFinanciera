@@ -7,6 +7,7 @@ import type {
   Analisis,
   Categoria,
   CategoriaSlug,
+  Ciudad,
   ComparacionMensual,
   CuentaBancaria,
   DatosExportados,
@@ -71,7 +72,17 @@ export interface AltaUsuario {
   fecha_nacimiento: string; // ISO date
   genero?: 'M' | 'F';
   telefono?: string;
+  /**
+   * NOMBRE de una ciudad del catalogo (`ciudades()`), no texto libre: en la BD
+   * es una FK. Si no esta en el catalogo, la API responde 422 sobre `ciudad`.
+   */
   ciudad?: string;
+  /**
+   * Idioma con el que la persona se registro. Si no se manda, la cuenta queda
+   * en `es` aunque el alta se hiciera en /pt o /en, y el idioma se pierde al
+   * entrar desde otro dispositivo.
+   */
+  idioma?: Idioma;
   terminos_version?: string;
 }
 
@@ -151,6 +162,8 @@ export interface FinanceDataSource {
   // §7 Operacion
   categorias(): Promise<Categoria[]>;
   monedas(): Promise<Moneda[]>;
+  /** Catalogo de ciudades del alta. Publico: el registro lo pide sin token. */
+  ciudades(): Promise<Ciudad[]>;
 
   // Banca (CUENTAS_BANCARIAS, TARJETAS, HISTORIAL_BURO) - el banco YA tiene estos datos
   cuentas(): Promise<CuentaBancaria[]>;

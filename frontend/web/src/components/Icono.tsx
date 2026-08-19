@@ -24,6 +24,8 @@ export type NombreIcono =
   | 'arriba'
   | 'abajo'
   | 'plano'
+  | 'ojo'
+  | 'ojo-cerrado'
   // perfil financiero
   | 'tendencia-arriba'
   | 'tendencia-abajo'
@@ -69,6 +71,9 @@ const TRAZOS: Record<NombreIcono, string> = {
   arriba: 'M12 19V5M6 11l6-6 6 6',
   abajo: 'M12 5v14M6 13l6 6 6-6',
   plano: 'M5 12h14',
+  ojo: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 15a3 3 0 100-6 3 3 0 000 6z',
+  'ojo-cerrado':
+    'M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 5.2A9.9 9.9 0 0112 5c6.5 0 10 7 10 7a17.9 17.9 0 01-3.1 4M6.5 6.6C3.9 8.3 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1',
   'tendencia-arriba': 'M3 17l6-6 4 4 8-8M15 7h6v6',
   'tendencia-abajo': 'M3 7l6 6 4-4 8 8M15 17h6v-6',
   observar: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 15a3 3 0 100-6 3 3 0 000 6z',

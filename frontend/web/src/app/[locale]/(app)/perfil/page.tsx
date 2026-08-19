@@ -139,7 +139,12 @@ export default function PaginaPerfil() {
         <TituloTarjeta>{t('cuenta')}</TituloTarjeta>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="cifra text-lg font-semibold text-ink">{usuario.nombre}</p>
+            {/* Nombre y apellido: los dos se piden en el alta y los dos son
+                NOT NULL en la base, asi que enseñar solo el nombre desaprovecha
+                un dato que la persona ya dio. */}
+            <p className="cifra text-lg font-semibold text-ink">
+              {[usuario.nombre, usuario.apellido].filter(Boolean).join(' ')}
+            </p>
             <p className="text-sm text-muted">{usuario.email}</p>
           </div>
           <div className="flex items-center gap-3">

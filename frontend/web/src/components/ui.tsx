@@ -59,23 +59,48 @@ export function Boton({
 export function Campo({
   etiqueta,
   ayuda,
+  error,
+  requerido = false,
   children,
 }: {
   etiqueta: string;
   ayuda?: string;
+  /** Mensaje de validacion. Si viene, sustituye a `ayuda` y marca el campo. */
+  error?: string | null;
+  requerido?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink-soft">{etiqueta}</span>
+      <span className="mb-1.5 block text-sm font-medium text-ink-soft">
+        {etiqueta}
+        {requerido ? (
+          <span className="ml-0.5 text-risk" aria-hidden>
+            *
+          </span>
+        ) : null}
+      </span>
       {children}
-      {ayuda ? <span className="mt-1.5 block text-xs text-muted">{ayuda}</span> : null}
+      {/* El error MANDA sobre la ayuda: enseñar los dos a la vez deja al campo
+          con dos lineas de texto debajo y la importante es la del error. */}
+      {error ? (
+        <span role="alert" className="mt-1.5 flex items-start gap-1 text-xs font-medium text-risk">
+          <Icono nombre="alerta" className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+          {error}
+        </span>
+      ) : ayuda ? (
+        <span className="mt-1.5 block text-xs text-muted">{ayuda}</span>
+      ) : null}
     </label>
   );
 }
 
 export const claseInput =
   'w-full rounded-2xl border border-line bg-card px-4 py-3 text-sm text-ink outline-none transition-all duration-200 focus:border-accent focus:ring-4 focus:ring-mint/15 placeholder:text-muted/60';
+
+/** Mismo input, en estado de error. Se usa junto a `<Campo error=...>`. */
+export const claseInputError =
+  'w-full rounded-2xl border border-risk bg-card px-4 py-3 text-sm text-ink outline-none transition-all duration-200 focus:border-risk focus:ring-4 focus:ring-risk/15 placeholder:text-muted/60';
 
 /** Perfil SIEMPRE con icono + etiqueta, nunca solo color. */
 export function ChipPerfil({

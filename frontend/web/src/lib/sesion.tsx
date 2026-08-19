@@ -55,6 +55,23 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
       if (!activo) return;
       if (restaurado) setUsuario(restaurado);
       setListo(true);
+
+      // La ficha guardada es una FOTO del momento en que se entro. Si desde
+      // entonces la API empezo a devolver campos nuevos -o cambiaron desde otro
+      // dispositivo-, el perfil seguiria pintando la copia vieja para siempre.
+      // Se refresca en segundo plano: no bloquea el primer pintado y, si la API
+      // no responde, la sesion se queda con lo que habia en vez de caerse.
+      if (restaurado) {
+        try {
+          const alDia = await getDataSource(locale).me();
+          if (activo) {
+            window.localStorage.setItem(CLAVE_SESION, JSON.stringify(alDia));
+            setUsuario(alDia);
+          }
+        } catch {
+          /* sin red o token caducado: se conserva la copia local */
+        }
+      }
     })();
 
     return () => {

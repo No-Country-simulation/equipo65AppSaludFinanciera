@@ -16,6 +16,7 @@ import type {
   Analisis,
   Categoria,
   CategoriaSlug,
+  Ciudad,
   ComparacionMensual,
   CuentaBancaria,
   DatosExportados,
@@ -156,7 +157,7 @@ export class ApiDataSource implements FinanceDataSource {
 
   registro(alta: AltaUsuario): Promise<Usuario> {
     // Cuerpo ya en snake_case (email, password, moneda_principal, nombre, apellido,
-    // fecha_nacimiento, genero?, telefono?, ciudad?, terminos_version?).
+    // fecha_nacimiento, genero?, telefono?, ciudad?, idioma?, terminos_version?).
     return this.pedir<Usuario>('/auth/registro', { method: 'POST', body: alta, auth: false });
   }
 
@@ -287,6 +288,11 @@ export class ApiDataSource implements FinanceDataSource {
       auth: false,
     });
     return respuesta.monedas.map((moneda) => moneda.codigo);
+  }
+
+  async ciudades(): Promise<Ciudad[]> {
+    const respuesta = await this.pedir<{ ciudades: Ciudad[] }>('/ciudades', { auth: false });
+    return respuesta.ciudades;
   }
 
   // Banca (endpoints TBD, ver ROADMAP: CUENTAS_BANCARIAS, TARJETAS, HISTORIAL_BURO)
