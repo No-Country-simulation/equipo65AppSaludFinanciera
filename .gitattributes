@@ -1,0 +1,19 @@
+# Atributos de todo el repo. Los subproyectos tienen los suyos
+# (backend/.gitattributes, frontend/.gitattributes) y mandan sobre este.
+
+# --- Barra de lenguajes de GitHub (linguist) ---
+#
+# Linguist mide BYTES, no importancia. Un .ipynb guarda dentro del JSON la
+# salida de cada celda -- tablas y graficas en base64 --, asi que el notebook
+# del modelo pesa 545 KB el solo y se llevaba el 29% de la barra, por delante
+# de Java. El notebook es un entregable del enunciado y se queda en el repo:
+# lo que se corrige es que el recuento de lenguajes represente lo que este
+# proyecto ES (TypeScript, Java, Python), no donde hay mas bytes.
+#
+# `linguist-documentation` lo saca del recuento sin ocultarlo ni marcarlo como
+# codigo de terceros, que es lo que haria `linguist-vendored`.
+*.ipynb linguist-documentation
+
+# Las semillas y los CSV del dataset son datos, no codigo fuente.
+db/semillas/dataset/*.csv linguist-generated
+ml/datos/*.csv linguist-generated
