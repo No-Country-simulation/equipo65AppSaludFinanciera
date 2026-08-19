@@ -1,44 +1,69 @@
 package com.fintechvital.api.controller;
 
+import com.fintechvital.api.dto.SimularBuroRequest;
 import com.fintechvital.api.model.HistorialBuro;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import com.fintechvital.api.repository.HistorialBuroRepository;
+import com.fintechvital.api.repository.UsuarioRepository;
+import com.fintechvital.api.security.UsuarioActual;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Simulador de consultas de buro.
+ *
+ * Existe para la DEMO: sin el, quien acaba de registrarse ve la pantalla de
+ * Salud crediticia siempre vacia, porque no hay integracion con un buro real
+ * (esta en el anti-alcance del proyecto) y la semilla solo trae historial para
+ * los usuarios de ejemplo.
+ *
+ * ⚠️ La primera version de este endpoint tomaba `usuarioId` del CUERPO de la
+ * peticion y lo persistia sin comprobar nada: cualquier persona con una sesion
+ * valida podia escribir el historial crediticio de otra. Ahora el id sale del
+ * token (RN9) y el cuerpo ya ni siquiera lo admite.
+ */
 @RestController
 @RequestMapping("/api/v1/buro")
+@Tag(name = "Salud crediticia")
 public class BuroController {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final HistorialBuroRepository historial;
+    private final UsuarioRepository usuarios;
+
+    public BuroController(HistorialBuroRepository historial, UsuarioRepository usuarios) {
+        this.historial = historial;
+        this.usuarios = usuarios;
+    }
 
     @PostMapping("/simular")
     @Transactional
-    public ResponseEntity<?> simularBuro(@RequestBody Map<String, Object> payload) {
-        try {
-            HistorialBuro buro = new HistorialBuro();
+    @Operation(summary = "Registra una consulta de buro simulada para el usuario del token")
+    public ResponseEntity<Void> simular(@Valid @RequestBody SimularBuroRequest peticion) {
+        UUID usuarioId = UsuarioActual.id();
 
-            // El frontend (React) nos va a mandar estos datos desde el formulario
-            buro.setUsuarioId(UUID.fromString(payload.get("usuarioId").toString()));
-            buro.setScoreCrediticio(Short.parseShort(payload.get("score").toString()));
-            buro.setDiasAtraso(Integer.parseInt(payload.get("atraso").toString()));
-            buro.setMontoAdeudado(new BigDecimal(payload.get("deuda").toString()));
-            buro.setMoneda(payload.getOrDefault("moneda", "MXN").toString());
-            buro.setConsultadoEn(LocalDate.now());
+        HistorialBuro consulta = new HistorialBuro();
+        consulta.setUsuarioId(usuarioId);
+        consulta.setScoreCrediticio(peticion.score());
+        consulta.setDiasAtraso(peticion.atraso());
+        consulta.setMontoAdeudado(peticion.deuda());
+        // Si no la mandan, la del usuario: un historial en una moneda distinta a
+        // la suya no se puede comparar con sus propios montos.
+        consulta.setMoneda(peticion.moneda() != null
+                ? peticion.moneda()
+                : usuarios.findById(usuarioId).map(u -> u.getMonedaPrincipal()).orElse("MXN"));
+        consulta.setConsultadoEn(LocalDate.now());
 
-            // Guardamos en la base de datos
-            entityManager.persist(buro);
-
-            return ResponseEntity.ok(Map.of("mensaje", "Historial simulado correctamente"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Faltan datos o son inválidos: " + e.getMessage()));
-        }
+        historial.save(consulta);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }
