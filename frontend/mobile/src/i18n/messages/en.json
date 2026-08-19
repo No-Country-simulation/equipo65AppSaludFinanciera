@@ -308,7 +308,12 @@
     "ultimaConsulta": "Last check: {fecha}",
     "alimentaPerfil": "Your credit behavior feeds your financial profile.",
     "vacio": "No bureau information yet.",
-    "senales": "Warning signs"
+    "senales": "Warning signs",
+    "sinHistorialTitulo": "No credit bureau records yet",
+    "sinHistorialAyuda": "Your score will show up here once there is a record. This version does not connect to a real bureau, so you can generate a sample one.",
+    "generarEjemplo": "Generate a sample record",
+    "generando": "Generating…",
+    "generarFallo": "We could not generate the sample record."
   },
   "analisis": {
     "titulo": "Analyses",

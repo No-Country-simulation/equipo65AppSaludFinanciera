@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Analisis, Categoria, CategoriaSlug, PerfilSlug } from '@/data';
 import { Colores, COLOR_PERFIL, Espacio, Fuentes } from '@/constants/tema';
@@ -44,7 +45,10 @@ export default function PantallaDetalleAnalisis() {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
       <Hero paddingTop={insets.top + 14}>
         <Pressable onPress={() => router.back()}>
-          <Text style={estilos.volver}>← {t('analisis.volver')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+          <Ionicons name="chevron-back" size={14} color="rgba(255,255,255,0.8)" />
+          <Text style={estilos.volver}>{t('analisis.volver')}</Text>
+        </View>
         </Pressable>
         {datos ? (
           <>

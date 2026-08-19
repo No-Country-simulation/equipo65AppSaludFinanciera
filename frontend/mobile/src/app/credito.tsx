@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Circle, G, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RegistroBuro, SaludCrediticia } from '@/data';
@@ -8,8 +9,8 @@ import { Espacio, Fuentes } from '@/constants/tema';
 import { useTheme } from '@/context/ThemeContext';
 import { useI18n } from '@/i18n';
 import { formatearFecha, formatearMoneda } from '@/lib/formato';
-import { useDatos } from '@/lib/useDatos';
-import { Aparece, EstadoCarga, Hero, Tarjeta, TituloTarjeta } from '@/components/ui';
+import { useDataSource, useDatos } from '@/lib/useDatos';
+import { Aparece, Boton, EstadoCarga, Hero, Tarjeta, TituloTarjeta } from '@/components/ui';
 
 const SCORE_MIN = 300;
 const SCORE_MAX = 850;
@@ -88,48 +89,27 @@ export default function PantallaCredito() {
   const { temaActivo } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { datos, cargando, error, recargar } = useDatos<SaludCrediticia>((fuente) => fuente.saludCrediticia());
+  const ds = useDataSource();
+  const { datos, cargando, error, codigo, recargar } = useDatos<SaludCrediticia>((fuente) =>
+    fuente.saludCrediticia(),
+  );
 
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [simulando, setSimulando] = useState(false);
-  const [formSimulador, setFormSimulador] = useState({
-    usuarioId: '',
-    score: '720',
-    atraso: '0',
-    deuda: '1500'
-  });
+  // 404 SIN_HISTORIAL_BURO no es un fallo: es una cuenta sin consultas aun.
+  const sinHistorial = codigo === 'SIN_HISTORIAL_BURO';
 
-  const simularBuro = async () => {
-    if (!formSimulador.usuarioId) {
-      alert("Por favor ingresa el ID del usuario (UUID)");
-      return;
-    }
-    setSimulando(true);
+  const [generando, setGenerando] = useState(false);
+  const [errorGenerar, setErrorGenerar] = useState<string | null>(null);
+
+  const generarEjemplo = async () => {
+    setGenerando(true);
+    setErrorGenerar(null);
     try {
-      const respuesta = await fetch('http://localhost:8080/api/v1/buro/simular', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          usuarioId: formSimulador.usuarioId,
-          score: parseInt(formSimulador.score),
-          atraso: parseInt(formSimulador.atraso),
-          deuda: parseFloat(formSimulador.deuda),
-          moneda: 'MXN'
-        })
-      });
-
-      if (respuesta.ok) {
-        setMostrarForm(false);
-        recargar(); 
-      } else {
-        alert('Error al simular. Revisa que el UUID sea correcto.');
-      }
-    } catch (error: any) {
-      alert('Error de conexión: ' + error.message);
+      await ds.simularBuro({ score: 720, atraso: 0, deuda: 8500 });
+      recargar();
+    } catch {
+      setErrorGenerar(t('credito.generarFallo'));
     } finally {
-      setSimulando(false);
+      setGenerando(false);
     }
   };
 
@@ -138,7 +118,10 @@ export default function PantallaCredito() {
       <Hero paddingTop={insets.top + 14}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Pressable onPress={() => router.back()}>
-            <Text style={s.volver}>← {t('nav.tarjetas')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+          <Ionicons name="chevron-back" size={14} color="rgba(255,255,255,0.8)" />
+          <Text style={s.volver}>{t('nav.tarjetas')}</Text>
+        </View>
           </Pressable>
         </View>
         <Text style={[s.titulo, { color: temaActivo.blanco }]}>{t('credito.titulo')}</Text>
@@ -147,66 +130,21 @@ export default function PantallaCredito() {
 
       <ScrollView contentContainerStyle={{ padding: Espacio.m, paddingBottom: 40 }}>
         
-        {/* BOTÓN DE EMERGENCIA HACKATHON */}
-        <Pressable 
-          style={[s.botonGigante, { backgroundColor: temaActivo.acento, marginBottom: Espacio.m }]}
-          onPress={() => setMostrarForm(!mostrarForm)}
-        >
-          <Text style={{ color: '#fff', fontFamily: Fuentes.cuerpoSemi, fontSize: 15, textAlign: 'center' }}>
-            {mostrarForm ? '❌ Cerrar Simulador' : '⚙️ [HACKATHON] Simular Datos de Buró'}
-          </Text>
-        </Pressable>
-
-        {mostrarForm && (
-          <Tarjeta style={{ marginBottom: Espacio.m, borderColor: temaActivo.acento, borderWidth: 2 }}>
-            <TituloTarjeta>Panel de Simulación de Buró</TituloTarjeta>
-            <View style={{ gap: 12, marginTop: 10 }}>
-              <TextInput
-                style={[s.input, { color: temaActivo.tinta, borderColor: temaActivo.linea }]}
-                placeholder="ID del Usuario (UUID)"
-                placeholderTextColor={temaActivo.apagado}
-                value={formSimulador.usuarioId}
-                onChangeText={(t) => setFormSimulador({...formSimulador, usuarioId: t})}
-              />
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput
-                  style={[s.input, { flex: 1, color: temaActivo.tinta, borderColor: temaActivo.linea }]}
-                  placeholder="Score (300-850)"
-                  placeholderTextColor={temaActivo.apagado}
-                  keyboardType="numeric"
-                  value={formSimulador.score}
-                  onChangeText={(t) => setFormSimulador({...formSimulador, score: t})}
-                />
-                <TextInput
-                  style={[s.input, { flex: 1, color: temaActivo.tinta, borderColor: temaActivo.linea }]}
-                  placeholder="Atraso (días)"
-                  placeholderTextColor={temaActivo.apagado}
-                  keyboardType="numeric"
-                  value={formSimulador.atraso}
-                  onChangeText={(t) => setFormSimulador({...formSimulador, atraso: t})}
-                />
-              </View>
-              <TextInput
-                style={[s.input, { color: temaActivo.tinta, borderColor: temaActivo.linea }]}
-                placeholder="Monto de Deuda"
-                placeholderTextColor={temaActivo.apagado}
-                keyboardType="numeric"
-                value={formSimulador.deuda}
-                onChangeText={(t) => setFormSimulador({...formSimulador, deuda: t})}
-              />
-              <Pressable
-                style={[s.botonGuardar, { backgroundColor: temaActivo.acento }]}
-                onPress={simularBuro}
-                disabled={simulando}
-              >
-                <Text style={{ color: temaActivo.blanco, fontFamily: Fuentes.cuerpoSemi, textAlign: 'center' }}>
-                  {simulando ? 'Guardando en Java...' : '🚀 Inyectar Datos y Ver Gráfica'}
-                </Text>
-              </Pressable>
-            </View>
+        {sinHistorial && !cargando ? (
+          <Tarjeta style={{ alignItems: 'center', gap: 10, paddingVertical: 28 }}>
+            <Ionicons name="speedometer-outline" size={30} color={temaActivo.acento} />
+            <Text style={[s.vacioTitulo, { color: temaActivo.tinta }]}>{t('credito.sinHistorialTitulo')}</Text>
+            <Text style={[s.vacioAyuda, { color: temaActivo.apagado }]}>{t('credito.sinHistorialAyuda')}</Text>
+            <Boton
+              texto={generando ? t('credito.generando') : t('credito.generarEjemplo')}
+              onPress={() => void generarEjemplo()}
+              cargando={generando}
+            />
+            {errorGenerar ? (
+              <Text style={[s.vacioAyuda, { color: temaActivo.riesgo }]}>{errorGenerar}</Text>
+            ) : null}
           </Tarjeta>
-        )}
-
+        ) : (
         <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
           {datos ? (
             <Aparece delay={40} style={{ gap: Espacio.m }}>
@@ -268,12 +206,15 @@ export default function PantallaCredito() {
             </Aparece>
           ) : null}
         </EstadoCarga>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  vacioTitulo: { fontFamily: Fuentes.cuerpoSemi, fontSize: 15, textAlign: 'center' },
+  vacioAyuda: { fontFamily: Fuentes.cuerpo, fontSize: 12, textAlign: 'center', paddingHorizontal: 18, lineHeight: 17 },
   volver: { fontFamily: Fuentes.cuerpoSemi, fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 8 },
   titulo: { fontFamily: Fuentes.titulo, fontSize: 23, letterSpacing: -0.4 },
   subtitulo: { fontFamily: Fuentes.cuerpo, fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4 },

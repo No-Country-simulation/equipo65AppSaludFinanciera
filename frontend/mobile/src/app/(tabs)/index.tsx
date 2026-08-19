@@ -231,7 +231,10 @@ export default function PantallaInicio() {
                   <Tarjeta>
                     <Pressable style={estilos.widgetHead} onPress={() => router.push('/metas' as Href)}>
                       <TituloTarjeta>{t('panel.metasTitulo')}</TituloTarjeta>
-                      <Text style={estilos.verTodo}>{t('panel.verTodo')} →</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Text style={estilos.verTodo}>{t('panel.verTodo')}</Text>
+                <Ionicons name="chevron-forward" size={12} color={Colores.acento} />
+              </View>
                     </Pressable>
                     <View style={{ gap: 14 }}>
                       {[...datos.metas].sort((a, b) => progresoMeta(b) - progresoMeta(a)).slice(0, 2).map((meta) => (
@@ -247,7 +250,10 @@ export default function PantallaInicio() {
                   <Tarjeta>
                     <Pressable style={estilos.widgetHead} onPress={() => router.push('/presupuestos' as Href)}>
                       <TituloTarjeta>{t('panel.presupuestosTitulo')}</TituloTarjeta>
-                      <Text style={estilos.verTodo}>{t('panel.verTodo')} →</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Text style={estilos.verTodo}>{t('panel.verTodo')}</Text>
+                <Ionicons name="chevron-forward" size={12} color={Colores.acento} />
+              </View>
                     </Pressable>
                     <View style={{ gap: 16 }}>
                       {[...datos.presupuestos]

@@ -308,7 +308,12 @@
     "ultimaConsulta": "Última consulta: {fecha}",
     "alimentaPerfil": "Tu comportamiento crediticio alimenta tu perfil financiero.",
     "vacio": "Aún no hay información de buró.",
-    "senales": "Señales de alerta"
+    "senales": "Señales de alerta",
+    "sinHistorialTitulo": "Todavía no hay consultas de buró",
+    "sinHistorialAyuda": "Tu score aparecerá aquí en cuanto haya una consulta. Esta versión no se conecta a un buró real, así que puedes generar una de ejemplo.",
+    "generarEjemplo": "Generar consulta de ejemplo",
+    "generando": "Generando…",
+    "generarFallo": "No pudimos generar la consulta de ejemplo."
   },
   "analisis": {
     "titulo": "Análisis",

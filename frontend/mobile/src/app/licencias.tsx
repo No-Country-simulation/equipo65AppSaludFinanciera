@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Espacio, Fuentes } from '@/constants/tema';
 import { useTheme } from '@/context/ThemeContext'; // 1. Hook de tema
@@ -48,7 +49,10 @@ export default function PantallaLicencias() {
     <View style={{ flex: 1, backgroundColor: temaActivo.canvas }}>
       <Hero paddingTop={insets.top + 14}>
         <Pressable onPress={() => router.back()}>
-          <Text style={s.volver}>← {t('licencias.volver')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+          <Ionicons name="chevron-back" size={14} color="rgba(255,255,255,0.8)" />
+          <Text style={s.volver}>{t('licencias.volver')}</Text>
+        </View>
         </Pressable>
         <Text style={[s.titulo, { color: temaActivo.blanco }]}>{t('licencias.titulo')}</Text>
       </Hero>

@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Evolucion, ResumenAnalisis } from '@/data';
 import { Colores, Espacio, Fuentes } from '@/constants/tema';
@@ -31,7 +32,10 @@ export default function PantallaAnalisis() {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
       <Hero paddingTop={insets.top + 14} redondeado={false}>
         <Pressable onPress={() => router.back()}>
-          <Text style={estilos.volver}>← {t('nav.panel')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+          <Ionicons name="chevron-back" size={14} color="rgba(255,255,255,0.8)" />
+          <Text style={estilos.volver}>{t('nav.panel')}</Text>
+        </View>
         </Pressable>
         <Text style={estilos.titulo}>{t('analisis.titulo')}</Text>
         <Text style={estilos.subtitulo}>{t('analisis.subtitulo')}</Text>

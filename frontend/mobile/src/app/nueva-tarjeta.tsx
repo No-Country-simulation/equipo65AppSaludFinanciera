@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type {
   AltaTarjeta,
@@ -50,7 +51,10 @@ export default function PantallaNuevaTarjeta() {
     <View style={{ flex: 1, backgroundColor: temaActivo.canvas }}>
       <Hero paddingTop={insets.top + 14}>
         <Pressable onPress={() => router.back()}>
-          <Text style={s.volver}>← {t('nav.tarjetas')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+          <Ionicons name="chevron-back" size={14} color="rgba(255,255,255,0.8)" />
+          <Text style={s.volver}>{t('nav.tarjetas')}</Text>
+        </View>
         </Pressable>
         <Text style={[s.titulo, { color: temaActivo.blanco }]}>
           {tarjetaId ? t('tarjetas.editarTitulo') : t('tarjetas.nuevaTitulo')}
