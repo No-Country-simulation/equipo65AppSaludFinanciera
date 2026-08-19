@@ -32,6 +32,7 @@ public class UsuarioService {
     private final UsuarioSeguridadRepository seguridad;
     private final RefreshTokenRepository refrescos;
     private final ExportacionService exportacion;
+    private final CiudadService ciudades;
     private final AuditoriaService auditoria;
     private final PasswordEncoder encoder;
 
@@ -39,12 +40,14 @@ public class UsuarioService {
                           UsuarioSeguridadRepository seguridad,
                           RefreshTokenRepository refrescos,
                           ExportacionService exportacion,
+                          CiudadService ciudades,
                           AuditoriaService auditoria,
                           PasswordEncoder encoder) {
         this.usuarios = usuarios;
         this.seguridad = seguridad;
         this.refrescos = refrescos;
         this.exportacion = exportacion;
+        this.ciudades = ciudades;
         this.auditoria = auditoria;
         this.encoder = encoder;
     }
@@ -142,6 +145,10 @@ public class UsuarioService {
         boolean totp = seguridad.findByUsuarioId(usuario.getId())
                 .map(s -> s.isTotpActivo())
                 .orElse(false);
-        return UsuarioResponse.de(usuario, totp);
+        // La ciudad se resuelve aqui y no con una relacion JPA: `usuario` se
+        // carga en sitios donde no hace falta, y una @ManyToOne EAGER traeria el
+        // catalogo en cada consulta del perfil.
+        return UsuarioResponse.de(usuario, totp,
+                ciudades.porId(usuario.getCiudadId()).orElse(null));
     }
 }

@@ -48,5 +48,10 @@ public record RegistroRequest(
         @Size(max = 15)
         String telefono,
 
+        // Nombre de una ciudad del catalogo (GET /api/v1/ciudades). Se traduce a
+        // `usuario.ciudad_id` en CiudadService: la tabla guarda una FK, no texto.
+        @Size(max = 120)
+        String ciudad,
+
         String terminosVersion
 ) {}

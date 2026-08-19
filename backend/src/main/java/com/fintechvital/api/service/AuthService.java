@@ -54,6 +54,7 @@ public class AuthService {
     private final DosFactoresService dosFactores;
     private final LimitadorLoginService limitador;
     private final AuditoriaService auditoria;
+    private final CiudadService ciudades;
 
     public AuthService(UsuarioRepository usuarios,
                        UsuarioSeguridadRepository seguridad,
@@ -64,7 +65,8 @@ public class AuthService {
                        CifradoService cifrado,
                        DosFactoresService dosFactores,
                        LimitadorLoginService limitador,
-                       AuditoriaService auditoria) {
+                       AuditoriaService auditoria,
+                       CiudadService ciudades) {
         this.usuarios = usuarios;
         this.seguridad = seguridad;
         this.refrescos = refrescos;
@@ -75,6 +77,7 @@ public class AuthService {
         this.dosFactores = dosFactores;
         this.limitador = limitador;
         this.auditoria = auditoria;
+        this.ciudades = ciudades;
     }
 
     // ------------------------------------------------------------- registro ---
@@ -103,6 +106,10 @@ public class AuthService {
         usuario.setFechaNacimiento(peticion.fechaNacimiento());
         usuario.setGenero(peticion.genero());
         usuario.setTelefono(peticion.telefono());
+        // El alta manda el NOMBRE de la ciudad y la tabla guarda una FK. Sin esta
+        // linea el dato llegaba a la API y se perdia sin dejar rastro, asi que la
+        // ciudad que la persona elegia no aparecia luego en su perfil.
+        usuario.setCiudadId(ciudades.resolverId(peticion.ciudad()));
         if (peticion.monedaPrincipal() != null) usuario.setMonedaPrincipal(peticion.monedaPrincipal());
         if (peticion.idioma() != null) usuario.setIdioma(peticion.idioma());
         if (peticion.terminosVersion() != null) {
@@ -118,7 +125,8 @@ public class AuthService {
         seguridad.save(credenciales);
 
         log.info("Usuario registrado: {}", usuario.getId());
-        return UsuarioResponse.de(usuario, false);
+        return UsuarioResponse.de(usuario, false,
+                ciudades.porId(usuario.getCiudadId()).orElse(null));
     }
 
     // ---------------------------------------------------------------- login ---
@@ -286,6 +294,7 @@ public class AuthService {
                 refreshEnClaro,          // el cliente lo ve UNA sola vez
                 jwt.getTtlAccessSegundos(),
                 false,
-                UsuarioResponse.de(usuario, credenciales.isTotpActivo()));
+                UsuarioResponse.de(usuario, credenciales.isTotpActivo(),
+                        ciudades.porId(usuario.getCiudadId()).orElse(null)));
     }
 }

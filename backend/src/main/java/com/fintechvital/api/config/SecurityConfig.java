@@ -91,7 +91,10 @@ public class SecurityConfig {
                 // jurado va a probar con un curl, sin registrarse.
                 .requestMatchers("/api/v1/analisis-financiero", "/analisis-financiero").permitAll()
                 .requestMatchers("/api/v1/transacciones/clasificar").permitAll()
-                .requestMatchers("/api/v1/salud", "/api/v1/categorias", "/api/v1/monedas").permitAll()
+                // `/ciudades` es publico porque lo consume el formulario de REGISTRO,
+                // donde todavia no hay token.
+                .requestMatchers("/api/v1/salud", "/api/v1/categorias", "/api/v1/monedas",
+                                 "/api/v1/ciudades").permitAll()
                 // Documentacion: Swagger UI y la especificacion OpenAPI. Es un
                 // requisito del enunciado, asi que tiene que verse sin token.
                 .requestMatchers("/api/v1/docs", "/api/v1/docs/**",
