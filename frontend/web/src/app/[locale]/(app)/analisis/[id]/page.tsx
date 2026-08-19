@@ -1,5 +1,6 @@
 'use client';
 
+import { Icono } from '@/components/Icono';
 import { use, useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { Analisis, Categoria, CategoriaSlug } from '@/data';
@@ -51,7 +52,8 @@ export default function PaginaDetalleAnalisis({
         <div className="space-y-5">
           <header className="aparece">
             <Link href="/analisis" className="text-sm font-semibold text-accent hover:underline">
-              ← {t('volver')}
+              <Icono nombre="chevron-izq" className="h-3.5 w-3.5" />
+        {t('volver')}
             </Link>
             <div className="mt-2 flex flex-wrap items-center gap-4">
               <h1 className="cifra text-3xl font-semibold text-ink">

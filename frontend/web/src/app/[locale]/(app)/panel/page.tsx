@@ -1,5 +1,6 @@
 'use client';
 
+import { Icono } from '@/components/Icono';
 import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type {
@@ -215,7 +216,8 @@ export default function PaginaPanel() {
                   <div className="mb-4 flex items-center justify-between">
                     <TituloTarjeta>{t('metasTitulo')}</TituloTarjeta>
                     <Link href="/metas" className="text-xs font-semibold text-accent hover:underline">
-                      {t('verTodo')} →
+                      {t('verTodo')}
+                <Icono nombre="chevron-der" className="h-3.5 w-3.5" />
                     </Link>
                   </div>
                   {datos.metas.length > 0 ? (
@@ -236,7 +238,8 @@ export default function PaginaPanel() {
                   <div className="mb-4 flex items-center justify-between">
                     <TituloTarjeta>{t('presupuestosTitulo')}</TituloTarjeta>
                     <Link href="/presupuestos" className="text-xs font-semibold text-accent hover:underline">
-                      {t('verTodo')} →
+                      {t('verTodo')}
+                <Icono nombre="chevron-der" className="h-3.5 w-3.5" />
                     </Link>
                   </div>
                   {datos.presupuestos.length > 0 ? (

@@ -1,5 +1,6 @@
 'use client';
 
+import { Icono } from '@/components/Icono';
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { Evolucion, ResumenAnalisis } from '@/data';
@@ -120,7 +121,10 @@ export default function PaginaAnalisis() {
                         <span className="flex-1 text-right text-sm tabular-nums text-muted">
                           {formatearPct(resumen.probabilidad, locale, 0)}
                         </span>
-                        <span className="text-xs font-semibold text-accent">{t('ver')} →</span>
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent">
+                  {t('ver')}
+                  <Icono nombre="chevron-der" className="h-3.5 w-3.5" />
+                </span>
                       </Link>
                     </li>
                   ))}

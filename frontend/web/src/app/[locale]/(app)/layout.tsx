@@ -7,6 +7,7 @@ import { useSesion } from '@/lib/sesion';
 import { BotonTema } from '@/components/BotonTema';
 import { SelectorIdioma } from '@/components/SelectorIdioma';
 import { Icono, type NombreIcono } from '@/components/Icono';
+import { BuscadorGlobal } from '@/components/BuscadorGlobal';
 import { Logo } from '@/components/Logo';
 
 const RUTAS: { href: string; clave: string; icono: NombreIcono }[] = [
@@ -47,8 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [colapsada, setColapsada] = useState(false);
   const [abierta, setAbierta] = useState(false); // drawer móvil
-  const [buscador, setBuscador] = useState(false); // buscador global (solo interfaz)
-  const [cuentas, setCuentas] = useState(false); // selector multi-cuenta (solo interfaz)
+  const [buscador, setBuscador] = useState(false);
 
   useEffect(() => {
     setColapsada(window.localStorage.getItem(CLAVE_COLAPSO) === '1');
@@ -133,37 +133,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          {/* Multi-cuenta (solo interfaz, F9) */}
-          <div className={`relative px-3 pb-2 ${colapsada ? 'lg:hidden' : ''}`}>
-            <button
-              onClick={() => setCuentas((v) => !v)}
-              className="flex w-full items-center gap-2.5 rounded-2xl bg-white/6 px-4 py-2.5 text-left transition hover:bg-white/10"
-            >
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-mint/20 text-mint">
-                <Icono nombre="presupuestos" className="h-4 w-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold text-white">{tPanel('cuentaPrincipal')}</span>
-                <span className="block text-[10px] text-white/50">{usuario.moneda_principal}</span>
-              </span>
-              <Icono nombre="chevron-der" className={`h-3.5 w-3.5 text-white/50 transition-transform ${cuentas ? 'rotate-90' : ''}`} />
-            </button>
-            {cuentas ? (
-              <div className="absolute inset-x-3 top-full z-10 mt-1 rounded-2xl border border-white/10 bg-[#1b262e] p-1.5 shadow-xl">
-                <div className="rounded-xl bg-white/8 px-3 py-2 text-xs font-semibold text-white">
-                  {tPanel('cuentaPrincipal')} · {usuario.moneda_principal}
-                </div>
-                <button
-                  onClick={() => setCuentas(false)}
-                  className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs text-white/45"
-                  title={tComun('proximamente')}
-                >
-                  <Icono nombre="mas" className="h-3.5 w-3.5" />
-                  {tPanel('agregarCuenta')} · {tComun('proximamente').toLowerCase()}
-                </button>
-              </div>
-            ) : null}
-          </div>
 
           {/* Buscador global (solo interfaz, F9) */}
           <div className="px-3 pb-3">
@@ -174,10 +143,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               }`}
               title={tPanel('buscarGlobal')}
             >
-              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
+              <Icono nombre="buscar" className="h-4 w-4 shrink-0" />
               <span className={colapsada ? 'lg:hidden' : ''}>{tPanel('buscarGlobal')}</span>
             </button>
           </div>
@@ -271,40 +237,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-5xl">{children}</div>
       </main>
 
-      {/* ── Buscador global (solo interfaz, F9) ────────────────────── */}
-      {buscador ? (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-ink/40 p-4 pt-[18vh] backdrop-blur-[2px]"
-          onClick={() => setBuscador(false)}
-        >
-          <div
-            className="aparece w-full max-w-lg rounded-[var(--radio)] bg-card p-2 shadow-[var(--sombra-lg)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 px-3 py-2">
-              <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
-              <input
-                autoFocus
-                placeholder={tPanel('buscarGlobal')}
-                className="w-full bg-transparent py-2 text-base text-ink outline-none placeholder:text-muted/60"
-                onKeyDown={(e) => e.key === 'Escape' && setBuscador(false)}
-              />
-              <button onClick={() => setBuscador(false)} className="text-muted hover:text-ink" aria-label={tComun('cerrar')}>
-                <Icono nombre="cerrar" className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="border-t border-line px-4 py-3 text-xs text-muted">
-              {tPanel('buscarPista')}{' '}
-              <span className="ml-1 rounded-full bg-warn-bg/15 px-2 py-0.5 font-semibold text-warn">
-                {tComun('proximamente')}
-              </span>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {/* Buscador global: busca de verdad en movimientos y metas */}
+      {buscador ? <BuscadorGlobal onCerrar={() => setBuscador(false)} /> : null}
     </div>
   );
 }

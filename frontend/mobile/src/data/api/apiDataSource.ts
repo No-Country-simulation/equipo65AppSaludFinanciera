@@ -308,6 +308,10 @@ export class ApiDataSource implements FinanceDataSource {
     return this.pedir<SaludCrediticia>('/buro/salud');
   }
 
+  simularBuro(datos: { score: number; atraso: number; deuda: number }): Promise<void> {
+    return this.pedir<void>('/buro/simular', { method: 'POST', body: datos });
+  }
+
   crearTarjeta(alta: AltaTarjeta): Promise<Tarjeta> {
     return this.pedir<Tarjeta>('/tarjetas', { method: 'POST', body: alta });
   }

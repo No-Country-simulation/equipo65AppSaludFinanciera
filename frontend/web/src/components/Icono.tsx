@@ -26,6 +26,7 @@ export type NombreIcono =
   | 'plano'
   | 'ojo'
   | 'ojo-cerrado'
+  | 'buscar'
   | 'android'
   | 'descargar'
   // perfil financiero
@@ -76,6 +77,7 @@ const TRAZOS: Record<NombreIcono, string> = {
   ojo: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7zM12 15a3 3 0 100-6 3 3 0 000 6z',
   android: 'M5 11h14v7a1 1 0 01-1 1H6a1 1 0 01-1-1zM7.5 11a4.5 4.5 0 019 0M9.2 6.3L7.8 4.4M14.8 6.3l1.4-1.9M9.8 8.5h.01M14.2 8.5h.01M3 12.5v4M21 12.5v4M9 19v2M15 19v2',
   descargar: 'M12 4v11m0 0l4-4m-4 4l-4-4M5 19h14',
+  buscar: 'M11 18a7 7 0 100-14 7 7 0 000 14zM21 21l-4.3-4.3',
   'ojo-cerrado':
     'M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 5.2A9.9 9.9 0 0112 5c6.5 0 10 7 10 7a17.9 17.9 0 01-3.1 4M6.5 6.6C3.9 8.3 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1',
   'tendencia-arriba': 'M3 17l6-6 4 4 8-8M15 7h6v6',

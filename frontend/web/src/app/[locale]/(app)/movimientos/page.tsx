@@ -38,7 +38,9 @@ function MovimientosVista() {
 
   const [filtro, setFiltro] = useState<CategoriaSlug | ''>('');
   const [filtroTarjeta, setFiltroTarjeta] = useState<string>(params.get('tarjeta') ?? '');
-  const [busqueda, setBusqueda] = useState('');
+  // El buscador global enlaza aqui con ?buscar=, asi que el filtro arranca
+  // con lo que la persona ya habia escrito en vez de en blanco.
+  const [busqueda, setBusqueda] = useState(() => params.get('buscar') ?? '');
   const [vista, setVista] = useState<'lista' | 'tabla'>('lista');
   const [ordenCol, setOrdenCol] = useState<ColumnaOrden>('fecha');
   const [ordenAsc, setOrdenAsc] = useState(false);
@@ -256,7 +258,7 @@ function MovimientosVista() {
 
       {mostrandoAlta ? (
         <Tarjeta className="aparece">
-          <form onSubmit={agregar} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1.5fr_1.5fr_auto] lg:items-end">
+          <form onSubmit={agregar} className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Campo etiqueta={t('descripcion')}>
               <input className={claseInput} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} maxLength={200} required autoFocus />
             </Campo>
@@ -283,7 +285,7 @@ function MovimientosVista() {
             <Campo etiqueta={t('nota')}>
               <input className={claseInput} value={nota} onChange={(e) => setNota(e.target.value)} maxLength={120} />
             </Campo>
-            <div className="flex gap-2 pb-5 lg:pb-0.5">
+            <div className="flex gap-2 sm:col-span-2 lg:col-span-3 lg:justify-end">
               <Boton type="submit" disabled={guardando}>
                 {guardando ? tComun('guardando') : tComun('guardar')}
               </Boton>

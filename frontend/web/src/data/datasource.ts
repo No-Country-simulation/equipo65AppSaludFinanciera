@@ -169,6 +169,14 @@ export interface FinanceDataSource {
   cuentas(): Promise<CuentaBancaria[]>;
   tarjetas(): Promise<Tarjeta[]>;
   saludCrediticia(): Promise<SaludCrediticia>;
+  /**
+   * Alta de una consulta de buro SIMULADA.
+   *
+   * Existe porque el proyecto no se conecta a un buro real (esta en el
+   * anti-alcance) y sin esto la pantalla de Salud crediticia esta vacia para
+   * siempre en cualquier cuenta nueva. El usuario lo toma la API del token.
+   */
+  simularBuro(datos: { score: number; atraso: number; deuda: number }): Promise<void>;
   // CRUD de tarjetas
   crearTarjeta(alta: AltaTarjeta): Promise<Tarjeta>;
   actualizarTarjeta(id: string, cambios: Partial<AltaTarjeta>): Promise<Tarjeta>;

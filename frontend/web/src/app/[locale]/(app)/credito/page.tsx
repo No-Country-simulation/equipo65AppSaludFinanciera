@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -13,8 +13,8 @@ import {
 } from 'recharts';
 import type { RegistroBuro, SaludCrediticia } from '@/data';
 import { formatearFecha, formatearMoneda } from '@/lib/formato';
-import { useDatos } from '@/lib/useDatos';
-import { EstadoCarga, Tarjeta, TituloTarjeta } from '@/components/ui';
+import { useDataSource, useDatos } from '@/lib/useDatos';
+import { Boton, EstadoCarga, Tarjeta, TituloTarjeta, Vacio } from '@/components/ui';
 import { Icono } from '@/components/Icono';
 
 const SCORE_MIN = 300;
@@ -63,9 +63,33 @@ export default function PaginaCredito() {
   const locale = useLocale();
   const gradId = useId().replace(/:/g, '');
 
-  const { datos, cargando, error, recargar } = useDatos<SaludCrediticia>((fuente) =>
+  const ds = useDataSource();
+  const { datos, cargando, error, codigo, recargar } = useDatos<SaludCrediticia>((fuente) =>
     fuente.saludCrediticia(),
   );
+
+  const [generando, setGenerando] = useState(false);
+  const [errorGenerar, setErrorGenerar] = useState<string | null>(null);
+
+  // La API responde 404 SIN_HISTORIAL_BURO cuando la cuenta no tiene ninguna
+  // consulta. Eso NO es un fallo: es una cuenta recien creada. Pintarlo como
+  // "no pudimos conectar con el servicio" hacia parecer rota la pantalla.
+  const sinHistorial = codigo === 'SIN_HISTORIAL_BURO';
+
+  const generarEjemplo = async () => {
+    setGenerando(true);
+    setErrorGenerar(null);
+    try {
+      // Valores de una situacion sana y creible; el detalle da igual, lo que
+      // importa es que la pantalla tenga algo real que dibujar.
+      await ds.simularBuro({ score: 720, atraso: 0, deuda: 8500 });
+      recargar();
+    } catch {
+      setErrorGenerar(t('generarFallo'));
+    } finally {
+      setGenerando(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -74,11 +98,29 @@ export default function PaginaCredito() {
         <p className="mt-1 text-sm text-muted">{t('subtitulo')}</p>
       </header>
 
-      <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
-        {datos ? (
-          <ScoreContenido datos={datos} gradId={gradId} locale={locale} />
-        ) : null}
-      </EstadoCarga>
+      {sinHistorial && !cargando ? (
+        <Vacio
+          icono="credito"
+          titulo={t('sinHistorialTitulo')}
+          ayuda={t('sinHistorialAyuda')}
+          accion={
+            <div className="flex flex-col items-center gap-2">
+              <Boton onClick={() => void generarEjemplo()} disabled={generando}>
+                {generando ? t('generando') : t('generarEjemplo')}
+              </Boton>
+              {errorGenerar ? (
+                <p role="alert" className="text-xs font-medium text-risk">
+                  {errorGenerar}
+                </p>
+              ) : null}
+            </div>
+          }
+        />
+      ) : (
+        <EstadoCarga cargando={cargando} error={error} recargar={recargar}>
+          {datos ? <ScoreContenido datos={datos} gradId={gradId} locale={locale} /> : null}
+        </EstadoCarga>
+      )}
     </div>
   );
 

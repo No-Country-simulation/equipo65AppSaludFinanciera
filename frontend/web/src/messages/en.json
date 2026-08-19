@@ -185,7 +185,13 @@
     "buscarGlobal": "Search Fintech Vital…",
     "buscarPista": "Transactions, goals, budgets and analyses from one place.",
     "cuentaPrincipal": "Main account",
-    "agregarCuenta": "Add account"
+    "agregarCuenta": "Add account",
+    "buscarEscribe": "Type to search your transactions and goals.",
+    "buscarSinResultados": "Nothing matches what you typed.",
+    "buscarCargando": "Searching…",
+    "buscarMovimientos": "Transactions",
+    "buscarMetas": "Savings goals",
+    "buscarFallo": "We could not search right now."
   },
   "indicadores": {
     "tasa_ahorro": "Savings rate",
@@ -324,7 +330,12 @@
     "ultimaConsulta": "Last check: {fecha}",
     "alimentaPerfil": "Your credit behavior feeds your financial profile.",
     "vacio": "No bureau information yet.",
-    "senales": "Warning signs"
+    "senales": "Warning signs",
+    "sinHistorialTitulo": "No credit bureau records yet",
+    "sinHistorialAyuda": "Your score will show up here once there is a record. This version does not connect to a real bureau, so you can generate a sample one to see how it would look.",
+    "generarEjemplo": "Generate a sample record",
+    "generando": "Generating…",
+    "generarFallo": "We could not generate the sample record."
   },
   "analisis": {
     "titulo": "Analyses",

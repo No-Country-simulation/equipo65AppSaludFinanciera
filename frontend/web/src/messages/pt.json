@@ -185,7 +185,13 @@
     "buscarGlobal": "Buscar no Fintech Vital…",
     "buscarPista": "Movimentações, metas, orçamentos e análises em um só lugar.",
     "cuentaPrincipal": "Conta principal",
-    "agregarCuenta": "Adicionar conta"
+    "agregarCuenta": "Adicionar conta",
+    "buscarEscribe": "Digite para buscar nos seus lançamentos e nas suas metas.",
+    "buscarSinResultados": "Nada corresponde ao que você digitou.",
+    "buscarCargando": "Buscando…",
+    "buscarMovimientos": "Lançamentos",
+    "buscarMetas": "Metas de poupança",
+    "buscarFallo": "Não foi possível buscar agora."
   },
   "indicadores": {
     "tasa_ahorro": "Taxa de poupança",
@@ -324,7 +330,12 @@
     "ultimaConsulta": "Última consulta: {fecha}",
     "alimentaPerfil": "Seu comportamento de crédito alimenta seu perfil financeiro.",
     "vacio": "Ainda não há informações de crédito.",
-    "senales": "Sinais de alerta"
+    "senales": "Sinais de alerta",
+    "sinHistorialTitulo": "Ainda não há consultas de bureau",
+    "sinHistorialAyuda": "Seu score aparecerá aqui assim que houver uma consulta. Esta versão não se conecta a um bureau real, então você pode gerar uma de exemplo para ver como ficaria.",
+    "generarEjemplo": "Gerar consulta de exemplo",
+    "generando": "Gerando…",
+    "generarFallo": "Não foi possível gerar a consulta de exemplo."
   },
   "analisis": {
     "titulo": "Análises",

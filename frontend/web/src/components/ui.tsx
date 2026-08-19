@@ -176,6 +176,37 @@ export function Skeleton({ className = '' }: { className?: string }) {
 }
 
 /** Estado cargando / error+Reintentar - el patron F6.7 desde el dia 1. */
+/**
+ * Estado VACIO: no hay nada que enseñar todavia, y eso no es un fallo.
+ *
+ * Se separa del estado de error a proposito. Antes, una pantalla sin datos
+ * pintaba "No pudimos conectar con el servicio" con un boton de Reintentar,
+ * que le dice a la persona que algo se rompio cuando lo unico que pasa es que
+ * su cuenta acaba de nacer.
+ */
+export function Vacio({
+  icono,
+  titulo,
+  ayuda,
+  accion,
+}: {
+  icono: NombreIcono;
+  titulo: string;
+  ayuda?: string;
+  accion?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-[var(--radio)] border border-line bg-card py-16 text-center">
+      <span className="grid h-11 w-11 place-items-center rounded-full bg-accent/10 text-accent">
+        <Icono nombre={icono} />
+      </span>
+      <p className="text-sm font-semibold text-ink">{titulo}</p>
+      {ayuda ? <p className="max-w-sm px-6 text-sm text-muted">{ayuda}</p> : null}
+      {accion ? <div className="mt-1">{accion}</div> : null}
+    </div>
+  );
+}
+
 export function EstadoCarga({
   cargando,
   error,

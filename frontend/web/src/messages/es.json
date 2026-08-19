@@ -185,7 +185,13 @@
     "buscarGlobal": "Buscar en Fintech Vital…",
     "buscarPista": "Movimientos, metas, presupuestos y análisis desde un solo lugar.",
     "cuentaPrincipal": "Cuenta principal",
-    "agregarCuenta": "Agregar cuenta"
+    "agregarCuenta": "Agregar cuenta",
+    "buscarEscribe": "Escribe para buscar en tus movimientos y tus metas.",
+    "buscarSinResultados": "Nada coincide con lo que escribiste.",
+    "buscarCargando": "Buscando…",
+    "buscarMovimientos": "Movimientos",
+    "buscarMetas": "Metas de ahorro",
+    "buscarFallo": "No pudimos buscar ahora mismo."
   },
   "indicadores": {
     "tasa_ahorro": "Tasa de ahorro",
@@ -324,7 +330,12 @@
     "ultimaConsulta": "Última consulta: {fecha}",
     "alimentaPerfil": "Tu comportamiento crediticio alimenta tu perfil financiero.",
     "vacio": "Aún no hay información de buró.",
-    "senales": "Señales de alerta"
+    "senales": "Señales de alerta",
+    "sinHistorialTitulo": "Todavía no hay consultas de buró",
+    "sinHistorialAyuda": "Tu score aparecerá aquí en cuanto haya una consulta. Esta versión no se conecta a un buró real, así que puedes generar una de ejemplo para ver cómo se vería.",
+    "generarEjemplo": "Generar consulta de ejemplo",
+    "generando": "Generando…",
+    "generarFallo": "No pudimos generar la consulta de ejemplo."
   },
   "analisis": {
     "titulo": "Análisis",
