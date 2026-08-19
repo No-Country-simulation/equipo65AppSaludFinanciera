@@ -23,7 +23,11 @@ async function entrar(page: Page) {
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.getByRole('button', { name: /^Entrar$/ }).click();
   // El login redirige a /<idioma>/panel con el idioma preferido del usuario.
-  await page.waitForURL(/\/(es|pt|en)\/panel/, { timeout: 15_000 });
+  //
+  // 30 s y no 15: recien reconstruida la imagen, Next compila la ruta /panel en
+  // la primera visita y el redirect puede pasar de 15 s. Con el margen corto,
+  // cada primera pasada dejaba 2-4 tests en rojo por algo que no esta roto.
+  await page.waitForURL(/\/(es|pt|en)\/panel/, { timeout: 30_000 });
 }
 
 /**
