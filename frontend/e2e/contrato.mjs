@@ -373,6 +373,98 @@ async function main() {
     afirmar(Array.isArray(r.monedas) && r.monedas.length > 0, 'no llega ninguna moneda');
   });
 
+  // --- Registro: lo que se rellena en el alta tiene que verse en el perfil ---
+  // Este bloque existe por un fallo concreto: el formulario mandaba `ciudad`, la
+  // API no tenia el campo, Jackson lo tiraba sin avisar y la ciudad no aparecia
+  // nunca en el perfil. No bastaba con "el alta responde 201": hay que
+  // comprobar que CADA dato que se manda vuelve.
+  p = pantalla('REGISTRO (lo que se responde en el alta sale en el perfil)');
+
+  const tokenDemo = token;
+  let ciudadElegida = null;
+
+  await caso(p, 'el catalogo de ciudades responde y llena el selector', async () => {
+    const r = await pedir('/ciudades', { auth: false });
+    afirmar(Array.isArray(r.ciudades) && r.ciudades.length > 0, 'no llega ninguna ciudad');
+    for (const c of r.ciudades) {
+      afirmar(typeof c.nombre === 'string' && c.nombre.trim().length > 0,
+        'una ciudad no trae nombre: el <option> se pintaria vacio');
+      afirmar(typeof c.estado_region === 'string', 'la ciudad "' + c.nombre + '" no trae estado_region');
+      afirmar(/^[A-Z]{2}$/.test(c.pais), 'la ciudad "' + c.nombre + '" trae pais "' + c.pais + '"');
+    }
+    ciudadElegida = r.ciudades[0];
+  });
+
+  // Un alta de verdad, con TODOS los campos del formulario rellenos.
+  const alta = {
+    email: 'e2e.alta.' + Date.now() + '@ejemplo.mx',
+    password: 'ContrasenaE2E123',
+    moneda_principal: 'MXN',
+    nombre: 'Nadia',
+    apellido: 'Quiroga',
+    fecha_nacimiento: '1994-05-17',
+    genero: 'F',
+    telefono: '5598765432',
+    idioma: 'pt',
+    terminos_version: '1.0',
+  };
+
+  /** Lo que la pantalla de perfil pinta a partir del alta. */
+  const comprobarPerfil = (u, donde) => {
+    afirmar(u.nombre === alta.nombre, donde + ': nombre "' + u.nombre + '" != "' + alta.nombre + '"');
+    afirmar(u.apellido === alta.apellido, donde + ': apellido "' + u.apellido + '" != "' + alta.apellido + '"');
+    afirmar(u.fecha_nacimiento === alta.fecha_nacimiento,
+      donde + ': fecha_nacimiento "' + u.fecha_nacimiento + '" != "' + alta.fecha_nacimiento + '"');
+    afirmar(u.genero === alta.genero, donde + ': genero "' + u.genero + '" != "' + alta.genero + '"');
+    afirmar(u.telefono === alta.telefono, donde + ': telefono "' + u.telefono + '" != "' + alta.telefono + '"');
+    afirmar(u.moneda_principal === alta.moneda_principal,
+      donde + ': moneda_principal "' + u.moneda_principal + '"');
+    // El idioma del alta: sin el, quien se registra en /pt entra despues en es.
+    afirmar(u.idioma === alta.idioma, donde + ': idioma "' + u.idioma + '" != "' + alta.idioma + '"');
+    // ESTE es el fallo reportado: la ciudad se rellenaba y no volvia nunca.
+    afirmar(u.ciudad === ciudadElegida.nombre,
+      donde + ': ciudad "' + u.ciudad + '" != "' + ciudadElegida.nombre + '" (se perdio en el alta)');
+    afirmar(u.estado_region === ciudadElegida.estado_region, donde + ': falta estado_region');
+    afirmar(u.pais === ciudadElegida.pais, donde + ': falta pais');
+  };
+
+  await caso(p, 'el alta devuelve TODOS los datos que se rellenaron', async () => {
+    afirmar(ciudadElegida, 'sin catalogo de ciudades no se puede probar el alta');
+    const creado = await pedir('/auth/registro', {
+      method: 'POST', auth: false, body: { ...alta, ciudad: ciudadElegida.nombre },
+    });
+    comprobarPerfil(creado, 'la respuesta del alta');
+  });
+
+  await caso(p, 'el perfil del recien registrado trae lo mismo que el alta', async () => {
+    const sesion = await pedir('/auth/login', {
+      method: 'POST', auth: false, body: { email: alta.email, password: alta.password },
+    });
+    token = sesion.access_token;
+    afirmar(sesion.usuario, 'el login no devuelve al usuario: la app guarda una ficha vacia');
+    comprobarPerfil(sesion.usuario, 'el usuario del login');
+    comprobarPerfil(await pedir('/usuarios/me'), 'GET /usuarios/me');
+  });
+
+  await caso(p, 'una ciudad que no esta en el catalogo se rechaza, no se ignora', async () => {
+    // Tirar el dato en silencio es lo que causo el fallo. Se prefiere un 422.
+    try {
+      await pedir('/auth/registro', {
+        method: 'POST', auth: false,
+        body: { ...alta, email: 'e2e.ciudad.' + Date.now() + '@ejemplo.mx', ciudad: 'Ciudad Inventada' },
+      });
+      afirmar(false, 'el alta acepto una ciudad inexistente: el dato se pierde sin avisar');
+    } catch (e) {
+      afirmar(e.status === 422, 'se esperaba 422 y llego: ' + e.message);
+    }
+  });
+
+  await caso(p, 'la cuenta de prueba se puede dar de baja (limpieza)', async () => {
+    await pedir('/usuarios/me', { method: 'DELETE', body: { password: alta.password } });
+  });
+
+  token = tokenDemo;
+
   // --- Capa de datos compartida ---------------------------------------------
   // Todo lo de arriba vale para el movil SOLO mientras las dos apps compartan
   // el mismo cliente de API. Si alguien toca una copia y no la otra, este test

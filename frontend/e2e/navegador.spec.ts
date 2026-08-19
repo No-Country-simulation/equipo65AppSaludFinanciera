@@ -47,6 +47,20 @@ async function irA(page: Page, enlace: RegExp) {
 }
 
 /**
+ * Silencia el aviso de almacenamiento ANTES de que se pinte.
+ *
+ * Esta fijo abajo y, en viewport de telefono, tapa el boton de enviar del
+ * formulario. Se marca su clave en localStorage en vez de pulsar "Entendido":
+ * el banner entra con animacion y Playwright lo rechaza por inestable mientras
+ * se mueve, asi que el clic se agotaba esperando.
+ */
+async function silenciarAviso(page: Page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('fintechvital.avisoAlmacenamiento', '1');
+  });
+}
+
+/**
  * Recoge las llamadas a la API que falla la pagina. Sirve para que, cuando un
  * test falle, el motivo salga en el mensaje y no haya que abrir devtools.
  */
@@ -149,7 +163,10 @@ test.describe('Movimientos', () => {
     await irA(page, /^Movimientos$/);
     await expect(page.getByRole('heading', { name: 'Movimientos' })).toBeVisible();
 
+    // `count()` NO espera: contaba antes de que resolviera el fetch y daba 0 en
+    // cuanto la maquina iba cargada (suite completa con varios workers).
     const filas = page.locator('ul > li');
+    await expect(filas.first()).toBeVisible();
     const n = await filas.count();
     expect(n, 'la lista de movimientos llega vacia').toBeGreaterThan(0);
 
@@ -309,5 +326,75 @@ test.describe('Sesion', () => {
       noAutorizadas,
       `abrir la URL directa da 401: ${noAutorizadas.join(', ')}`,
     ).toHaveLength(0);
+  });
+});
+
+/**
+ * Formulario de registro. Es la primera pantalla que ve alguien que no tiene
+ * cuenta, y la unica que se rellena entera de una vez: lo que aqui no se
+ * guarda no se ve nunca mas.
+ */
+test.describe('Registro', () => {
+  test('el selector de ciudad se llena del catalogo, no es texto libre', async ({ page }) => {
+    // La ciudad es una FK en la BD (`usuario.ciudad_id`). Escrita a mano no se
+    // podia guardar: se rellenaba y desaparecia sin que nadie avisara.
+    await page.goto('/es/registro');
+    const ciudad = page.locator('select').filter({ hasText: 'Selecciona tu ciudad' });
+    await expect(ciudad).toBeVisible();
+
+    const opciones = ciudad.locator('option[value]:not([value=""])');
+    await expect(opciones.first()).toBeAttached({ timeout: 15_000 });
+    const textos = await opciones.allTextContents();
+    expect(textos.length, 'el catalogo de ciudades llega vacio').toBeGreaterThan(0);
+    expect(
+      textos.filter((t) => t.trim().length === 0).length,
+      'hay ciudades que se pintan en blanco',
+    ).toBe(0);
+  });
+
+  test('enviar el formulario vacio señala los campos, no falla en silencio', async ({ page }) => {
+    await silenciarAviso(page);
+    await page.goto('/es/registro');
+    await page.getByRole('button', { name: /^Continuar$/ }).click();
+
+    // Un `required` de HTML solo enseña un globo del navegador en el primer
+    // campo. Aqui cada campo dice lo suyo y el aviso queda en la pagina.
+    const avisos = page.getByRole('alert');
+    await expect(avisos.first()).toBeVisible();
+    expect(await avisos.count(), 'solo se marca un campo').toBeGreaterThan(1);
+  });
+
+  test('avisa de la contrasena corta y del correo mal escrito al salir del campo', async ({ page }) => {
+    await page.goto('/es/registro');
+    await page.getByRole('textbox', { name: /email/i }).fill('esto-no-es-un-correo');
+    // .first(): el segundo input de tipo password es el de confirmacion.
+    await page.locator('input[type="password"]').first().fill('corta');
+    await page.getByRole('textbox', { name: /^Nombre/ }).click();
+
+    await expect(page.getByText('Ingresa un correo electrónico válido.')).toBeVisible();
+    await expect(
+      page.getByText('La contraseña debe tener al menos 10 caracteres.'),
+    ).toBeVisible();
+  });
+
+  test('avisa cuando las dos contrasenas no coinciden', async ({ page }) => {
+    // Sin esto, una errata al teclear deja a la persona fuera de la cuenta que
+    // acaba de crear, y con 2FA de por medio recuperarla no es trivial.
+    await page.goto('/es/registro');
+    const passwords = page.locator('input[type="password"]');
+    await passwords.first().fill('contrasena-larga-1');
+    await passwords.nth(1).fill('contrasena-larga-2');
+    await page.getByRole('textbox', { name: /^Nombre/ }).click();
+
+    await expect(page.getByText('Las contraseñas no coinciden.')).toBeVisible();
+  });
+
+  test('el alta anuncia sus cuatro pasos', async ({ page }) => {
+    // Cuenta, Finanzas, Seguridad y Listo. Si el paso de finanzas desaparece,
+    // el ingreso mensual deja de pedirse y el analisis arranca sin base.
+    await page.goto('/es/registro');
+    const pasos = page.locator('ol > li');
+    await expect(pasos).toHaveCount(4);
+    await expect(pasos.nth(1)).toContainText('Finanzas');
   });
 });

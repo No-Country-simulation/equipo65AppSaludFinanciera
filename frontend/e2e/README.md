@@ -44,6 +44,20 @@ se lee nada. Por eso los casos afirman sobre los campos concretos que cada
 pantalla pinta, y el mensaje de fallo dice qué se rompe en la interfaz, no solo
 qué campo falta.
 
+**El bloque `REGISTRO` de `contrato.mjs` compara campo a campo.** Da de alta un
+usuario con el formulario entero relleno y exige que el alta, el login y
+`GET /usuarios/me` devuelvan **lo mismo que se mandó**, incluida la ciudad.
+Existe por un fallo concreto: `ciudad` viajaba en la petición, la API no tenía
+ese campo, Jackson lo descartaba sin avisar y la ciudad no aparecía nunca en el
+perfil. Un caso de "el alta responde 201" no lo habría cazado. El usuario de
+prueba se da de baja al final del bloque.
+
+El alta tiene **cuatro pasos** (cuenta, finanzas, seguridad, listo) y el de
+finanzas guarda contra la API real -- ingreso mensual a `PATCH /usuarios/me` y
+la primera meta a `POST /metas`--, no en `localStorage`. `navegador.spec.ts`
+vigila que ese paso siga anunciandose en el stepper: si desaparece, el ingreso
+mensual deja de pedirse en el alta y el analisis arranca sin base.
+
 **`navegador.spec.ts` navega pulsando el menú, no con `page.goto()`.** No es
 estilo: el token de sesión vive solo en memoria (`data/api/token.ts`) y
 `hidratarSesion()` es un no-op, así que una carga completa de página lo pierde y
