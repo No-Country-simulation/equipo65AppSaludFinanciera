@@ -37,8 +37,8 @@ asesoría financiera regulada y no inventa recomendaciones con un LLM.
 Necesitas **Docker o Podman**. Nada más.
 
 ```bash
-git clone https://github.com/No-Country-simulation/equipo65AppSaludFinanciera.git
-cd equipo65AppSaludFinanciera
+git clone https://github.com/No-Country-simulation/fintech-vital-equipo65.git
+cd fintech-vital-equipo65
 
 ./ops/stack.sh arriba        # Linux / macOS
 .\ops\stack.ps1 arriba       # Windows
