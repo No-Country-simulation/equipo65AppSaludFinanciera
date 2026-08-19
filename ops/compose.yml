@@ -198,6 +198,7 @@ services:
       context: ../frontend/web
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+        NEXT_PUBLIC_APK_URL: ${NEXT_PUBLIC_APK_URL:-}
     image: fintechvital/web:local
     container_name: ${FV_PROYECTO:-fintechvital}-web
     ports:

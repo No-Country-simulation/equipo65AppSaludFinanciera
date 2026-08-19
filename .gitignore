@@ -60,6 +60,9 @@ build/
 target/
 __pycache__/
 *.tsbuildinfo
+# El APK de Android se construye, no se versiona: son ~110 MB por build.
+*.apk
+*.aab
 
 # --- Herramientas de agentes / indexado local ---
 .agents/

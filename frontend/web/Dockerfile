@@ -18,6 +18,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # EN EL MOMENTO DEL BUILD (no se puede cambiar reiniciando el contenedor).
 ARG NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# URL del APK de Android. SIN valor por defecto a proposito: si nadie la
+# define, la web no pinta el bloque de descarga. Un boton que lleva a un 404
+# es peor que no ofrecer la app.
+ARG NEXT_PUBLIC_APK_URL=
+ENV NEXT_PUBLIC_APK_URL=$NEXT_PUBLIC_APK_URL
 RUN npm run build
 
 FROM node:22-alpine AS runtime
