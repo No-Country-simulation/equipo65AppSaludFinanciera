@@ -96,8 +96,26 @@
       "fechaInvalida": "Essa data não existe. Confira.",
       "fechaFutura": "A data de nascimento deve estar no passado.",
       "telefonoInvalido": "O telefone deve ter entre 6 e 15 dígitos.",
-      "ciudadInvalida": "Informe uma cidade válida (mínimo 3 letras, sem números)."
-    }
+      "ingresoObligatorio": "Informe sua renda mensal ou pule esta etapa.",
+      "ingresoInvalido": "A renda precisa ser maior que zero.",
+      "metaIncompleta": "Se você define uma meta, diga também de quanto precisa.",
+      "passwordNoCoincide": "As senhas não coincidem."
+    },
+    "ciudadSelecciona": "Selecione sua cidade",
+    "ciudadNoDisponible": "Não foi possível carregar o catálogo de cidades. Você pode continuar sem ela.",
+    "pasoFinanzas": "Finanças",
+    "onboardingTitulo": "Ajuste suas finanças",
+    "onboardingSubtitulo": "Dois dados e sua análise já começa a fazer sentido. Você pode alterá-los quando quiser no seu perfil.",
+    "ingresoMensual": "Renda mensal",
+    "ingresoMensualAyuda": "É a base de todos os indicadores: sem ela, a análise não consegue calcular sua taxa de poupança.",
+    "metaTitulo": "Sua primeira meta de poupança",
+    "metaNombre": "Para que você está poupando?",
+    "metaNombrePlaceholder": "Uma viagem, um carro, uma reserva de emergência…",
+    "metaMonto": "De quanto você precisa?",
+    "guardarContinuar": "Salvar e continuar",
+    "omitirPaso": "Agora não",
+    "onboardingFallo": "Não foi possível salvar esses dados, mas sua conta já foi criada. Você pode informá-los depois no seu perfil.",
+    "passwordConfirmar": "Repita a senha"
   },
   "panel": {
     "saludo": "Olá, {nombre}",
@@ -368,7 +386,7 @@
     "idioma": "Idioma",
     "guardado": "Alterações salvas",
     "datosPersonales": "Dados pessoais",
-    "datosPersonalesAyuda": "Fornecidos pelo seu banco (somente leitura).",
+    "datosPersonalesAyuda": "Você os informou ao criar sua conta (somente leitura).",
     "apellido": "Sobrenome",
     "edad": "Idade",
     "anios": "{n} anos",

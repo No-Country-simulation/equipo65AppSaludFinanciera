@@ -136,7 +136,12 @@ export default function PantallaPerfil() {
     <ScrollView style={{ flex: 1, backgroundColor: temaActivo.canvas }} contentContainerStyle={{ paddingBottom: 32 }}>
       <Hero paddingTop={insets.top + 14}>
         <Text style={[estilos.titulo, { color: temaActivo.blanco, opacity: 0.6 }]}>{t('perfilUsuario.titulo')}</Text>
-        <Text style={[estilos.nombre, { color: temaActivo.blanco }]}>{usuario.nombre}</Text>
+        {/* Nombre y apellido: los dos se piden en el alta y los dos son NOT NULL
+            en la base, asi que enseñar solo el nombre desaprovecha un dato que
+            la persona ya dio. */}
+        <Text style={[estilos.nombre, { color: temaActivo.blanco }]}>
+          {[usuario.nombre, usuario.apellido].filter(Boolean).join(' ')}
+        </Text>
         <Text style={[estilos.subtitulo, { color: temaActivo.blanco, opacity: 0.65 }]}>{usuario.email}</Text>
       </Hero>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,7 +13,7 @@ import { router, type Href } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FinanceApiError, TERMINOS_VERSION, type Moneda, type Usuario } from '@/data';
+import { FinanceApiError, TERMINOS_VERSION, type Ciudad, type Moneda, type Usuario } from '@/data';
 import { Colores, Espacio, Fuentes } from '@/constants/tema';
 import { useI18n } from '@/i18n';
 import { useSesion } from '@/lib/sesion';
@@ -25,11 +25,17 @@ import { Logo } from '@/components/Logo';
 
 const MONEDAS: Moneda[] = ['USD', 'MXN', 'ARS', 'COP', 'CLP', 'PEN', 'BRL', 'EUR'];
 
-type Paso = 'cuenta' | 'qr' | 'verificar' | 'respaldo';
-const INDICE_PASO: Record<Paso, number> = { cuenta: 0, qr: 1, verificar: 1, respaldo: 2 };
+type Paso = 'cuenta' | 'onboarding' | 'qr' | 'verificar' | 'respaldo';
+const INDICE_PASO: Record<Paso, number> = {
+  cuenta: 0,
+  onboarding: 1,
+  qr: 2,
+  verificar: 2,
+  respaldo: 3,
+};
 
 export default function PantallaRegistro() {
-  const { t, setIdioma } = useI18n();
+  const { t, idioma, setIdioma } = useI18n();
   const ds = useDataSource();
   const { iniciarSesion, actualizarUsuario } = useSesion();
   const insets = useSafeAreaInsets();
@@ -37,6 +43,7 @@ export default function PantallaRegistro() {
   const [paso, setPaso] = useState<Paso>('cuenta');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirmar, setPasswordConfirmar] = useState('');
   const [moneda, setMoneda] = useState<Moneda>('USD');
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -44,7 +51,16 @@ export default function PantallaRegistro() {
   const [genero, setGenero] = useState<'M' | 'F' | ''>('');
   const [telefono, setTelefono] = useState('');
   const [ciudad, setCiudad] = useState('');
+  // Catalogo de ciudades: `usuario.ciudad_id` es una FK, asi que la ciudad se
+  // ELIGE. Escrita a mano no se podia guardar y se perdia sin avisar.
+  const [ciudades, setCiudades] = useState<Ciudad[]>([]);
+  const [ciudadesFallaron, setCiudadesFallaron] = useState(false);
   const [aceptado, setAceptado] = useState(false);
+
+  // Paso 2: puesta a punto financiera.
+  const [ingreso, setIngreso] = useState('');
+  const [nombreMeta, setNombreMeta] = useState('');
+  const [montoMeta, setMontoMeta] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +72,20 @@ export default function PantallaRegistro() {
 
   const fallar = (causa: unknown) =>
     setError(causa instanceof FinanceApiError ? causa.message : String(causa));
+
+  useEffect(() => {
+    let activo = true;
+    ds.ciudades()
+      .then((lista) => {
+        if (activo) setCiudades(lista);
+      })
+      .catch(() => {
+        if (activo) setCiudadesFallaron(true);
+      });
+    return () => {
+      activo = false;
+    };
+  }, [ds]);
 
   /**
    * Mascara de la fecha de nacimiento: el usuario teclea solo digitos y aqui se
@@ -87,6 +117,10 @@ export default function PantallaRegistro() {
     // auth.passwordAyuda. Pedir mas aqui que en la API confunde al usuario.
     if (password.length < 10) return 'auth.val.passwordCorta';
 
+    // Una errata deja a la persona fuera de la cuenta que acaba de crear, y
+    // con 2FA de por medio recuperarla no es trivial.
+    if (passwordConfirmar !== password) return 'auth.val.passwordNoCoincide';
+
     // La mascara garantiza la forma, no que la fecha exista: 2026-02-31 encaja
     // en el patron. Se construye la fecha y se comprueba que Date no haya
     // tenido que desbordar el dia (31 de febrero -> 3 de marzo).
@@ -113,13 +147,8 @@ export default function PantallaRegistro() {
       return 'auth.val.telefonoInvalido';
     }
 
-    // Sin lista blanca de letras: una regex con solo acentos del castellano
-    // rechaza "Sao Paulo", "Brasilia" o "Saint-Etienne". Basta con exigir
-    // longitud y que no venga un numero suelto.
-    const ciudadLimpia = ciudad.trim();
-    if (ciudadLimpia && (ciudadLimpia.length < 3 || /\d/.test(ciudadLimpia))) {
-      return 'auth.val.ciudadInvalida';
-    }
+    // La ciudad ya no se valida: sale de un selector alimentado por
+    // `GET /ciudades`, asi que solo puede estar vacia o ser una del catalogo.
     return null;
   };
 
@@ -143,17 +172,82 @@ export default function PantallaRegistro() {
         fecha_nacimiento: nacimiento,
         genero: genero || undefined,
         telefono: telefono.trim() || undefined,
-        ciudad: ciudad.trim() || undefined,
+        ciudad: ciudad || undefined,
+        // El idioma con el que se registro. Sin esto la cuenta quedaba en `es`
+        // aunque el alta se hiciera en portugues, y al entrar desde otro
+        // dispositivo la app se abria en el idioma equivocado.
+        idioma,
         terminos_version: TERMINOS_VERSION,
       });
       const sesion = await ds.login(email.trim(), password);
       const creado = sesion.usuario ?? (await ds.me());
       iniciarSesion(creado, { access: sesion.access_token, refresh: sesion.refresh_token });
       setUsuario(creado);
-      const datos = await ds.iniciar2fa();
-      setSecreto(datos.secreto);
-      setOtpauth(datos.otpauth_uri);
-      setPaso('qr');
+      // La cuenta ya existe y hay sesion: de aqui en adelante las llamadas
+      // van autenticadas, que es lo que necesita el paso de finanzas.
+      setPaso('onboarding');
+    } catch (causa) {
+      fallar(causa);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  /** Pide el secreto TOTP y pasa al QR. Se llega aqui se guarde o no el paso 2. */
+  const irAlSegundoFactor = async () => {
+    const datos = await ds.iniciar2fa();
+    setSecreto(datos.secreto);
+    setOtpauth(datos.otpauth_uri);
+    setPaso('qr');
+  };
+
+  /**
+   * Paso 2: ingreso mensual y primera meta, CONTRA LA API.
+   *
+   * El ingreso va al perfil (`PATCH /usuarios/me`) porque es la base de todos
+   * los indicadores, y la meta a `POST /metas`. No se guarda nada en el
+   * dispositivo: el proyecto no admite datos simulados (ADR-0011).
+   */
+  const guardarFinanzas = async () => {
+    setError(null);
+    if (!ingreso.trim() || !(Number(ingreso) > 0)) {
+      setError(t('auth.val.ingresoObligatorio'));
+      return;
+    }
+    // O los dos o ninguno: una meta sin objetivo no se puede pintar, y un
+    // objetivo sin nombre no dice nada.
+    const tieneNombre = nombreMeta.trim().length > 0;
+    const tieneMonto = Number(montoMeta) > 0;
+    if (tieneNombre !== tieneMonto) {
+      setError(t('auth.val.metaIncompleta'));
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      const actualizado = await ds.actualizarPerfil({ ingreso_mensual: Number(ingreso) });
+      actualizarUsuario(actualizado);
+      setUsuario(actualizado);
+      if (tieneNombre && tieneMonto) {
+        await ds.crearMeta({ nombre: nombreMeta.trim(), objetivo: Number(montoMeta) });
+      }
+      await irAlSegundoFactor();
+    } catch (causa) {
+      // La cuenta YA esta creada: si esto falla no se puede echar atras a la
+      // persona. Se avisa y se le deja seguir con "Ahora no".
+      setError(
+        `${t('auth.onboardingFallo')} ${causa instanceof FinanceApiError ? causa.message : ''}`.trim(),
+      );
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const omitirFinanzas = async () => {
+    setEnviando(true);
+    setError(null);
+    try {
+      await irAlSegundoFactor();
     } catch (causa) {
       fallar(causa);
     } finally {
@@ -201,7 +295,7 @@ export default function PantallaRegistro() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          {[t('auth.pasoCuenta'), t('auth.pasoSeguridad'), t('auth.pasoListo')].map((etiqueta, i) => (
+          {[t('auth.pasoCuenta'), t('auth.pasoFinanzas'), t('auth.pasoSeguridad'), t('auth.pasoListo')].map((etiqueta, i) => (
             <View key={etiqueta} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <View style={[estilos.pasoNum, { backgroundColor: i <= pasoActual ? Colores.menta : 'rgba(255,255,255,0.15)' }]}>
                 <Text style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 11, color: Colores.blanco }}>{i + 1}</Text>
@@ -221,6 +315,7 @@ export default function PantallaRegistro() {
 
               <Campo etiqueta={t('auth.email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
               <Campo etiqueta={t('auth.password')} ayuda={t('auth.passwordAyuda')} value={password} onChangeText={setPassword} secureTextEntry />
+              <Campo etiqueta={t('auth.passwordConfirmar')} value={passwordConfirmar} onChangeText={setPasswordConfirmar} secureTextEntry />
 
               <View style={{ gap: 6 }}>
                 <Text style={estilos.etiqueta}>{t('auth.monedaPrincipal')}</Text>
@@ -271,7 +366,33 @@ export default function PantallaRegistro() {
               {/* 15 = @Size(max = 15) de RegistroRequest. Con maxLength 10 no
                   entraba un numero brasileno (11 digitos). */}
               <Campo etiqueta={t('auth.telefono')} ayuda={t('auth.opcional')} value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" maxLength={15} />
-              <Campo etiqueta={t('auth.ciudad')} ayuda={t('auth.opcional')} value={ciudad} onChangeText={setCiudad} autoCapitalize="words" />
+              {/* La ciudad se ELIGE del catalogo (`GET /ciudades`) y no se
+                  escribe: en la BD es una FK, asi que un nombre a mano no se
+                  podia guardar y desaparecia sin avisar. */}
+              <View style={{ gap: 6 }}>
+                <Text style={estilos.etiqueta}>
+                  {t('auth.ciudad')} ({t('auth.opcional')})
+                </Text>
+                {ciudadesFallaron ? (
+                  <Text style={estilos.ayuda}>{t('auth.ciudadNoDisponible')}</Text>
+                ) : ciudades.length === 0 ? (
+                  <Text style={estilos.ayuda}>{t('comun.cargando')}</Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {ciudades.map((item) => (
+                      <Pressable
+                        key={item.id}
+                        onPress={() => setCiudad(ciudad === item.nombre ? '' : item.nombre)}
+                        style={[estilos.chipMoneda, ciudad === item.nombre && { backgroundColor: Colores.acento, borderColor: 'transparent' }]}
+                      >
+                        <Text style={{ fontFamily: Fuentes.cuerpoSemi, fontSize: 12, color: ciudad === item.nombre ? Colores.sobreAcento : Colores.apagado }}>
+                          {item.nombre}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
 
               {error ? <Text style={estilos.error}>{error}</Text> : null}
 
@@ -299,6 +420,49 @@ export default function PantallaRegistro() {
                   <Text style={{ color: Colores.acento, fontFamily: Fuentes.cuerpoSemi }}>{t('auth.entrar')}</Text>
                 </Text>
               </Pressable>
+            </>
+          ) : null}
+
+          {paso === 'onboarding' ? (
+            <>
+              <Text style={estilos.titulo}>{t('auth.onboardingTitulo')}</Text>
+              <Text style={estilos.subtitulo}>{t('auth.onboardingSubtitulo')}</Text>
+
+              <Campo
+                etiqueta={`${t('auth.ingresoMensual')} (${moneda})`}
+                ayuda={t('auth.ingresoMensualAyuda')}
+                value={ingreso}
+                onChangeText={setIngreso}
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={[estilos.etiqueta, { marginTop: 4 }]}>
+                {t('auth.metaTitulo')} ({t('auth.opcional')})
+              </Text>
+              <Campo
+                etiqueta={t('auth.metaNombre')}
+                placeholder={t('auth.metaNombrePlaceholder')}
+                value={nombreMeta}
+                onChangeText={setNombreMeta}
+                maxLength={80}
+              />
+              <Campo
+                etiqueta={`${t('auth.metaMonto')} (${moneda})`}
+                value={montoMeta}
+                onChangeText={setMontoMeta}
+                keyboardType="decimal-pad"
+              />
+
+              {error ? <Text style={estilos.error}>{error}</Text> : null}
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Boton texto={t('auth.omitirPaso')} variante="fantasma" onPress={() => void omitirFinanzas()} deshabilitado={enviando} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Boton texto={enviando ? t('comun.guardando') : t('auth.guardarContinuar')} onPress={() => void guardarFinanzas()} cargando={enviando} />
+                </View>
+              </View>
             </>
           ) : null}
 
@@ -373,6 +537,7 @@ const estilos = StyleSheet.create({
   titulo: { fontFamily: Fuentes.titulo, fontSize: 24, color: Colores.tinta },
   subtitulo: { fontFamily: Fuentes.cuerpo, fontSize: 13, color: Colores.apagado, marginTop: -8 },
   etiqueta: { fontFamily: Fuentes.cuerpoMedio, fontSize: 13, color: Colores.tinta },
+  ayuda: { fontFamily: Fuentes.cuerpo, fontSize: 12, color: Colores.apagado },
   chipMoneda: { borderRadius: 999, borderWidth: 1, borderColor: Colores.linea, paddingHorizontal: 12, paddingVertical: 6 },
   error: { fontFamily: Fuentes.cuerpoMedio, fontSize: 13, color: Colores.riesgo },
   enlace: { fontFamily: Fuentes.cuerpo, fontSize: 13, color: Colores.apagado, textAlign: 'center' },

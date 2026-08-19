@@ -96,8 +96,26 @@
       "fechaInvalida": "That date does not exist. Please check it.",
       "fechaFutura": "The date of birth must be in the past.",
       "telefonoInvalido": "The phone number must have between 6 and 15 digits.",
-      "ciudadInvalida": "Enter a valid city (at least 3 letters, no numbers)."
-    }
+      "ingresoObligatorio": "Enter your monthly income, or skip this step.",
+      "ingresoInvalido": "Income must be greater than zero.",
+      "metaIncompleta": "If you set a goal, tell us how much you need too.",
+      "passwordNoCoincide": "The passwords do not match."
+    },
+    "ciudadSelecciona": "Select your city",
+    "ciudadNoDisponible": "We could not load the city catalog. You can continue without it.",
+    "pasoFinanzas": "Finances",
+    "onboardingTitulo": "Set up your finances",
+    "onboardingSubtitulo": "Two figures and your analysis starts making sense. You can change them anytime from your profile.",
+    "ingresoMensual": "Monthly income",
+    "ingresoMensualAyuda": "It is the basis of every indicator: without it the analysis cannot work out your savings rate.",
+    "metaTitulo": "Your first savings goal",
+    "metaNombre": "What are you saving for?",
+    "metaNombrePlaceholder": "A trip, a car, an emergency fund…",
+    "metaMonto": "How much do you need?",
+    "guardarContinuar": "Save and continue",
+    "omitirPaso": "Not now",
+    "onboardingFallo": "We could not save this, but your account is already created. You can add it later from your profile.",
+    "passwordConfirmar": "Repeat the password"
   },
   "panel": {
     "saludo": "Hi, {nombre}",
@@ -368,7 +386,7 @@
     "idioma": "Language",
     "guardado": "Changes saved",
     "datosPersonales": "Personal details",
-    "datosPersonalesAyuda": "Provided by your bank (read-only).",
+    "datosPersonalesAyuda": "You entered these when you created your account (read-only).",
     "apellido": "Last name",
     "edad": "Age",
     "anios": "{n} years",

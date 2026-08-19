@@ -96,8 +96,26 @@
       "fechaInvalida": "Esa fecha no existe. Revísala.",
       "fechaFutura": "La fecha de nacimiento debe estar en el pasado.",
       "telefonoInvalido": "El teléfono debe tener entre 6 y 15 dígitos.",
-      "ciudadInvalida": "Ingresa una ciudad válida (mínimo 3 letras, sin números)."
-    }
+      "ingresoObligatorio": "Indica tu ingreso mensual, o salta este paso.",
+      "ingresoInvalido": "El ingreso tiene que ser mayor que cero.",
+      "metaIncompleta": "Si pones una meta, dinos también cuánto necesitas.",
+      "passwordNoCoincide": "Las contraseñas no coinciden."
+    },
+    "ciudadSelecciona": "Selecciona tu ciudad",
+    "ciudadNoDisponible": "No pudimos cargar el catálogo de ciudades. Puedes continuar sin ella.",
+    "pasoFinanzas": "Finanzas",
+    "onboardingTitulo": "Pon a punto tus finanzas",
+    "onboardingSubtitulo": "Dos datos y tu análisis arranca con sentido. Puedes cambiarlos cuando quieras desde tu perfil.",
+    "ingresoMensual": "Ingreso mensual",
+    "ingresoMensualAyuda": "Es la base de todos los indicadores: sin él, el análisis no puede calcular tu tasa de ahorro.",
+    "metaTitulo": "Tu primera meta de ahorro",
+    "metaNombre": "¿Para qué ahorras?",
+    "metaNombrePlaceholder": "Un viaje, un auto, un fondo de emergencia…",
+    "metaMonto": "¿Cuánto necesitas?",
+    "guardarContinuar": "Guardar y continuar",
+    "omitirPaso": "Ahora no",
+    "onboardingFallo": "No pudimos guardar estos datos, pero tu cuenta ya está creada. Puedes ponerlos luego desde tu perfil.",
+    "passwordConfirmar": "Repite la contraseña"
   },
   "panel": {
     "saludo": "Hola, {nombre}",
@@ -368,7 +386,7 @@
     "idioma": "Idioma",
     "guardado": "Cambios guardados",
     "datosPersonales": "Datos personales",
-    "datosPersonalesAyuda": "Provistos por tu banco (solo lectura).",
+    "datosPersonalesAyuda": "Los indicaste al crear tu cuenta (solo lectura).",
     "apellido": "Apellido",
     "edad": "Edad",
     "anios": "{n} años",
