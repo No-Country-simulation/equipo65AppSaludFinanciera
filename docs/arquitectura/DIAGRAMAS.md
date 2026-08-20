@@ -306,9 +306,14 @@ modelos viajan dentro de la imagen del servicio de ML.
 
 ---
 
-## §5 Cómo trabajan en paralelo las 8 personas
+## §5 Cómo se trabajó en paralelo
 
-El diagrama que explica por qué nadie espera a nadie.
+El diagrama que explica por qué nadie esperó a nadie.
+
+> ℹ️ **Se planteó para ocho personas**, que es el tamaño con el que arrancó el
+> equipo en la S0. Acabó siendo de **cuatro** (1 full stack, 2 backend, 1 data
+> science), y los contratos aguantaron igual: esa es justamente la gracia de
+> congelarlos antes de repartir el trabajo.
 
 ```mermaid
 graph LR

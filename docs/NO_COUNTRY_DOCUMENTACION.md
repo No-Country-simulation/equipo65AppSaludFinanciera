@@ -172,8 +172,12 @@ aislamiento por usuario, y `gitleaks` en CI.
 
 ## Equipo
 
-8 personas: 2 de Data Science, 1 de Data, 1 DBA, 3 de Backend y 1 Fullstack
-(frontend web + móvil).
+**4 personas**: 1 full stack, 2 backend y 1 data science.
+
+- **Neri Alberto Rubio Galicia** — Full Stack Developer
+- **Montserrat Coria Martinez** — Data Scientist
+- **Daniel Caro** — Backend Developer
+- **Angel Ezequiel Barbosa Lomeli** — Backend Developer
 
 ## Enlaces
 

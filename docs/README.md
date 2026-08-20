@@ -83,8 +83,8 @@ contratos, que **sí** se publican.
 
 ## Los tres contratos
 
-Son la razón por la que ocho personas pueden trabajar en paralelo sin
-bloquearse. **Cambiarlos exige un ADR y avisar al equipo**: un slug mal escrito
+Son la razón por la que el equipo pudo trabajar en paralelo sin bloquearse
+—se plantearon para ocho personas, y el equipo acabó siendo de cuatro—. **Cambiarlos exige un ADR y avisar al equipo**: un slug mal escrito
 rompe la demo en un sitio distinto del que se tocó.
 
 1. **Contrato de la API** — la forma exacta del JSON que entra y sale
@@ -196,9 +196,9 @@ No Country.
 
 ## Lo que NO está definido todavía (a propósito)
 
-- **La coordinación del equipo de 8.** Reparto de módulos, revisión de PRs y
-  CODEOWNERS se deciden cuando el equipo se comunique. Todo lo demás ya está
-  resuelto para que esa conversación sea corta.
+- **La coordinación formal del equipo.** Reparto de módulos, revisión de PRs y
+  CODEOWNERS nunca se formalizaron: con cuatro personas se resolvió hablando.
+  Todo lo demás ya está resuelto.
 
 > ℹ️ **Sobre el nombre**: el proyecto se llama **Fintech Vital** desde el
 > 2026-07-30, fijado por el logo del equipo. El codename `financeAI` está
