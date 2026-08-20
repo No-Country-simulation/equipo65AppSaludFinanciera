@@ -100,11 +100,30 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/docs", "/api/v1/docs/**",
                                  "/api/v1/openapi.json", "/api/v1/openapi.json/**",
                                  "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // Rutas heredadas que el equipo ya tenia en marcha. Se mantienen
-                // abiertas para no romper nada mientras se migran a /api/v1.
-                .requestMatchers("/api/**").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
-                .anyRequest().permitAll()
+                // Alias heredados SIN /v1 que el equipo ya tenia en marcha:
+                // /api/auth/{login,registro,register,refresh,logout}. Se mantienen
+                // para no romper clientes viejos.
+                //
+                // ⚠️ Antes esta linea era `/api/**`, que abria en canal CUALQUIER
+                // ruta bajo /api -- incluidas las de /api/v1 que no estuvieran
+                // listadas arriba. Hoy no dejaba nada al descubierto porque todas
+                // estan declaradas, pero significaba que un endpoint nuevo nacia
+                // PUBLICO salvo que alguien se acordara de protegerlo. Acotado al
+                // prefijo que de verdad se usa.
+                .requestMatchers("/api/auth/**").permitAll()
+
+                // /error es el reenvio interno de Spring cuando una peticion no
+                // casa con ningun controlador. Tiene que quedar abierto: con
+                // `anyRequest().authenticated()` debajo, un 404 de una ruta
+                // inexistente se convertiria en un 401, y el catalogo de errores
+                // dejaria de cumplirse para quien no lleve token.
+                .requestMatchers("/error").permitAll()
+
+                // Por defecto se EXIGE token. Antes era `permitAll()`, es decir
+                // fail-open: lo que no estuviera escrito arriba quedaba abierto.
+                // Con `authenticated()` el olvido se nota (401) en vez de pasar
+                // desapercibido, que es como tiene que fallar la autorizacion.
+                .anyRequest().authenticated()
             )
             // Sin esto, un 401 devolveria la pagina de login HTML de Spring en vez
             // del JSON de error del contrato.
