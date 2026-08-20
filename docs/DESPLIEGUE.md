@@ -77,26 +77,20 @@ Y tiene que ser una URL que **el navegador del usuario** pueda resolver
 (`https://api-staging.fintechvital.com/api/v1`), no `http://api:8080`, que solo
 existe dentro de la red de contenedores.
 
-#### 2. 🔴 Arreglar el CORS de la API
+#### 2. ✅ CORS de la API — resuelto
 
-Con la web en un dominio y la API en otro, **todas** las peticiones del
-navegador son *cross-origin*. Hoy:
+Con la web en un dominio y la API en otro, **todas** las peticiones del navegador
+son *cross-origin*, y sin CORS bien puesto la web se ve pero no carga nada.
 
-- `AnalisisController`, `TransaccionController` y `UserController` tienen
-  `@CrossOrigin(origins = "*")` — permisivo, y el contrato pide lo contrario.
-- **`AuthController` no tiene `@CrossOrigin`.** El login **fallará** desde el
-  navegador en cuanto se pruebe por el dominio.
-
-Lo correcto es una configuración global de CORS con los orígenes reales:
+Ya no hay `@CrossOrigin(origins = "*")` suelto por los controladores: la
+configuración es **global y única**, en
+[`CorsConfig.java`](../backend/src/main/java/com/fintechvital/api/config/CorsConfig.java),
+con los orígenes por entorno en `FV_CORS_ORIGINS` (separados por comas). Un
+origen ajeno recibe **403**.
 
 ```
-https://fintechvital.com
-https://staging.fintechvital.com
-http://localhost:3000
+FV_CORS_ORIGINS=http://localhost:3000,https://staging.fintechvital.com
 ```
-
-Es requisito para que staging sirva de algo: sin CORS bien puesto, el navegador
-bloquea todas las llamadas y la web se ve pero no carga nada.
 
 #### 3. Móvil contra staging
 
@@ -112,25 +106,78 @@ misma Wi-Fi** que la máquina de desarrollo.
 
 ## Producción
 
+`ops/.env.prod` ya está escrito (no viaja en el repo: `.gitignore` lo excluye por
+`.env.*`). Lleva secretos propios, distintos de los de staging, y la base
+**arranca vacía**.
+
 ```bash
-# ops/.env.prod
-POSTGRES_PASSWORD=<generada, guardada fuera del repo>
-FV_CARGAR_DEMO=no
+# ops/.env.prod - lo esencial
+FV_PROYECTO=fintechvital-prod                  # aísla contenedores y volumen
+POSTGRES_PASSWORD=<generada, fuera del repo>
+FV_CARGAR_DEMO=no                              # cero datos mock en la entrega
+FV_CARGAR_DATASET=no
+FV_JWT_SECRETO=<openssl rand -base64 48>
+FV_CLAVE_INTERNA=<openssl rand -base64 32>     # API <-> ML
+FV_CORS_ORIGINS=https://fintechvital.com,https://www.fintechvital.com
 NEXT_PUBLIC_API_URL=https://api.fintechvital.com/api/v1
 CLOUDFLARE_TUNNEL_TOKEN=<token de producción, distinto al de staging>
+PUERTO_WEB=3200  PUERTO_API=8280  PUERTO_DB=5633
 ```
+
+> ⚠️ **`FV_CORS_ORIGINS` hay que definirla explícitamente.** El valor por defecto
+> de `compose.yml` **no incluye `www`**, y como ese defecto gana sobre el de
+> `CorsConfig.java`, sin esta línea `www.fintechvital.com` carga la web pero el
+> navegador bloquea todas las llamadas a la API.
 
 `FV_CARGAR_DEMO=no` **no es opcional**: la regla del proyecto es *cero datos mock
 en la entrega*. Solo tiene efecto en el primer arranque sobre un volumen vacío,
-así que no basta con cambiarlo después.
+así que no basta con cambiarlo después. Consecuencia a tener presente: **la suite
+`frontend/e2e/contrato.mjs` no corre contra producción**, porque inicia sesión con
+la cuenta de ejemplo `ana.torres@ejemplo.mx`, que aquí no existe. Contra
+producción se comprueba el endpoint público del enunciado y un alta real.
+
+### Cloudflare: los tres hostnames
+
+El túnel de producción es **suyo propio**. Un token identifica **un** túnel, y
+correr el mismo en dos stacks hace que Cloudflare los vea como dos réplicas del
+mismo origen y **reparta el tráfico entre ellos**: `fintechvital.com` acabaría
+sirviendo staging la mitad de las veces.
+
+En *Zero Trust → Networks → Tunnels →* el túnel de producción *→ Public Hostnames*.
+Los destinos son **nombres de servicio**, no `localhost`, porque `cloudflared`
+corre dentro del compose y comparte su red:
+
+| Public hostname | Service |
+|---|---|
+| `fintechvital.com` | `http://web:3000` |
+| `www.fintechvital.com` | `http://web:3000` |
+| `api.fintechvital.com` | `http://api:8080` |
+
+Al guardar cada hostname, Cloudflare **crea solo el registro DNS** (un `CNAME`
+proxied a `<id-del-túnel>.cfargotunnel.com`). No hay que añadirlo a mano, y en el
+apex funciona por *CNAME flattening*.
+
+**Redirección `www` → apex** (opcional pero recomendable: evita que Google indexe
+el sitio dos veces). *Rules → Redirect Rules → Create*, en el plan gratuito:
+
+- Si `hostname` **equals** `www.fintechvital.com`
+- Entonces `Dynamic` → `concat("https://fintechvital.com", http.request.uri.path)`,
+  código **301**, *preserve query string*.
+
+Con la redirección puesta, `www` igual necesita su hostname en el túnel y su
+origen en `FV_CORS_ORIGINS`: la regla actúa en el borde de Cloudflare, pero si el
+hostname no existe el visitante recibe un error 1016 antes de llegar a la regla.
 
 ### Antes de publicar
 
-- [ ] `./ops/stack.sh probar` en verde
+- [ ] `ENTORNO=.env.prod ./ops/stack.sh probar` en verde
 - [ ] `FV_CARGAR_DEMO=no` y sin usuarios de ejemplo en la base
 - [ ] Contraseñas generadas, distintas de las de staging, fuera del repo
-- [ ] CORS limitado a los dominios reales (no `*`)
+- [ ] `FV_CORS_ORIGINS` con los dos dominios de producción (no `*`, no `localhost`)
 - [ ] Token de túnel de producción distinto al de staging
+- [ ] Los tres *public hostnames* creados y resolviendo
+- [ ] `frontend/web/public/fintech-vital.apk` copiado **antes** del build, o
+      `NEXT_PUBLIC_APK_URL` vacía (el APK no viaja en el clon)
 - [ ] Copia de seguridad de la base hecha y **restaurada** una vez para comprobar
 - [ ] `git log -p` sin ninguna credencial: el repositorio es **público**
 

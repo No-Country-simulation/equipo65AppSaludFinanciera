@@ -144,7 +144,7 @@ puede romper por cambiar de idioma.
 **Backend** Java 21 · Spring Boot 3 · Maven
 **Datos** PostgreSQL 16 · migraciones versionadas
 **Modelo** Python 3.11 · FastAPI · scikit-learn
-**Operación** Docker / Podman · Compose · Cloudflare Tunnel · Terraform + Ansible (OCI)
+**Operación** Docker / Podman · Compose · Cloudflare Tunnel
 
 ---
 
