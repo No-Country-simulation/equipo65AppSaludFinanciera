@@ -21,8 +21,10 @@ class TransaccionEntrada(BaseModel):
     #: el indice de la lista.
     id: str | None = None
     descripcion: str = Field(min_length=1, max_length=200)
-    #: El contrato lo marca opcional. Aqui SI se usa cuando esta: es una de las
-    #: features que pide el modelo de Data Science.
+    #: El contrato lo marca opcional y se acepta, pero HOY NO SE USA: M1
+    #: clasifica solo por el texto (ver `inferencia.clasificar`). Se mantiene en
+    #: el esquema para no romper a Spring, que ya lo manda, y porque un modelo
+    #: futuro con el monto como feature no exigiria cambiar el contrato.
     valor: float | None = None
 
 
