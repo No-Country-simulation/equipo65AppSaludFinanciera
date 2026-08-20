@@ -1,6 +1,6 @@
 # Fintech Vital - frontend (web + móvil)
 
-*(nombre provisional del proyecto - propuestas en [`docs/BRANDING.md`](docs/BRANDING.md))*
+*(nombre provisional del proyecto - propuestas en [`docs/BRANDING.md`](../docs/BRANDING.md))*
 
 Interfaces del proyecto de **salud financiera** del Hackathon **ONE G9 - Alura +
 Oracle (vía No Country)**: un dashboard web y una app móvil donde la persona ve
@@ -97,7 +97,7 @@ público no lleve nunca una credencial válida dentro. Ver
 [`../db/README.md`](../db/README.md).
 
 ¿Máquina sin nada instalado? Guía completa paso a paso:
-[`docs/FRONTEND_DESDE_CERO.md`](docs/FRONTEND_DESDE_CERO.md).
+[`docs/FRONTEND_DESDE_CERO.md`](../docs/FRONTEND_DESDE_CERO.md).
 Detalles por app: [`web/README.md`](web/README.md) ·
 [`mobile/README.md`](mobile/README.md).
 

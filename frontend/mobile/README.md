@@ -41,7 +41,7 @@ npx expo start          # escanea el QR con Expo Go
 **Usuario demo**: `demo@fintechvital.dev` + cualquier contraseña de 10+ caracteres.
 
 > ¿Máquina sin nada instalado? Guía completa paso a paso:
-> [`docs/FRONTEND_DESDE_CERO.md`](../docs/FRONTEND_DESDE_CERO.md)
+> [`docs/FRONTEND_DESDE_CERO.md`](../../docs/FRONTEND_DESDE_CERO.md)
 
 ## De dónde salen los datos
 

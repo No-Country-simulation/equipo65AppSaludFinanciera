@@ -43,7 +43,7 @@ O en contenedor (Docker o Podman, igual que la demo):
 arranca con la base vacía a propósito.
 
 > ¿Máquina sin nada instalado? Guía completa paso a paso:
-> [`docs/FRONTEND_DESDE_CERO.md`](../docs/FRONTEND_DESDE_CERO.md)
+> [`docs/FRONTEND_DESDE_CERO.md`](../../docs/FRONTEND_DESDE_CERO.md)
 
 ## De dónde salen los datos (importante)
 
