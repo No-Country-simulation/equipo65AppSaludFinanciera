@@ -40,6 +40,8 @@ const MEDIO_ICONO: Record<MedioOperacion, React.ComponentProps<typeof Ionicons>[
   cajero: 'cash-outline',
   sucursal: 'business-outline',
   pos: 'card-outline',
+  transferencia: 'swap-horizontal-outline',
+  efectivo: 'wallet-outline',
 };
 
 export default function PantallaMovimientos() {

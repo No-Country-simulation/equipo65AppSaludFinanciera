@@ -232,7 +232,9 @@
       "portal_web": "Web portal",
       "cajero": "ATM",
       "sucursal": "Branch",
-      "pos": "Card terminal (POS)"
+      "pos": "Card terminal (POS)",
+      "transferencia": "Transfer",
+      "efectivo": "Cash"
     },
     "filtrarTarjeta": "Card",
     "todasTarjetas": "All cards",

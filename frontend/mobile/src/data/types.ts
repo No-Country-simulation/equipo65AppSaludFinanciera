@@ -68,10 +68,21 @@ export type FrecuenciaAhorro = 'nula' | 'baja' | 'media' | 'alta';
 export type Moneda = 'USD' | 'MXN' | 'ARS' | 'COP' | 'CLP' | 'PEN' | 'BRL' | 'EUR';
 
 /**
- * Medio por el que se hizo la operacion (TRANSACCIONES.medio_operacion, MySQL).
+ * Medio por el que se hizo la operacion (`transaccion.medio_operacion`).
  * Slugs snake_case: la etiqueta legible la pone el frontend por idioma.
+ *
+ * Son los SIETE del CHECK de la migracion V4. Faltaban `transferencia` y
+ * `efectivo`, que la semilla si usa: los movimientos pagados asi pintaban la
+ * clave cruda `movimientos.medios.transferencia` en la pantalla.
  */
-export type MedioOperacion = 'app_movil' | 'portal_web' | 'cajero' | 'sucursal' | 'pos';
+export type MedioOperacion =
+  | 'app_movil'
+  | 'portal_web'
+  | 'cajero'
+  | 'sucursal'
+  | 'pos'
+  | 'transferencia'
+  | 'efectivo';
 
 /** Red de pago de la tarjeta (TARJETAS.red_pago). */
 export type RedPago = 'visa' | 'mastercard' | 'amex';

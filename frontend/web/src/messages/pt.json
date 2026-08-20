@@ -254,7 +254,9 @@
       "portal_web": "Portal web",
       "cajero": "Caixa eletrônico",
       "sucursal": "Agência",
-      "pos": "Maquininha (POS)"
+      "pos": "Maquininha (POS)",
+      "transferencia": "Transferência",
+      "efectivo": "Dinheiro"
     },
     "filtrarTarjeta": "Cartão",
     "todasTarjetas": "Todos os cartões",

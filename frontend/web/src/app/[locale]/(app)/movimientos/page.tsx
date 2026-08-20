@@ -27,6 +27,8 @@ const MEDIO_ICONO: Record<MedioOperacion, NombreIcono> = {
   cajero: 'cajero',
   sucursal: 'sucursal',
   pos: 'tarjeta',
+  transferencia: 'transferencia',
+  efectivo: 'efectivo',
 };
 
 function MovimientosVista() {

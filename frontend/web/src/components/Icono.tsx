@@ -50,6 +50,8 @@ export type NombreIcono =
   | 'web'
   | 'cajero'
   | 'sucursal'
+  | 'transferencia'
+  | 'efectivo'
   // tema claro/oscuro
   | 'sol'
   | 'luna';
@@ -98,6 +100,8 @@ const TRAZOS: Record<NombreIcono, string> = {
   web: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18',
   cajero: 'M6 3h12a1 1 0 011 1v13H5V4a1 1 0 011-1zM9 8h6M8 13h8M8 20h8',
   sucursal: 'M3 21h18M4 9l8-4 8 4M6 9v12M18 9v12M10 9v12M14 9v12',
+  transferencia: 'M4 9h13m0 0l-4-4m4 4l-4 4M20 15H7m0 0l4-4m-4 4l4 4',
+  efectivo: 'M2 7h20v10H2zM12 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5M5.5 10h.01M18.5 14h.01',
   sol: 'M12 17a5 5 0 100-10 5 5 0 000 10zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   luna: 'M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z',
 };

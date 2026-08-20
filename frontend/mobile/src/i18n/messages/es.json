@@ -232,7 +232,9 @@
       "portal_web": "Portal web",
       "cajero": "Cajero",
       "sucursal": "Sucursal",
-      "pos": "Terminal (POS)"
+      "pos": "Terminal (POS)",
+      "transferencia": "Transferencia",
+      "efectivo": "Efectivo"
     },
     "filtrarTarjeta": "Tarjeta",
     "todasTarjetas": "Todas las tarjetas",
