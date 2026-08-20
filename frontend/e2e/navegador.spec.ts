@@ -149,10 +149,24 @@ test.describe('Movimientos', () => {
     await irA(page, /^Movimientos$/);
     const filtro = filtroCategoria(page);
     await expect(filtro).toBeVisible();
-    const valores = await filtro.locator('option').evaluateAll((os) =>
-      os.map((o) => (o as HTMLOptionElement).value).filter(Boolean),
-    );
-    expect(valores.length, `solo llegan ${valores.length} categorias`).toBeGreaterThanOrEqual(12);
+
+    // Misma carrera que el test de arriba: el <select> se pinta con "Todas"
+    // ANTES de que responda /categorias, y `evaluateAll` no espera. Sin esto el
+    // test leia 0 categorias y fallaba por timing, no porque el catalogo
+    // estuviera roto -- y solo en movil-web, que es mas lento, lo que lo hacia
+    // parecer un fallo de esa vista.
+    await expect
+      .poll(
+        async () =>
+          filtro.locator('option').evaluateAll((os) =>
+            os.map((o) => (o as HTMLOptionElement).value).filter(Boolean).length,
+          ),
+        {
+          timeout: 15_000,
+          message: 'el catalogo de categorias no llego al desplegable',
+        },
+      )
+      .toBeGreaterThanOrEqual(12);
   });
 
   test('filtrar por una categoria recarga la lista', async ({ page }) => {
@@ -207,12 +221,29 @@ test.describe('Movimientos', () => {
     const formulario = page.locator('form');
     await expect(formulario).toBeVisible();
 
-    // Quien da de alta un movimiento tiene que poder decir de que es. Hoy el
-    // formulario solo pide descripcion, monto, fecha y nota.
+    // Quien da de alta un movimiento tiene que poder decir de que es.
+    //
+    // Se busca EL SELECTOR DE CATEGORIA por su etiqueta, no `toHaveCount(1)`
+    // sobre todos los <select> del formulario: eso valia cuando la categoria era
+    // el unico desplegable, pero el alta gano el de tarjeta y el test empezo a
+    // fallar por un cambio que no rompia nada. Se afirma la intencion -- "se
+    // puede elegir la categoria" -- en vez de cuantos controles hay al lado.
+    const categoria = formulario.getByLabel(/^Categor/);
     await expect(
-      formulario.locator('select'),
+      categoria,
       'el formulario de alta no tiene ningun campo para elegir la categoria',
-    ).toHaveCount(1);
+    ).toBeVisible();
+
+    // Y que traiga el catalogo, no solo la opcion "Automatica".
+    await expect
+      .poll(
+        async () =>
+          categoria.locator('option').evaluateAll((os) =>
+            os.map((o) => (o as HTMLOptionElement).value).filter(Boolean).length,
+          ),
+        { timeout: 15_000, message: 'el selector de categoria del alta llego vacio' },
+      )
+      .toBeGreaterThanOrEqual(12);
   });
 });
 
