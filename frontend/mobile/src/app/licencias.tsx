@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,6 @@ import { useI18n } from '@/i18n';
 import { Hero, Tarjeta } from '@/components/ui';
 
 const GRUPOS = [
-  // ... (tu lista de grupos se queda igual)
   {
     clave: 'licencias.grupoMovil',
     items: [
@@ -29,6 +28,17 @@ const GRUPOS = [
       ['next-intl', 'MIT'],
       ['Recharts', 'MIT'],
       ['Tailwind CSS', 'MIT'],
+    ],
+  },
+  {
+    clave: 'licencias.grupoServidor',
+    items: [
+      ['Spring Boot', 'Apache-2.0'],
+      ['PostgreSQL', 'PostgreSQL License'],
+      ['FastAPI', 'MIT'],
+      ['scikit-learn', 'BSD-3-Clause'],
+      ['pandas', 'BSD-3-Clause'],
+      ['NumPy', 'BSD-3-Clause'],
     ],
   },
   {
@@ -84,6 +94,19 @@ export default function PantallaLicencias() {
             ))}
           </Tarjeta>
         ))}
+
+        <Tarjeta>
+          <Text style={[s.seccionTitulo, { color: temaActivo.tinta }]}>{t('licencias.grupoDatos')}</Text>
+          <Text style={[s.parrafo, { color: temaActivo.tintaSuave }]}>{t('licencias.datosNota')}</Text>
+          {/* Texto de enlace EXIGIDO por el plan gratuito de ExchangeRate-API.
+              No se traduce ni se reescribe: es su condicion de uso. */}
+          <Text
+            onPress={() => Linking.openURL('https://www.exchangerate-api.com')}
+            style={[s.enlace, { color: temaActivo.acento }]}
+          >
+            Rates By Exchange Rate API
+          </Text>
+        </Tarjeta>
       </ScrollView>
     </View>
   );
@@ -94,6 +117,7 @@ const s = StyleSheet.create({
   titulo: { fontFamily: Fuentes.titulo, fontSize: 23, letterSpacing: -0.4 },
   parrafo: { fontFamily: Fuentes.cuerpo, fontSize: 13.5, lineHeight: 20 },
   seccionTitulo: { fontFamily: Fuentes.titulo, fontSize: 16, marginBottom: 8 },
+  enlace: { fontFamily: Fuentes.cuerpoSemi, fontSize: 13.5, marginTop: 8 },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',

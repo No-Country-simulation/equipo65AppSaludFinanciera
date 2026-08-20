@@ -30,6 +30,17 @@ const GRUPOS = [
     ],
   },
   {
+    clave: 'grupoServidor',
+    items: [
+      ['Spring Boot', 'Apache-2.0'],
+      ['PostgreSQL', 'PostgreSQL License'],
+      ['FastAPI', 'MIT'],
+      ['scikit-learn', 'BSD-3-Clause'],
+      ['pandas', 'BSD-3-Clause'],
+      ['NumPy', 'BSD-3-Clause'],
+    ],
+  },
+  {
     clave: 'grupoFuentes',
     items: [
       ['Bricolage Grotesque', 'SIL OFL 1.1'],
@@ -54,7 +65,7 @@ export default function PaginaLicencias() {
           {t('volver')}
         </Link>
         <span className="display text-lg font-bold">
-          finance<span className="text-mint">AI</span>
+          Fintech <span className="text-mint">Vital</span>
         </span>
         <SelectorIdioma compacto />
       </header>
@@ -79,6 +90,21 @@ export default function PaginaLicencias() {
               </ul>
             </section>
           ))}
+
+          <section className="entra-x mt-7">
+            <h2 className="display text-lg font-semibold text-ink">{t('grupoDatos')}</h2>
+            <p className="mt-3 leading-relaxed text-ink-soft">{t('datosNota')}</p>
+            {/* Texto de enlace EXIGIDO por el plan gratuito de ExchangeRate-API.
+                No se traduce ni se reescribe: es su condicion de uso. */}
+            <a
+              href="https://www.exchangerate-api.com"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-block text-sm font-semibold text-accent underline-offset-2 hover:underline"
+            >
+              Rates By Exchange Rate API
+            </a>
+          </section>
 
           <footer className="mt-9 border-t border-line pt-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">{tLegales('verTambien')}</p>

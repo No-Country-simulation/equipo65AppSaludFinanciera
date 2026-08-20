@@ -7,7 +7,7 @@ import { useTheme } from '@/context/ThemeContext'; // 1. Importamos el contexto
 import { useI18n } from '@/i18n';
 import { Hero, Tarjeta } from '@/components/ui';
 
-const SECCIONES = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 's12'] as const;
+const SECCIONES = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 's12', 's13'] as const;
 
 export default function PantallaLegales() {
   const { t } = useI18n();

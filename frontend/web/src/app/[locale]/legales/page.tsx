@@ -23,7 +23,7 @@ export default function PaginaLegales() {
           {t('volver')}
         </Link>
         <span className="display text-lg font-bold">
-          finance<span className="text-mint">AI</span>
+          Fintech <span className="text-mint">Vital</span>
         </span>
         <SelectorIdioma compacto />
       </header>
