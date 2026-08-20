@@ -710,11 +710,30 @@ switch ($Accion) {
         Nota 'Las siguientes son cuestion de segundos.'
         Write-Host ''
         Reservar-Puertos
+
+        # El build va en su PROPIO comando, antes de levantar.
+        #
+        # No basta con `up --build`: con podman-compose, un servicio que declara
+        # `build:` e `image:` a la vez se levanta desde la imagen que ya existe
+        # y el build se salta. El sintoma es de los que hacen perder una tarde:
+        # cambias el codigo, `arriba` dice OK, y el contenedor sigue sirviendo el
+        # build anterior. Paso el 2026-08-19 con la web.
+        #
+        # Hacerlo aparte no cuesta nada cuando no hay cambios: las capas estan
+        # en cache y `build` termina en segundos. Lo que garantiza es que un
+        # cambio en el codigo SIEMPRE llega al contenedor.
+        if ($Solo) {
+            Compose build @Solo
+        } else {
+            Compose @perfilArriba build
+        }
+        if ($LASTEXITCODE -ne 0) { Explicar-FalloDeArranque; exit 1 }
+
         # Con -Solo el usuario elige servicios a mano: ahi no se cuela el tunel.
         if ($Solo) {
-            Compose up -d --build @Solo
+            Compose up -d @Solo
         } else {
-            Compose @perfilArriba up -d --build
+            Compose @perfilArriba up -d
         }
         if ($LASTEXITCODE -ne 0) { Explicar-FalloDeArranque; exit 1 }
 

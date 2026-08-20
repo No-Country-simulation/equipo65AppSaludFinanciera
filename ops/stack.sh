@@ -428,7 +428,13 @@ case "$accion" in
         echo '  Las siguientes son cuestion de segundos.'
         echo
         reservar_puertos
-        compose "${perfil_arriba[@]}" up -d --build || { explicar_fallo_arranque; exit 1; }
+        # El build va en su PROPIO comando, antes de levantar. No basta con
+        # `up --build`: con podman-compose, un servicio que declara `build:` e
+        # `image:` a la vez se levanta desde la imagen existente y el build se
+        # salta, asi que el contenedor sigue sirviendo el codigo anterior.
+        # Cuando no hay cambios, las capas estan en cache y esto tarda segundos.
+        compose "${perfil_arriba[@]}" build || { explicar_fallo_arranque; exit 1; }
+        compose "${perfil_arriba[@]}" up -d || { explicar_fallo_arranque; exit 1; }
         # Los contenedores existen, pero la API tarda en abrir el puerto. Se
         # espera aqui para no mandar a nadie a un navegador que dara error.
         echo
