@@ -201,6 +201,12 @@ services:
         NEXT_PUBLIC_APK_URL: ${NEXT_PUBLIC_APK_URL:-}
     image: fintechvital/web:local
     container_name: ${FV_PROYECTO:-fintechvital}-web
+    environment:
+      # Mantiene staging fuera de los buscadores (src/app/robots.ts). NO es una
+      # NEXT_PUBLIC_*: se lee en el servidor, en tiempo de ejecucion, asi que
+      # cambiarla solo pide reiniciar el contenedor, no reconstruir la imagen.
+      FV_NOINDEX: ${FV_NOINDEX:-no}
+      TZ: UTC
     ports:
       - "127.0.0.1:${PUERTO_WEB:-3000}:3000"
     restart: unless-stopped
