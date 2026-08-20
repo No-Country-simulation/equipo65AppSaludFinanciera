@@ -120,6 +120,11 @@ test.describe('Movimientos', () => {
     await expect(filtro).toBeVisible();
 
     const opciones = filtro.locator('option');
+    // El <select> se pinta con "Todas" ANTES de que responda /categorias, y
+    // `count()` no espera: contar de inmediato daba 1 y el test fallaba por
+    // carrera, no porque el catalogo estuviera roto. Se espera a la segunda
+    // opcion; si no llega, las afirmaciones de abajo dan el mensaje bueno.
+    await opciones.nth(1).waitFor({ state: 'attached', timeout: 15_000 }).catch(() => {});
     const total = await opciones.count();
 
     // "Todas" existe siempre porque esta hardcodeada; las demas vienen de
