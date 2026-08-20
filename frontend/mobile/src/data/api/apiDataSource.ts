@@ -66,6 +66,19 @@ interface OpcionesPeticion {
  */
 let refrescoEnCurso: Promise<boolean> | null = null;
 
+/**
+ * Lo que se enseña cuando `fetch` ni siquiera llega a hablar con la API.
+ *
+ * Va aqui y no en los archivos de i18n porque este es el unico punto del
+ * codigo que sabe que la peticion murio ANTES de tener respuesta, y porque la
+ * capa de datos la comparten web y movil, que tienen catalogos distintos.
+ */
+const SIN_CONEXION: Record<Idioma, string> = {
+  es: 'No pudimos contactar con el servicio. Revisa tu conexión y, si usas un bloqueador o protección antirrastreo, permite este sitio.',
+  pt: 'Não conseguimos contatar o serviço. Verifique sua conexão e, se você usa um bloqueador ou proteção contra rastreamento, permita este site.',
+  en: 'We could not reach the service. Check your connection, and if you use a blocker or tracking protection, allow this site.',
+};
+
 export class ApiDataSource implements FinanceDataSource {
   constructor(
     private readonly baseUrl: string,
@@ -80,11 +93,32 @@ export class ApiDataSource implements FinanceDataSource {
       const token = getAccessToken();
       if (token) headers.Authorization = `Bearer ${token}`;
     }
-    const respuesta = await fetch(`${this.baseUrl}${ruta}`, {
-      method,
-      headers,
-      body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
-    });
+    // `fetch` RECHAZA (no devuelve respuesta) cuando la peticion no llega a
+    // salir: sin red, servicio caido, DNS, o un bloqueador de contenido que
+    // corta la llamada al otro subdominio de la API. Sin este try, el TypeError
+    // del navegador se escapaba de todo el manejo de errores y aterrizaba en la
+    // pantalla tal cual: "TypeError: NetworkError when attempting to fetch
+    // resource", que no le dice nada a nadie.
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(`${this.baseUrl}${ruta}`, {
+        method,
+        headers,
+        body: formData ?? (body !== undefined ? JSON.stringify(body) : undefined),
+      });
+    } catch {
+      throw new FinanceApiError(
+        {
+          codigo: 'SIN_CONEXION',
+          mensaje: SIN_CONEXION[this.idioma] ?? SIN_CONEXION.es,
+          detalles: [],
+          traza_id: '',
+        },
+        // 0 = no hubo respuesta HTTP. Lo distingue de un 503 del servidor, que
+        // si contesto.
+        0,
+      );
+    }
 
     // El access token dura 15 min: en cualquier sesion normal caduca mientras
     // se usa la app. Se renueva y se reintenta UNA vez; si el refresco tampoco
