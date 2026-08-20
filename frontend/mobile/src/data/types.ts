@@ -92,8 +92,18 @@ export type EstadoBancario = 'activa' | 'bloqueada' | 'cancelada';
 /** Estado del plan de ahorro (PLANES_AHORRO.estado_plan). */
 export type EstadoPlan = 'activo' | 'finalizado' | 'cancelado';
 
-/** Version vigente de los T&C que acepta el checkbox de registro. */
-export const TERMINOS_VERSION = '1.0';
+/**
+ * Version vigente de los T&C que acepta el checkbox de registro.
+ *
+ * Se sube cuando el TEXTO cambia de fondo, no con cada retoque: lo que se
+ * guarda en `usuario.terminos_version` es la prueba de QUE acepto la persona,
+ * asi que dos textos distintos no pueden compartir numero.
+ *
+ * 1.1 (2026-08-19) - se nombra el correo de contacto para ejercer derechos
+ *                    ARCO/LGPD, que antes decia solo "el correo del equipo".
+ * 1.0              - version inicial.
+ */
+export const TERMINOS_VERSION = '1.1';
 
 export interface Usuario {
   id: string;
