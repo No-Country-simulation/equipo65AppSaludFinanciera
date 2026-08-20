@@ -370,6 +370,12 @@ $env:PODMAN_COMPOSE_WARNING_LOGS = 'false'
 #   `down -v`       no borraba el volumen: `limpiar` decia que si y no lo hacia
 # Una funcion SIMPLE con el $args automatico pasa los argumentos tal cual.
 function Compose {
+    # podman-compose escribe en STDERR un aviso (">>>> Executing external
+    # compose provider ... <<<<") en CADA llamada. Al capturar la salida de un
+    # psql, ese texto se cuela con el resultado y `probar` daba por rota la base
+    # de datos aunque estuviera perfecta: la consulta devolvia "30" pero lo
+    # capturado no era un numero. Se silencia aqui, en un solo sitio.
+    $env:PODMAN_COMPOSE_WARNING_LOGS = 'false'
     & $motorCli compose -f $compose --env-file $envFile @args
 }
 

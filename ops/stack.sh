@@ -171,6 +171,10 @@ fi
 motor_nombre="Docker"; [ "$motor" = podman ] && motor_nombre="Podman"
 ok "Motor de contenedores: $motor_nombre"
 
+# podman-compose escribe en STDERR un aviso en cada llamada. Al capturar la
+# salida de un psql, ese texto se cuela con el resultado y `probar` da por rota
+# una base de datos que esta perfecta. Se silencia en un solo sitio.
+export PODMAN_COMPOSE_WARNING_LOGS=false
 compose() { "$motor" compose -f "$compose_file" --env-file "$env_file" "$@"; }
 
 leer_env() {
