@@ -43,6 +43,20 @@ export interface AltaTransaccion {
    * guarda como correccion suya (`categoria_origen = "usuario"`).
    */
   categoria?: CategoriaSlug;
+  /**
+   * Tarjeta con la que se pago. OPCIONAL: un movimiento puede no venir de
+   * ninguna (efectivo, transferencia).
+   *
+   * Sin esto, `transaccion.tarjeta_id` quedaba SIEMPRE nulo en todo lo que se
+   * daba de alta desde la aplicacion, y como el filtro por tarjeta y el "Ver
+   * movimientos" de cada tarjeta leen esa columna, las dos cosas salian vacias
+   * para cualquiera que no fuese un usuario de la semilla. La API ya lo
+   * aceptaba y ya comprobaba que la tarjeta sea tuya (RN9); lo que faltaba era
+   * mandarlo.
+   */
+  id_tarjeta?: string;
+  /** Nombre del comercio. La lista de movimientos ya lo pinta cuando viene. */
+  comercio?: string;
 }
 
 export interface FiltrosTransacciones {

@@ -61,7 +61,8 @@ export default function PantallaMovimientos() {
   const [descripcion, setDescripcion] = useState('');
   const [monto, setMonto] = useState('');
   const [categoriaAlta, setCategoriaAlta] = useState<CategoriaSlug | ''>('');
-  const [nota, setNota] = useState('');
+  const [tarjetaAlta, setTarjetaAlta] = useState('');
+  const [comercio, setComercio] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [importando, setImportando] = useState(false);
 
@@ -121,11 +122,16 @@ export default function PantallaMovimientos() {
         // Vacia = que clasifique el modelo. Si se elige una, la API la guarda
         // como correccion de la persona (categoria_origen = "usuario").
         categoria: categoriaAlta || undefined,
+        // Vacia = el movimiento no cuelga de ninguna tarjeta (efectivo,
+        // transferencia). La API comprueba que la tarjeta sea tuya.
+        id_tarjeta: tarjetaAlta || undefined,
+        comercio: comercio.trim() || undefined,
       });
       setDescripcion('');
       setMonto('');
       setCategoriaAlta('');
-      setNota('');
+      setTarjetaAlta('');
+      setComercio('');
       setModalAlta(false);
       recargar();
     } finally {
@@ -419,7 +425,52 @@ export default function PantallaMovimientos() {
                 );
               })}
             </ScrollView>
-            <Campo etiqueta={t('movimientos.nota')} value={nota} onChangeText={setNota} maxLength={120} />
+            {/* Tarjeta: opcional. Sin ella el movimiento no cuelga de ninguna
+                (efectivo, transferencia), que es lo normal. Elegirla es lo que
+                hace que aparezca luego en "Ver movimientos" de esa tarjeta. */}
+            <Text style={[estilos.filaMeta, { color: temaActivo.apagado, marginBottom: 6 }]}>
+              {t('movimientos.tarjeta')}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
+            >
+              {[
+                { id: '', etiqueta: t('movimientos.sinTarjeta') },
+                ...(datos?.tarjetas ?? []).map((tarjeta) => ({
+                  id: tarjeta.id,
+                  etiqueta: tarjeta.etiqueta ?? `•••• ${tarjeta.ultimos4}`,
+                })),
+              ].map((opcion) => {
+                const sel = tarjetaAlta === opcion.id;
+                return (
+                  <Pressable
+                    key={opcion.id || 'ninguna'}
+                    onPress={() => setTarjetaAlta(opcion.id)}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: sel ? temaActivo.acento : temaActivo.linea,
+                      backgroundColor: sel ? `${temaActivo.acento}1a` : 'transparent',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: sel ? Fuentes.cuerpoSemi : Fuentes.cuerpo,
+                        fontSize: 13,
+                        color: sel ? temaActivo.acento : temaActivo.tinta,
+                      }}
+                    >
+                      {opcion.etiqueta}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Campo etiqueta={t('movimientos.comercio')} value={comercio} onChangeText={setComercio} maxLength={120} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <Boton texto={t('comun.cancelar')} variante="fantasma" onPress={() => setModalAlta(false)} />

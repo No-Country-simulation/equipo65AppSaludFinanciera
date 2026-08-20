@@ -52,7 +52,8 @@ function MovimientosVista() {
   const [monto, setMonto] = useState('');
   const [fecha, setFecha] = useState('');
   const [categoriaAlta, setCategoriaAlta] = useState<CategoriaSlug | ''>('');
-  const [nota, setNota] = useState(''); // solo interfaz (F9: etiquetas/notas)
+  const [tarjetaAlta, setTarjetaAlta] = useState('');
+  const [comercio, setComercio] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; tipo: 'ok' | 'info' } | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
@@ -160,12 +161,17 @@ function MovimientosVista() {
         // Vacia = que clasifique el modelo. Si se elige una, la API la guarda
         // como correccion de la persona (categoria_origen = "usuario").
         categoria: categoriaAlta || undefined,
+        // Vacia = el movimiento no cuelga de ninguna tarjeta (efectivo,
+        // transferencia). La API comprueba que la tarjeta sea tuya.
+        id_tarjeta: tarjetaAlta || undefined,
+        comercio: comercio.trim() || undefined,
       });
       setDescripcion('');
       setMonto('');
       setFecha('');
       setCategoriaAlta('');
-      setNota('');
+      setTarjetaAlta('');
+      setComercio('');
       setMostrandoAlta(false);
       recargar();
     } finally {
@@ -284,8 +290,22 @@ function MovimientosVista() {
                 ))}
               </select>
             </Campo>
-            <Campo etiqueta={t('nota')}>
-              <input className={claseInput} value={nota} onChange={(e) => setNota(e.target.value)} maxLength={120} />
+            <Campo etiqueta={t('tarjeta')} ayuda={t('tarjetaAyuda')}>
+              <select
+                className={claseInput}
+                value={tarjetaAlta}
+                onChange={(e) => setTarjetaAlta(e.target.value)}
+              >
+                <option value="">{t('sinTarjeta')}</option>
+                {datos?.tarjetas.map((tarjeta) => (
+                  <option key={tarjeta.id} value={tarjeta.id}>
+                    {tarjeta.etiqueta ?? `•••• ${tarjeta.ultimos4}`}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+            <Campo etiqueta={t('comercio')}>
+              <input className={claseInput} value={comercio} onChange={(e) => setComercio(e.target.value)} maxLength={120} />
             </Campo>
             <div className="flex gap-2 sm:col-span-2 lg:col-span-3 lg:justify-end">
               <Boton type="submit" disabled={guardando}>
