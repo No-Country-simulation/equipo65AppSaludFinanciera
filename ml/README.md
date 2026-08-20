@@ -3,7 +3,7 @@
 Inferencia pura sobre los artefactos `.pkl` que entrega Data Science: **categoría
 de una transacción** y **perfil financiero**. No tiene lógica de negocio — los
 indicadores, el motor de reglas y la persistencia viven en Spring Boot
-([`CONTRATO_MODELO.md`](../frontend/docs/arquitectura/CONTRATO_MODELO.md) §1).
+([`CONTRATO_MODELO.md`](../docs/arquitectura/CONTRATO_MODELO.md) §1).
 
 No se expone a internet: vive en la red interna del compose y solo lo llama la API.
 
@@ -68,7 +68,7 @@ ningún usuario podría recibir un diagnóstico bueno. Hay un test que lo compru
   modelo y una del baseline no deberían confundirse nunca.
 
 > El sistema clasifica en los tres idiomas, que es lo que exige
-> [ADR-0009](../frontend/docs/adr/0009-multi-idioma.md): `IFOOD *PEDIDO` →
+> [ADR-0009](../docs/adr/0009-multi-idioma.md): `IFOOD *PEDIDO` →
 > `alimentacion` (0.93), `PIX RECEBIDO SALARIO` → `ingresos` (1.00),
 > `CONTA DE LUZ ENEL` → `servicios` (0.99).
 

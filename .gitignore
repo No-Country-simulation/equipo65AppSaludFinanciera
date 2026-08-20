@@ -29,9 +29,34 @@ COMMITS_PROPUESTOS.md
 /docs/E2E_HALLAZGOS.md
 /docs/PROMPT_ARREGLOS.md
 
+# Doc de COORDINACION INTERNA. Venia de `frontend/docs/` y se movio aqui con el
+# resto (2026-08-20). Se publica la doc tecnica y de producto -- los 15 ADR, los
+# tres contratos, arquitectura, taxonomia, proceso, seguridad y entrega -- y se
+# queda fuera solo lo que le sirve al equipo y a nadie mas. Ninguno de estos
+# lleva credenciales; la diferencia es a quien le sirve el documento.
+#
+# Listas de tareas personales: nombran a quien le toca cada cosa.
+/docs/PENDIENTES_AGENTE.md
+/docs/PENDIENTES_ANGEL.md
+# Propuestas abiertas del equipo y actas de trabajo de cada ronda.
+/docs/PROPUESTAS_EQUIPO.md
+/docs/rondas/
+# Inventario de que cuentas existen y de quien son. Sin secretos dentro -- solo
+# dice donde vive cada uno -- pero es el mapa administrativo del proyecto.
+/docs/operacion/CUENTAS_SERVICIOS.md
+
 # Generado por Spring Initializr al crear el proyecto. No aporta nada y
 # confunde: la doc real esta en README.md y docs/.
 /HELP.md
+
+# Guion del video PROMOCIONAL (80-95 s): plan de produccion audiovisual con
+# musica, iluminacion y tomas generadas con IA. Es material de marketing del
+# equipo, no documentacion del software, y ademas ocupa la raiz del repo.
+#
+# ⚠️ No confundir con `docs/entrega/DEMO.md`, que SI se publica: ese es
+# el guion del video de ENTREGA (7 min) y documenta que demuestra el proyecto y
+# como verificarlo.
+/guion.md
 
 # CHANGELOG.md SI se publica (es entregable del proyecto): no lo agregues aqui.
 
@@ -67,6 +92,9 @@ __pycache__/
 # --- Herramientas de agentes / indexado local ---
 .agents/
 .codegraph/
+# Instrucciones para agentes de IA, como CLAUDE.md. Son andamiaje de desarrollo,
+# no documentacion del proyecto: en un repo publico solo anaden ruido.
+AGENTS.md
 # Solo lo local: `.claude/settings.json` (compartido) SI puede subir. Se listan
 # los contenidos, no el directorio: git no reincluye archivos dentro de un
 # directorio ya excluido.

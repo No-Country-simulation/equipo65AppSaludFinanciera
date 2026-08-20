@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Productos bancarios (ENDPOINTS.md prioridad 2 - Banca).
+ * Productos bancarios (CONTRATO_API - Banca).
  *
  * Tres recursos que la interfaz ya consume: `/cuentas`, `/tarjetas` y
  * `/buro/salud`. Todos exigen token y filtran por el usuario que va en el (RN9);

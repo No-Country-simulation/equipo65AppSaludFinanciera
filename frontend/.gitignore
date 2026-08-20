@@ -145,23 +145,11 @@ temp/
 .claude/settings.local.json
 CLAUDE.md
 
-# --- Doc interna: se publica SOLO la doc propia del frontend ---
-# (FRONTEND_DESDE_CERO.md, BRANDING.md, NO_COUNTRY_*.md quedan fuera de esta lista
-#  a proposito: esos SI se publican). Ver CLAUDE.md > "Estructura del repo".
-/docs/adr/
-/docs/arquitectura/
-/docs/contratos/
-/docs/datos/
-/docs/entrega/
-/docs/futuro/
-/docs/operacion/
-/docs/proceso/
-/docs/producto/
-/docs/rondas/
-/docs/seguridad/
-/docs/GLOSARIO.md
-/docs/PENDIENTES_AGENTE.md
-/docs/PENDIENTES_ANGEL.md
-/docs/PROPUESTAS_EQUIPO.md
-/docs/README.md
+# --- Doc ---
+# La documentacion del frontend se movio a `docs/` en la RAIZ del repositorio
+# (2026-08-20): los tres contratos y los ADR gobiernan el proyecto entero, no
+# solo estas interfaces, y vivian aqui por herencia de cuando `frontend/` era lo
+# unico que habia. Las reglas de que se publica y que no estan en el .gitignore
+# de la raiz.
+
 /.env.ejemplo

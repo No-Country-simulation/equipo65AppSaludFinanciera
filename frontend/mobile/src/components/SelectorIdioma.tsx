@@ -14,7 +14,7 @@ export function SelectorIdioma({ claro = false }: { claro?: boolean }) {
   const cambiar = (nuevo: Idioma) => {
     setIdioma(nuevo);
     // Con sesion, la preferencia se persiste en BD para que viaje entre dispositivos
-    // (movil <-> web). Optimista + PATCH en segundo plano. Ver CAMBIOS_INTERFACES.md 4.
+    // (movil <-> web). Optimista + PATCH en segundo plano.
     if (usuario && usuario.idioma !== nuevo) {
       actualizarUsuario({ ...usuario, idioma: nuevo });
       void ds

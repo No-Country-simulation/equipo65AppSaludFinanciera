@@ -5,7 +5,7 @@
 -- tasas de cambio, ciudades y la taxonomia congelada (categorias y perfiles)
 -- con sus etiquetas en los 3 idiomas.
 --
--- Fuente de verdad de los slugs: frontend/docs/datos/TAXONOMIA.md (congelada).
+-- Fuente de verdad de los slugs: docs/datos/TAXONOMIA.md (congelada).
 -- Cambiar un slug de aqui exige un ADR: rompe DS, backend, BD y las dos apps.
 -- =============================================================================
 

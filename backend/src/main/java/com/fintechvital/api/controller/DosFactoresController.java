@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Verificacion en dos pasos (CONTRATO_API - ENDPOINTS.md prioridad 4).
+ * Verificacion en dos pasos (CONTRATO_API - ADR-0013).
  *
  * Las cuatro rutas van bajo /auth pero TODAS exigen token: para configurar el
  * segundo factor ya hay que haber pasado el primero. Estan declaradas como

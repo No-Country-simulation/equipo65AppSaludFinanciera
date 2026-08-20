@@ -1,21 +1,40 @@
 # Despliegue
 
-De la máquina de cada uno a `fintechvital.com`. Es el **mismo `compose.yml`** en
-los tres entornos; lo único que cambia es el archivo de entorno.
+De la máquina de cada uno a `fintechvital.com`. Es el **mismo stack** en los tres
+entornos; lo que cambia es el archivo de entorno y, en producción, dónde corre.
 
-| Entorno | Archivo | Dominio | Datos de ejemplo |
-|---|---|---|---|
-| local | `ops/.env` | `localhost` | `si` |
-| staging | `ops/.env.staging` | `staging.fintechvital.com` | `si` |
-| producción | `ops/.env.prod` | `fintechvital.com` | **`no`** |
+| Entorno | Archivo | Dónde corre | Dominio | Datos de ejemplo |
+|---|---|---|---|---|
+| local | `ops/.env` | tu máquina | `localhost` | `si` |
+| staging | `ops/.env.staging` | tu máquina, expuesta por el túnel | `staging.fintechvital.com` | `si` |
+| **producción** | `ops/.env.prod` | **instancia de OCI** | `fintechvital.com` | **`no`** |
+
+> ✅ **Producción está en pie desde el 2026-08-20** y se opera con
+> `ops/oci/desplegar.ps1`, no con `stack.ps1`: las imágenes se construyen para
+> **arm64**, se suben a OCI Container Registry y la instancia se las baja. Todo
+> el procedimiento está en
+> [`../ops/DESPLIEGUE_NUBE_TECNICO.md`](../ops/DESPLIEGUE_NUBE_TECNICO.md), y la
+> versión sin tecnicismos en
+> [`../ops/DESPLIEGUE_NUBE.md`](../ops/DESPLIEGUE_NUBE.md).
+>
+> Lo que sigue en este documento es lo **común a los tres entornos** (Cloudflare,
+> CORS, variables, migraciones y respaldos).
 
 ```bash
 ./ops/stack.sh arriba                       # local
 ENTORNO=.env.staging ./ops/stack.sh tunel   # staging
-ENTORNO=.env.prod    ./ops/stack.sh arriba  # producción
 ```
 
-En Windows: `.\ops\stack.ps1 arriba -Entorno .env.prod`.
+En Windows, `.\ops\stack.ps1 arriba` y `.\ops\stack.ps1 tunel -Entorno .env.staging`.
+
+**Producción va aparte**, porque corre en otra máquina y con imágenes ya
+construidas:
+
+```powershell
+.\ops\oci\publicar-imagenes.ps1    # construye arm64 y sube a OCIR
+.\ops\oci\desplegar.ps1            # despliega en la instancia
+.\ops\oci\desplegar.ps1 -Accion estado
+```
 
 Ningún `.env` entra al repositorio (están en `.gitignore`); solo `.env.ejemplo`.
 
@@ -106,9 +125,10 @@ misma Wi-Fi** que la máquina de desarrollo.
 
 ## Producción
 
-`ops/.env.prod` ya está escrito (no viaja en el repo: `.gitignore` lo excluye por
-`.env.*`). Lleva secretos propios, distintos de los de staging, y la base
-**arranca vacía**.
+`ops/.env.prod` (no viaja en el repo: `.gitignore` lo excluye por `.env.*`) lleva
+secretos propios, distintos de los de staging, y la base **arranca vacía**. Es el
+archivo que `ops/oci/desplegar.ps1` copia a la instancia como `/opt/fintechvital/.env`
+con permisos `0600`.
 
 ```bash
 # ops/.env.prod - lo esencial
@@ -170,7 +190,7 @@ hostname no existe el visitante recibe un error 1016 antes de llegar a la regla.
 
 ### Antes de publicar
 
-- [ ] `ENTORNO=.env.prod ./ops/stack.sh probar` en verde
+- [ ] `FV_API_URL=https://api.fintechvital.com/api/v1 node ops/ejemplos.mjs` en verde
 - [ ] `FV_CARGAR_DEMO=no` y sin usuarios de ejemplo en la base
 - [ ] Contraseñas generadas, distintas de las de staging, fuera del repo
 - [ ] `FV_CORS_ORIGINS` con los dos dominios de producción (no `*`, no `localhost`)
@@ -185,36 +205,30 @@ hostname no existe el visitante recibe un error 1016 antes de llegar a la regla.
 
 ## Subir las imágenes a un registro
 
-Para desplegar en las instancias de OCI sin compilar allí:
+En producción **la instancia no compila nada**: se baja imágenes ya construidas
+de **OCI Container Registry (OCIR)**. Un script se encarga de las cuatro:
 
-```bash
-# Construir
-docker build -t ghcr.io/no-country-simulation/fintechvital-db:0.4.0  db/
-docker build -t ghcr.io/no-country-simulation/fintechvital-api:0.4.0 backend/
-docker build -t ghcr.io/no-country-simulation/fintechvital-web:0.4.0 \
-  --build-arg NEXT_PUBLIC_API_URL=https://api.fintechvital.com/api/v1 \
-  frontend/web/
-
-# Publicar
-echo "$GHCR_TOKEN" | docker login ghcr.io -u <usuario> --password-stdin
-docker push ghcr.io/no-country-simulation/fintechvital-db:0.4.0
-docker push ghcr.io/no-country-simulation/fintechvital-api:0.4.0
-docker push ghcr.io/no-country-simulation/fintechvital-web:0.4.0
+```powershell
+.\ops\oci\publicar-imagenes.ps1              # las 4
+.\ops\oci\publicar-imagenes.ps1 -Solo web,api  # solo lo que cambió
 ```
 
-> ⚠️ Las instancias de OCI del plan gratuito son **ARM64 (Ampere)**. Si se
-> construye en un portátil x86, hay que hacerlo multi-arquitectura o la imagen no
-> arranca allí:
->
-> ```bash
-> docker buildx build --platform linux/amd64,linux/arm64 -t <imagen> --push db/
-> ```
->
-> Las imágenes base que usamos (`postgres:16-alpine`, `eclipse-temurin:21-jre-alpine`,
-> `node:22-alpine`) ya son multi-arquitectura.
+> ⚠️ Las instancias de OCI del plan gratuito son **ARM64 (Ampere)**. Construir
+> en un portátil x86 sin decirlo produce imágenes x86 que **suben sin protestar**
+> y solo fallan al arrancar, con un `exec format error` que no dice de dónde
+> viene. El script fuerza `--platform linux/arm64`; para que eso no tarde media
+> hora bajo emulación, `backend/Dockerfile` compila el `.jar` en la arquitectura
+> del anfitrión (`FROM --platform=$BUILDPLATFORM`) y solo la etapa de ejecución
+> es arm64.
 
-En la instancia, `ops/compose.yml` se usa con `image:` en vez de `build:`, y solo
-hace falta `docker compose pull && docker compose up -d`.
+El detalle — registrar la emulación, el login a OCIR y cómo hacerlo todo a mano
+si el script falla — está en
+[`../ops/DESPLIEGUE_NUBE_TECNICO.md`](../ops/DESPLIEGUE_NUBE_TECNICO.md) §3 y §5.
+
+En la instancia se usa `ops/compose.oci.yml`, que trae `image:` en vez de
+`build:`, y el despliegue hace **`pull` explícito + `up -d --force-recreate`**:
+sin lo primero arranca la imagen vieja que tenía cacheada, y sin lo segundo no
+recrea nada y aun así reporta éxito.
 
 ---
 
@@ -235,7 +249,11 @@ distintos en silencio.
 Copia de seguridad antes de tocar nada:
 
 ```bash
+# Local o staging
 docker exec fintechvital-db pg_dump -U fintechvital -Fc fintechvital > respaldo-$(date +%F).dump
+
+# En la instancia de OCI (el contenedor se llama distinto: otro proyecto compose)
+podman exec fintechvital-prod-db pg_dump -U fintechvital -Fc fintechvital > respaldo-$(date +%F).dump
 ```
 
 ---
@@ -264,9 +282,10 @@ primer plano y al salir con **Ctrl+C borra contenedores, red y volumen**.
 
 ## Plan B de la demo
 
-Si el túnel o la infraestructura fallan el día de la entrega:
-**se corre en local y se graba**. La demo no depende de que OCI esté en pie
-([ADR-0008](../frontend/docs/adr/0008-infra-no-bloquea-app.md)).
+Producción está en pie, pero el plan B sigue vigente: si el túnel o la
+infraestructura fallan el día de la entrega, **se corre en local y se graba**. La
+demo no depende de que OCI esté en pie
+([ADR-0008](../docs/adr/0008-infra-no-bloquea-app.md)).
 
 Por eso la semilla de ejemplo es **determinista**: los mismos datos siempre, en
 cualquier máquina. La grabación es reproducible.

@@ -4,8 +4,8 @@ PostgreSQL 16, empaquetado en una imagen que ya trae **el esquema y los datos de
 ejemplo dentro**. La misma imagen sirve para local, staging y producción: lo
 único que cambia es si se cargan los datos de ejemplo y cuál es la contraseña.
 
-> Motor y su porqué: [ADR-0014](../frontend/docs/adr/0014-motor-postgresql.md).
-> Taxonomía (catálogo **vigente**, ya no congelado): `frontend/docs/datos/TAXONOMIA.md`.
+> Motor y su porqué: [ADR-0014](../docs/adr/0014-motor-postgresql.md).
+> Taxonomía (catálogo **vigente**, ya no congelado): `docs/datos/TAXONOMIA.md`.
 
 ---
 

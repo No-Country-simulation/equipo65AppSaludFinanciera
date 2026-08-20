@@ -2,8 +2,9 @@
 
 Guía para dejar corriendo la **web** (contenedor o modo dev) y la **app móvil**
 (emulador o teléfono) partiendo de una máquina limpia, como si fuera una VM
-recién creada. Para el stack completo (backend/ML/BD, cuando existan) ver
-[`ONBOARDING.md`](proceso/ONBOARDING.md).
+recién creada. Para el stack completo (API, modelo y base de datos, que ya
+existen) ver [`ONBOARDING.md`](proceso/ONBOARDING.md) — o, más corto,
+`./ops/stack.sh arriba` desde la raíz, que levanta todo de una vez.
 
 > **Atajo**: después de instalar los requisitos, TODO se maneja desde el menú -
 > **Windows**: doble clic en `frontend/INICIAR.bat` · **Linux/macOS**:
@@ -79,8 +80,8 @@ brew install git node@22
 ## §3 Clonar y verificar la máquina
 
 ```bash
-git clone <url-del-repo> Fintech Vital
-cd financeAI/frontend
+git clone https://github.com/No-Country-simulation/fintech-vital-equipo65.git
+cd fintech-vital-equipo65/frontend
 ```
 
 - **Windows**: doble clic en `INICIAR.bat` (dentro de `frontend/`) → opción `[1]` (doctor).

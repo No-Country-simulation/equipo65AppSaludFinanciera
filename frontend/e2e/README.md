@@ -89,7 +89,7 @@ node frontend/e2e/contrato.mjs
 
 Un test que falla aquí está describiendo un fallo real de la aplicación. No se
 ajusta el test para que pase: se arregla lo que señala, o se anota por qué se
-deja. Estado y diagnóstico en [`docs/E2E_HALLAZGOS.md`](../../docs/E2E_HALLAZGOS.md).
+deja.
 
 `retries: 0` a propósito: un test que pasa "a la segunda" esconde justo lo que
 buscamos, que es una pantalla que a veces no carga.

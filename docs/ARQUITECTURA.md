@@ -6,7 +6,7 @@ están separados así.
 > Para el detalle de cada pieza: [`../db/README.md`](../db/README.md) ·
 > [`../ops/README.md`](../ops/README.md) · [`../backend/README.md`](../backend/README.md).
 > El **contrato de la API** y la **taxonomía** viven en
-> `frontend/docs/arquitectura/` y `frontend/docs/datos/`. La taxonomía **ya no
+> `docs/arquitectura/` y `docs/datos/`. La taxonomía **ya no
 > está congelada**: la manda data science y la base de datos se adapta.
 
 ---
@@ -161,13 +161,47 @@ comportamiento que se quiere en la entrega.
 | Capa mock desacoplada *(ya retirada)* | ADR-0011 |
 | 2FA obligatorio en el registro | ADR-0013 |
 | **PostgreSQL 16 como motor** | ADR-0014 |
+| Tokens de sesión en el cliente | ADR-0015 |
 
-Todas en [`../frontend/docs/adr/`](../frontend/docs/adr/).
+Todas en [`../docs/adr/`](../docs/adr/).
 
 **Por qué reglas y no un LLM para las recomendaciones**: son auditables,
 reproducibles y se pueden defender ante un jurado. *"El sistema te sugiere esto
 porque tu tasa de ahorro es −0.36"* es una respuesta; *"lo dijo el modelo"* no
 lo es. Además no dependen de una API externa el día de la demo.
+
+---
+
+## Cómo llega a producción
+
+En local y en staging, los cuatro servicios corren en la máquina de quien
+desarrolla. En **producción corren en una instancia de Oracle Cloud**:
+
+```mermaid
+flowchart LR
+    N["Navegador"] -->|HTTPS| CF["Cloudflare<br/>TLS · anti-DDoS · caché"]
+    CF -.->|"túnel saliente (QUIC)<br/>sin puerto abierto"| T
+    subgraph OCI["OCI · instancia ARM en subred privada, sin IP pública"]
+      T["cloudflared"] --> WEB["web :3000"]
+      T --> API["api :8080"]
+      API --> DB[("db :5432")]
+      API --> MLP["ml :8000"]
+    end
+```
+
+Tres cosas que explican el montaje:
+
+- **No hay ningún puerto abierto al exterior.** Es el servidor el que abre la
+  conexión hacia Cloudflare y la mantiene. Los puertos del host solo escuchan en
+  `127.0.0.1`, para depurar desde dentro de la máquina.
+- **La instancia no compila nada.** Las imágenes se construyen para arm64 en la
+  máquina de quien despliega, se suben a OCI Container Registry y la instancia
+  se las baja. Compilar Java bajo emulación en 1 OCPU no es viable.
+- **La base arranca vacía**, sin datos de ejemplo. Quien entra se registra y
+  carga sus propios movimientos.
+
+Detalle en [`../ops/DESPLIEGUE_NUBE.md`](../ops/DESPLIEGUE_NUBE.md) (llano) y
+[`../ops/DESPLIEGUE_NUBE_TECNICO.md`](../ops/DESPLIEGUE_NUBE_TECNICO.md).
 
 ---
 
@@ -178,15 +212,18 @@ Web        ████████████████████  complet
 Móvil      ████████████████████  completa
 Datos      ████████████████████  esquema + migraciones + semilla
 Contenedor ████████████████████  verificado en Docker y Podman
-API        ████████████░░░░░░░░  26 de 44 endpoints
+API        ████████████████████  completa para lo que consumen las interfaces
 ML         ████████████████████  los dos modelos entrenados y en uso
+Despliegue ████████████████████  en produccion sobre OCI
 ```
 
-**La API ya hace un análisis financiero de punta a punta**: clasifica las
+**La API hace un análisis financiero de punta a punta**: clasifica las
 transacciones contra el servicio de modelo, calcula los 8 indicadores, predice
-el perfil y genera recomendaciones con el motor de reglas. Auth con 2FA, perfil
-y banca también están cerrados. Falta transacciones (CRUD e importación),
-persistir el análisis con su historial, catálogos y producto.
+el perfil y genera recomendaciones con el motor de reglas, y lo persiste con su
+historial. Auth con 2FA, perfil, banca, transacciones (CRUD e importación de
+CSV), catálogos y producto (metas, presupuestos, eventos) están cerrados:
+**ninguna pantalla recibe ya un 404**. Del contrato queda `GET /auditoria`, que
+ninguna interfaz usa.
 
 **Los dos modelos están entrenados y en uso**, con dataset propio trilingüe y
 un notebook que documenta todo el proceso. M1 clasifica por el texto de la
@@ -195,7 +232,7 @@ indicadores. El diseño sigue siendo *modelo primero, baseline si no está segur
 el clasificador por palabras clave cubre los comercios que el modelo nunca vio.
 Las métricas están en [`../ml/README.md`](../ml/README.md).
 
-El inventario completo y el orden sugerido para atacarlo están en los
-documentos de trabajo del equipo (`ENDPOINTS.md`, `REVISION_API.md`), que no se
-publican en el repositorio. Ver [`README.md`](README.md) §*Documentos de
-trabajo*.
+El inventario completo de rutas, con la forma exacta de cada petición y cada
+respuesta, está en
+[`CONTRATO_API.md`](../docs/arquitectura/CONTRATO_API.md) y en el
+Swagger que la propia API genera en `/api/v1/docs`.

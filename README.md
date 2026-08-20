@@ -8,6 +8,9 @@ recomendaciones que puedes aplicar hoy.**
 Web · Móvil · API · Base de datos — todo en contenedores.
 Español 🇪🇸 · Português 🇧🇷 · English 🇺🇸
 
+**▶ En vivo: [fintechvital.com](https://fintechvital.com)** · API en
+[api.fintechvital.com](https://api.fintechvital.com/api/v1/salud)
+
 *Hackathon ONE G9 (Alura + Oracle) — No Country, equipo 65*
 
 </div>
@@ -90,8 +93,9 @@ contenedores (te lo pregunta primero).
 | **Móvil** | ✅ Completa (misma capa de datos que la web) | [`frontend/README.md`](frontend/README.md) |
 | **Base de datos** | ✅ Esquema, migraciones y datos de ejemplo | [`db/README.md`](db/README.md) |
 | **Contenedores** | ✅ Verificado con Docker **y** Podman | [`ops/README.md`](ops/README.md) |
-| **API** | 🚧 Análisis financiero, autenticación con 2FA, perfil y banca listos; transacciones y catálogos por construir | [`backend/README.md`](backend/README.md) |
+| **API** | ✅ Completa para lo que consumen las interfaces (2 endpoints del enunciado, auth con 2FA, transacciones, análisis, catálogos, producto) | [`backend/README.md`](backend/README.md) |
 | **Modelo (ML)** | ✅ Los dos modelos entrenados y en uso, con notebook y dataset propio | [`ml/README.md`](ml/README.md) |
+| **Despliegue** | ✅ En producción sobre **Oracle Cloud (OCI)**, tras un túnel de Cloudflare | [`ops/DESPLIEGUE_NUBE.md`](ops/DESPLIEGUE_NUBE.md) |
 
 ---
 
@@ -131,9 +135,12 @@ puede romper por cambiar de idioma.
 | Trabajar en la API | [`backend/README.md`](backend/README.md) |
 | Trabajar en el servicio de modelo | [`ml/README.md`](ml/README.md) |
 | Desplegar (staging y producción) | [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) |
-| Ramas, commits y pruebas | [`frontend/docs/proceso/`](frontend/docs/proceso/) |
-| Montar solo el frontend | [`frontend/docs/FRONTEND_DESDE_CERO.md`](frontend/docs/FRONTEND_DESDE_CERO.md) |
-| El porqué de cada decisión | [`frontend/docs/adr/`](frontend/docs/adr/) |
+| Entender cómo llega a internet, sin tecnicismos | [`ops/DESPLIEGUE_NUBE.md`](ops/DESPLIEGUE_NUBE.md) |
+| Desplegar en la instancia de OCI | [`ops/DESPLIEGUE_NUBE_TECNICO.md`](ops/DESPLIEGUE_NUBE_TECNICO.md) |
+| Los tres contratos (API, modelo, taxonomía) | [`docs/arquitectura/`](docs/arquitectura/) |
+| Cómo se prueba y cómo entrar al proyecto | [`docs/proceso/`](docs/proceso/) |
+| Montar solo el frontend | [`docs/FRONTEND_DESDE_CERO.md`](docs/FRONTEND_DESDE_CERO.md) |
+| El porqué de cada decisión | [`docs/adr/`](docs/adr/) |
 | El índice completo | [`docs/README.md`](docs/README.md) |
 
 ---
@@ -145,6 +152,7 @@ puede romper por cambiar de idioma.
 **Datos** PostgreSQL 16 · migraciones versionadas
 **Modelo** Python 3.11 · FastAPI · scikit-learn
 **Operación** Docker / Podman · Compose · Cloudflare Tunnel
+**Nube** Oracle Cloud (OCI): Compute ARM · Container Registry · Vault · Bastion
 
 ---
 

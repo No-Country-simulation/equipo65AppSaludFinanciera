@@ -1,6 +1,6 @@
 # Fintech Vital - móvil (React Native + Expo)
 
-App móvil del proyecto (referencia visual: BBVA). Misma cobertura funcional
+App móvil del proyecto. Misma cobertura funcional
 que la web: login/registro con 2FA, inicio con perfil financiero y gastos por
 categoría, movimientos, presupuestos, metas, análisis con recomendaciones y
 evolución, perfil. **Trilingüe: español · português · english.**
@@ -41,23 +41,28 @@ npx expo start          # escanea el QR con Expo Go
 **Usuario demo**: `demo@fintechvital.dev` + cualquier contraseña de 10+ caracteres.
 
 > ¿Máquina sin nada instalado? Guía completa paso a paso:
-> [`docs/proceso/FRONTEND_DESDE_CERO.md`](../docs/FRONTEND_DESDE_CERO.md)
+> [`docs/FRONTEND_DESDE_CERO.md`](../docs/FRONTEND_DESDE_CERO.md)
 
 ## De dónde salen los datos
 
-Igual que la web: capa mock desacoplada
-([ADR-0011](../docs/adr/0011-mocks-desacoplados-frontend.md)), elegida por
-variable de entorno:
+Igual que la web: de la **API real y de ninguna otra parte**. La capa mock y el
+flag `EXPO_PUBLIC_DATA_SOURCE` **ya no existen** — se retiraron al completarse la
+API, que es lo que
+[ADR-0011](../../docs/adr/0011-mocks-desacoplados-frontend.md) preveía. Lo único
+que se configura es a dónde apunta:
 
 ```bash
-EXPO_PUBLIC_DATA_SOURCE=mock   # default hoy (sin backend)
-EXPO_PUBLIC_DATA_SOURCE=api    # al integrar
 EXPO_PUBLIC_API_URL=http://10.0.2.2:8080/api/v1   # 10.0.2.2 = localhost del anfitrion en el emulador
 ```
 
 `src/data/` es **byte-idéntica** a la de la web salvo `config.ts` (lee
-`EXPO_PUBLIC_*` e inyecta AsyncStorage). El mock respalda su estado en
-AsyncStorage, así que cerrar y reabrir la app **no** borra lo cargado.
+`EXPO_PUBLIC_*` e inyecta AsyncStorage). Hay un test de la suite E2E que
+comprueba esa igualdad byte a byte, para que las dos aplicaciones no se separen
+sin que nadie lo note.
+
+La sesión sí persiste (ADR-0015): el access token en AsyncStorage y el refresh
+en el llavero del sistema (`expo-secure-store`), así que cerrar y reabrir la app
+no obliga a iniciar sesión otra vez.
 
 ## Estructura
 
@@ -85,6 +90,6 @@ npx tsc --noEmit    # typecheck
 | Vía | Para quién | Qué se necesita |
 |---|---|---|
 | **Video demo** | Jurado (obligatorio de todas formas) | Grabar la app desde el emulador o un teléfono |
-| **APK con EAS Build** (recomendado) | Jurado y equipo, cualquier Android | `npx eas build -p android --profile preview` genera un `.apk` instalable; el link/QR se pone en el README de entrega. **Para la entrega se compila con `EXPO_PUBLIC_DATA_SOURCE=api`** apuntando a la API pública (regla CERO mock) |
+| **APK con EAS Build** (recomendado) | Jurado y equipo, cualquier Android | `npx eas build -p android --profile preview` genera un `.apk` instalable; el link/QR se pone en el README de entrega. **Para la entrega se compila apuntando a la API pública** (`EXPO_PUBLIC_API_URL=https://api.fintechvital.com/api/v1`) |
 | **Expo Go + QR** | Equipo durante el desarrollo | Expo Go instalado y estar en la misma red que quien corre `npx expo start` |
 | iOS / TestFlight | - | Requiere Apple Developer (US$99/año) - **descartado para el hackathon** |

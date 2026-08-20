@@ -1,0 +1,130 @@
+{
+  "_comentario": "CASOS DE CONTRATO - los ejecutan AMBOS lados de la costura DS<->Backend, en CI. El stub (ml/stub/) y el servicio real (ml/) deben pasar los mismos casos: eso es lo que garantiza que sean intercambiables. Ver docs/arquitectura/CONTRATO_MODELO.md §7.",
+  "version": "1.0.0",
+  "clasificar": {
+    "_comentario": "POST /interno/v1/clasificar - la categoria esperada es la unica assertion dura. La confianza solo se verifica como rango [0,1].",
+    "casos_es": [
+      { "descripcion": "COMPRA SORIANA HIPER 4821", "categoria_esperada": "alimentacion", "idioma": "es" },
+      { "descripcion": "OXXO TIENDA 1832", "categoria_esperada": "alimentacion", "idioma": "es" },
+      { "descripcion": "UBER *TRIP HELP.UBER.COM", "categoria_esperada": "transporte", "idioma": "es" },
+      { "descripcion": "GASOLINERA PEMEX 7781", "categoria_esperada": "transporte", "idioma": "es" },
+      { "descripcion": "RENTA DEPTO JUL", "categoria_esperada": "vivienda", "idioma": "es" },
+      { "descripcion": "DOM. CFE SUMINISTRO", "categoria_esperada": "servicios", "idioma": "es" },
+      { "descripcion": "TELMEX INTERNET", "categoria_esperada": "servicios", "idioma": "es" },
+      { "descripcion": "FCIA GUADALAJARA SUC 112", "categoria_esperada": "salud", "idioma": "es" },
+      { "descripcion": "PLATZI SUSCRIPCION ANUAL", "categoria_esperada": "educacion", "idioma": "es" },
+      { "descripcion": "NETFLIX.COM AMSTERDAM", "categoria_esperada": "entretenimiento", "idioma": "es" },
+      { "descripcion": "LIVERPOOL DEPTO 22", "categoria_esperada": "compras", "idioma": "es" },
+      { "descripcion": "PAGO TC VISA INTERESES", "categoria_esperada": "finanzas", "idioma": "es" },
+      { "descripcion": "TRANSF. A INVERSION GBM", "categoria_esperada": "ahorro_inversion", "idioma": "es" },
+      { "descripcion": "TRANSF. RECIBIDA NOMINA", "categoria_esperada": "ingresos", "idioma": "es" }
+    ],
+    "casos_pt": [
+      { "_nota": "CRITICOS: el jurado es mayoritariamente de Brasil. Si estos fallan, la demo se cae.",
+        "descripcion": "IFOOD *PEDIDO", "categoria_esperada": "alimentacion", "idioma": "pt" },
+      { "descripcion": "PAO DE ACUCAR 227", "categoria_esperada": "alimentacion", "idioma": "pt" },
+      { "descripcion": "99POP CORRIDA", "categoria_esperada": "transporte", "idioma": "pt" },
+      { "descripcion": "POSTO IPIRANGA", "categoria_esperada": "transporte", "idioma": "pt" },
+      { "descripcion": "ALUGUEL APTO 302", "categoria_esperada": "vivienda", "idioma": "pt" },
+      { "descripcion": "CONTA DE LUZ ENEL", "categoria_esperada": "servicios", "idioma": "pt" },
+      { "descripcion": "DROGARIA SAO PAULO", "categoria_esperada": "salud", "idioma": "pt" },
+      { "descripcion": "MENSALIDADE ESCOLAR", "categoria_esperada": "educacion", "idioma": "pt" },
+      { "descripcion": "MAGAZINE LUIZA", "categoria_esperada": "compras", "idioma": "pt" },
+      { "descripcion": "JUROS CARTAO NUBANK", "categoria_esperada": "finanzas", "idioma": "pt" },
+      { "descripcion": "APLICACAO CDB", "categoria_esperada": "ahorro_inversion", "idioma": "pt" },
+      { "descripcion": "PIX RECEBIDO SALARIO", "categoria_esperada": "ingresos", "idioma": "pt" }
+    ],
+    "casos_en": [
+      { "descripcion": "WHOLE FOODS MARKET #1042", "categoria_esperada": "alimentacion", "idioma": "en" },
+      { "descripcion": "SHELL OIL 5521", "categoria_esperada": "transporte", "idioma": "en" },
+      { "descripcion": "MONTHLY RENT PAYMENT", "categoria_esperada": "vivienda", "idioma": "en" },
+      { "descripcion": "CON EDISON UTILITY", "categoria_esperada": "servicios", "idioma": "en" },
+      { "descripcion": "CVS PHARMACY 8812", "categoria_esperada": "salud", "idioma": "en" },
+      { "descripcion": "AMAZON MARKETPLACE", "categoria_esperada": "compras", "idioma": "en" },
+      { "descripcion": "CREDIT CARD INTEREST", "categoria_esperada": "finanzas", "idioma": "en" },
+      { "descripcion": "DIRECT DEPOSIT PAYROLL", "categoria_esperada": "ingresos", "idioma": "en" }
+    ],
+    "casos_borde": [
+      { "_nota": "El stub y el real deben coincidir en el COMPORTAMIENTO, no en la categoria.",
+        "descripcion": "XKCD 12345 ???", "categoria_esperada": "otros", "razon": "no clasificable -> RN6, confianza < 0.40" },
+      { "descripcion": "A", "categoria_esperada": "otros", "razon": "descripcion minima valida (1 char)" }
+    ],
+    "invalidos": [
+      { "entrada": { "transacciones": [] }, "http_esperado": 422, "codigo": "VALIDACION_ENTRADA" },
+      { "entrada": { "transacciones": [{ "descripcion": "" }] }, "http_esperado": 422, "codigo": "VALIDACION_ENTRADA", "razon": "descripcion vacia" },
+      { "entrada": { "_nota": "501 transacciones" }, "http_esperado": 422, "codigo": "VALIDACION_ENTRADA", "razon": "maximo 500" }
+    ]
+  },
+  "perfil": {
+    "_comentario": "POST /interno/v1/perfil - los indicadores los calcula Spring. Estos 3 casos son los de docs/entrega/EJEMPLOS.md, con los ratios ya calculados a mano.",
+    "casos": [
+      {
+        "nombre": "ejemplo-1-enunciado",
+        "indicadores": {
+          "tasa_ahorro": 0.831,
+          "ratio_endeudamiento": 0.25,
+          "ratio_gasto_ingreso": 0.169,
+          "ratio_gasto_esencial": 0.16,
+          "ratio_gasto_discrecional": 0.009,
+          "concentracion_gasto": 0.553,
+          "frecuencia_ahorro_num": 2,
+          "ratio_recurrente": 0.053
+        },
+        "perfil_esperado": "en_observacion",
+        "razon": "ahorro alto pero endeudamiento 0.25 > 0.20 -> no llega a saludable"
+      },
+      {
+        "nombre": "ejemplo-2-sobreendeudado",
+        "indicadores": {
+          "tasa_ahorro": -0.128,
+          "ratio_endeudamiento": 0.55,
+          "ratio_gasto_ingreso": 1.129,
+          "ratio_gasto_esencial": 0.814,
+          "ratio_gasto_discrecional": 0.143,
+          "concentracion_gasto": 0.285,
+          "frecuencia_ahorro_num": 0,
+          "ratio_recurrente": 0.011
+        },
+        "perfil_esperado": "en_riesgo",
+        "razon": "dispara 3 condiciones: deficit, deuda > 0.40, no ahorra"
+      },
+      {
+        "nombre": "ejemplo-3-saludable",
+        "indicadores": {
+          "tasa_ahorro": 0.426,
+          "ratio_endeudamiento": 0.1,
+          "ratio_gasto_ingreso": 0.574,
+          "ratio_gasto_esencial": 0.507,
+          "ratio_gasto_discrecional": 0.057,
+          "concentracion_gasto": 0.426,
+          "frecuencia_ahorro_num": 3,
+          "ratio_recurrente": 0.06
+        },
+        "perfil_esperado": "saludable",
+        "razon": "ahorro >= 0.20, deuda <= 0.20, frecuencia >= 2"
+      }
+    ],
+    "invalidos": [
+      { "entrada": { "indicadores": { "tasa_ahorro": 0.5 } }, "http_esperado": 422, "razon": "faltan indicadores (los 8 son obligatorios)" },
+      { "entrada": { "indicadores": { "frecuencia_ahorro_num": 7 } }, "http_esperado": 422, "razon": "fuera de {0,1,2,3}" }
+    ]
+  },
+  "invariantes": {
+    "_comentario": "Estas se verifican en TODA respuesta, no en un caso concreto. Son las que impiden que el contrato se rompa en silencio.",
+    "clasificar": [
+      "categoria SIEMPRE es uno de los 12 slugs (nunca null, nunca un valor fuera de la lista)",
+      "confianza en [0.0, 1.0]",
+      "si confianza < 0.40 -> categoria == 'otros' (RN6)",
+      "len(resultados) == len(transacciones) de entrada",
+      "el campo 'id' se devuelve tal cual vino (eco)",
+      "modelo_version presente y no vacio"
+    ],
+    "perfil": [
+      "perfil es uno de: saludable | en_observacion | en_riesgo",
+      "probabilidad == probabilidades[perfil]",
+      "sum(probabilidades.values()) == 1.0 (+-0.01)",
+      "las 3 claves de probabilidades estan siempre presentes",
+      "explicacion es una lista (puede estar vacia en v1.0)"
+    ]
+  }
+}

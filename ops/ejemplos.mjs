@@ -5,7 +5,7 @@
  * el smoke test del proyecto: si esto pasa, el endpoint que el jurado va a
  * probar responde lo que documentamos.
  *
- * La fuente de verdad de los numeros es frontend/docs/entrega/EJEMPLOS.md. Si
+ * La fuente de verdad de los numeros es docs/entrega/EJEMPLOS.md. Si
  * el sistema devuelve otra cosa, o hay un bug, o hay que actualizar ese doc a
  * proposito -- pero nunca en silencio.
  *

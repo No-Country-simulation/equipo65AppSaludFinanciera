@@ -3,24 +3,29 @@
 API REST en **Java 21 + Spring Boot 3**. Es la única pieza que habla con la base
 de datos y con el servicio de inferencia; toda la lógica de negocio vive aquí.
 
-> 🚧 **Estado (2026-08-07)**: hechos **26 de los 44 endpoints** del contrato,
-> contra PostgreSQL real y verificados en contenedor.
+> ✅ **Estado (2026-08-20)**: **completa para todo lo que consumen la web y la
+> app móvil**, contra PostgreSQL real, verificada en contenedor y **desplegada en
+> producción** en <https://api.fintechvital.com>.
 >
 > | Bloque | |
 > |---|---|
-> | Análisis financiero (los 2 del enunciado) | ✅ |
+> | Análisis financiero (los 2 endpoints del enunciado) | ✅ |
 > | Autenticación y sesión (JWT + refresh rotativo) | ✅ |
 > | 2FA TOTP (alta, códigos de respaldo, login) | ✅ |
 > | Perfil, exportación de datos y baja de cuenta | ✅ |
 > | Banca (cuentas, tarjetas, buró) | ✅ |
-> | Transacciones (CRUD, importar CSV) | 🔴 |
-> | Análisis persistido e historial | 🔴 |
-> | Catálogos, metas, presupuestos y eventos | 🔴 |
+> | Transacciones (CRUD + importar CSV) | ✅ |
+> | Análisis persistido, historial y evolución | ✅ |
+> | Catálogos (`/categorias`, `/monedas`, `/ciudades`) | ✅ |
+> | Metas, presupuestos, eventos y `/resumen/comparacion` | ✅ |
 >
-> El inventario endpoint por endpoint (`ENDPOINTS.md`) y la revisión con el orden
-> sugerido para atacarlo (`REVISION_API.md`) **no están en el repositorio**: son
-> documentos de trabajo del equipo. **Pídelos antes de escribir código**, o
-> acabarás inventándote la forma del JSON.
+> **Ninguna pantalla de la web o del móvil recibe ya un 404.** Del contrato queda
+> sin implementar solo `GET /auditoria` (🔒 admin), que ninguna interfaz usa.
+>
+> La forma exacta del JSON está en
+> [`CONTRATO_API.md`](../docs/arquitectura/CONTRATO_API.md) y en el
+> Swagger de `/api/v1/docs`. **Léelos antes de escribir código**, o acabarás
+> inventándote la forma de la respuesta.
 
 ---
 
@@ -177,21 +182,18 @@ no se puede desincronizar del código.
 
 ## Lo que falta
 
-Resumen. El detalle endpoint por endpoint está en los documentos de trabajo del
-equipo (`ENDPOINTS.md`, `REVISION_API.md`), que no se publican: pídelos.
+Poco, y nada que bloquee a las interfaces ni a la entrega:
 
-- **Transacciones**: listado paginado, alta manual, corrección de categoría,
-  baja e importación de CSV.
-- **Análisis persistido**: ejecutar sobre las transacciones del usuario,
-  guardarlo y servir el historial y la evolución.
-- **Catálogos** (`/categorias`, `/monedas`) y **producto** (metas, presupuestos,
-  eventos de calendario).
-- **Operación**: `/salud` completo y `/auditoria` para administradores.
-- Mover los umbrales por categoría de `dominio/Taxonomia.java` a la columna
-  `categoria.umbral_ingreso`, que ya existe en la base.
+- **`GET /auditoria`** (🔒 admin). Los eventos **sí se registran** — cada login,
+  cambio de contraseña y baja de cuenta escribe en `evento_auditoria` — pero no
+  hay endpoint para leerlos. Ninguna pantalla lo pide.
+- **Umbrales por categoría**: hoy viven en `dominio/Taxonomia.java`. La columna
+  `categoria.umbral_ingreso` ya existe en la base y sería el sitio correcto;
+  moverlos evitaría recompilar para ajustar un umbral.
 
-**La buena noticia**: la base de datos ya está migrada y **con datos dentro**.
-Los de catálogos y producto son leer una tabla y devolverla.
+La forma exacta de cada ruta está en
+[`CONTRATO_API.md`](../docs/arquitectura/CONTRATO_API.md) y, generada
+desde el código, en el Swagger de `/api/v1/docs`.
 
 ---
 

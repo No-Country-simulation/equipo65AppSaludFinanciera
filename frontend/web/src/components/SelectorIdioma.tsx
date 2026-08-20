@@ -18,7 +18,7 @@ export function SelectorIdioma({ compacto = false }: { compacto?: boolean }) {
   const cambiar = (nuevo: Locale) => {
     router.replace(pathname, { locale: nuevo });
     // Con sesion, la preferencia se persiste en BD para que viaje entre dispositivos
-    // (web <-> movil). Optimista + PATCH en segundo plano. Ver CAMBIOS_INTERFACES.md 4.
+    // (web <-> movil). Optimista + PATCH en segundo plano.
     if (usuario && usuario.idioma !== nuevo) {
       actualizarUsuario({ ...usuario, idioma: nuevo });
       void ds

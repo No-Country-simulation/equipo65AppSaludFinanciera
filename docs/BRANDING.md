@@ -28,7 +28,7 @@ vez un *check* y una flecha ascendente, con barras de gráfico dentro de "TECH".
 > sustituyendo colores sobre el positivo, y esa aproximación perdía cosas del
 > original (ver abajo).
 
-Viven en [`../web/public/marca/`](../web/public/marca/):
+Viven en [`../web/public/marca/`](../frontend/web/public/marca):
 
 | Archivo | Cuándo se usa |
 |---|---|

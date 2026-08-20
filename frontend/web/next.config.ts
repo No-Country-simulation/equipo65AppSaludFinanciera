@@ -4,7 +4,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  // Imagen Docker minima (infra/compose): copia .next/standalone
+  // Imagen de contenedor minima (ops/compose.yml): copia .next/standalone
   output: 'standalone',
 };
 

@@ -12,6 +12,121 @@ Versionado: [SemVer](https://semver.org/lang/es/).
 
 ---
 
+## [0.5.0] — 2026-08-20
+
+**Fintech Vital esta en produccion: <https://fintechvital.com>.** Con el
+despliegue en Oracle Cloud se cierra el requisito 7 del enunciado, que era el
+ultimo de los 8 que quedaba abierto.
+
+### Anadido
+
+- **Despliegue en OCI.** La aplicacion entera corre en una instancia Compute ARM
+  (Ampere A1) en una **subred privada sin IP publica**. Las cuatro imagenes se
+  construyen para arm64, se publican en **OCI Container Registry** y la instancia
+  se las baja; los secretos salen de **OCI Vault** y el unico acceso
+  administrativo es por **OCI Bastion**. La unica entrada desde internet es un
+  **tunel de Cloudflare**: no hay ningun puerto abierto en el origen.
+- **Scripts de despliegue** (`ops/oci/`): `publicar-imagenes.ps1` construye y
+  sube, `desplegar.ps1` despliega y ademas da `estado`, `logs` y `bajar`. La
+  configuracion de la cuenta vive en `ops/oci/oci.env`, fuera del repositorio,
+  con su plantilla versionada.
+- **`ops/compose.oci.yml`**: el stack de produccion, con `image:` en vez de
+  `build:` y techo de `cpus` por servicio.
+- **Dos documentos de despliegue**: [`ops/DESPLIEGUE_NUBE.md`](ops/DESPLIEGUE_NUBE.md),
+  para cualquiera, y [`ops/DESPLIEGUE_NUBE_TECNICO.md`](ops/DESPLIEGUE_NUBE_TECNICO.md),
+  con el procedimiento manual completo y las diez trampas que costaron el
+  despliegue.
+- **`ops/ejemplos.mjs`**: smoke test funcional de los tres ejemplos del
+  enunciado. Corre contra cualquier entorno, produccion incluida. **54/54.**
+- **Suite E2E** en `frontend/e2e/`: 35 casos de contrato de API y 48 de
+  navegador (escritorio y movil-web), con `retries: 0`. Cubre web **y** movil,
+  porque comparten `src/data` byte a byte y hay un test que lo comprueba.
+- **Sesion persistida** (ADR-0015): los tokens sobreviven a un F5 y a reabrir la
+  app, y el access token se renueva solo al caducar. En movil, el refresh va al
+  llavero del sistema.
+- **Descarga del APK de Android** desde las pantallas publicas de la web.
+
+### Cambiado
+
+- **La API quedo completa** para todo lo que consumen las interfaces:
+  transacciones (CRUD + importacion de CSV), analisis persistido con historial y
+  evolucion, catalogos (`/categorias`, `/monedas`, `/ciudades`), metas,
+  presupuestos, eventos y `/resumen/comparacion`. **Ninguna pantalla recibe ya un
+  404.** Del contrato solo queda `GET /auditoria`, que ninguna interfaz usa.
+- **`backend/Dockerfile` compila el `.jar` en la arquitectura del anfitrion**
+  (`FROM --platform=$BUILDPLATFORM`). Un `--platform linux/arm64` a secas ponia a
+  Maven y a `javac` a correr bajo emulacion qemu: el mismo build pasaba de ~3
+  minutos a media hora larga. El bytecode no depende de la arquitectura, asi que
+  solo la etapa de ejecucion necesita ser arm64.
+- **Se publica la documentacion tecnica del frontend**: los 15 ADR, los tres
+  contratos (API, modelo y taxonomia), el checklist de entrega y los documentos
+  de arquitectura. Estaban excluidos por un `.gitignore` heredado de cuando
+  `frontend/` era lo unico que se subia, y eso dejaba **17 enlaces rotos** en el
+  repositorio publico, empezando por el README. Sigue fuera solo la coordinacion
+  interna: listas de tareas personales, actas de ronda e inventario de cuentas.
+
+### Seguridad
+
+- **La consola de H2 estaba servida en produccion.**
+  `https://api.fintechvital.com/h2-console/` respondia 200: `spring.h2.console.enabled`
+  venia en `true` por defecto y `SecurityConfig` dejaba la ruta abierta. **No era
+  explotable** -- H2 rechaza conexiones remotas mientras no se active
+  `webAllowOthers`, y la version (2.2.224) no tiene las RCE de `RUNSCRIPT` --,
+  pero es superficie inutil: la base de produccion es PostgreSQL. Ahora el valor
+  por defecto es `false`. **Requiere redesplegar** para surtir efecto.
+- **La API por defecto ya exige token.** `SecurityConfig` terminaba en
+  `.anyRequest().permitAll()` y abria `/api/**` entero. Con todas las rutas
+  declaradas arriba no dejaba nada al descubierto, pero la autorizacion fallaba
+  *abierta*: un endpoint nuevo nacia publico salvo que alguien se acordara de
+  protegerlo. Ahora termina en `.anyRequest().authenticated()` y el comodin esta
+  acotado a `/api/auth/**`, los alias heredados sin `/v1`.
+  - **Cambio visible**: una URL inexistente **sin token** responde ahora
+    `NO_AUTENTICADO` (401) en vez de 404. El sobre del error no cambia. Con token,
+    un recurso ajeno o inexistente sigue devolviendo 404 (RN9).
+  - `/error` queda explicitamente abierto, o el 404 de Spring se habria convertido
+    en 401 tambien para las rutas publicas.
+- Verificado con las dos suites contra el stack real: **contrato 35/35** y
+  **navegador 51/51**.
+
+### Arreglado
+
+- **Alta y perfil reconciliados.** Lo que se rellenaba en el registro no llegaba
+  entero al perfil: `ciudad` viajaba en la peticion, el DTO no tenia ese campo y
+  Jackson lo descartaba **sin avisar**, asi que la ciudad no se veia nunca. Ahora
+  hay catalogo publico `GET /ciudades`, la API resuelve el nombre a la clave
+  ajena ignorando mayusculas y acentos, y **responde 422 si no esta en el
+  catalogo en vez de tirarlo en silencio**. El alta manda tambien `idioma`: sin
+  el, quien se registraba en `/pt` quedaba en espanol.
+- **Formulario de registro (web)** rehecho: validacion por campo con el mensaje
+  debajo del campo, los `detalles` del 422 pintados en su campo, medidor de
+  fuerza de contrasena y boton de ver/ocultar. El boton de enviar ya no se apaga
+  por campos vacios: se envia, se valida y se senala lo que falta.
+- **Se retiro la ultima capa de datos falsos**, que todavia suplantaba a la API
+  en ocho pantallas. Con esto se cumple del todo la regla de cero datos mock
+  (ADR-0011).
+- **El tema oscuro no sobrevivia a un F5.** El script anti-parpadeo del layout
+  leia la clave `fintechvital.tema` y el boton de tema escribia
+  `financeai.tema`: al renombrar el proyecto se cambio una y no la otra. Al
+  recargar, la pagina volvia a claro y ademas el boton quedaba con la etiqueta
+  invertida. Ahora las dos usan `fintechvital.tema`. Efecto secundario: quien
+  tuviera el tema guardado con la clave vieja lo pierde una vez.
+- **Dos tests obsoletos dejaban la suite de navegador en rojo desde el
+  2026-08-19**, y nadie lo habia notado porque el fallo se confundia con la
+  lentitud del primer arranque. Uno exigia que el formulario de alta tuviera
+  **exactamente un** `<select>`, y el formulario habia ganado el de tarjeta; el
+  otro leia el catalogo de categorias **antes** de que llegara. Los dos afirman
+  ahora la intencion (que se pueda elegir categoria, que el catalogo llegue) en
+  vez de un detalle incidental. La suite vuelve a estar verde: **51/51**.
+- Se corrigieron afirmaciones de la documentacion que no se sostenian: no hay
+  CI ni `gitleaks` montados, no hay rate limit fuera del bloqueo de login, el
+  `casos.json` de contrato **no lo ejecuta nadie**, Object Storage y
+  Terraform/Ansible no se usaron, y el stub `ml-fake` ya no existe. La
+  documentacion que decia "Semana 0, nada construido" o que citaba el codename
+  `financeAI` quedo puesta al dia, y el guion del video ya no pide afirmar en
+  camara que los modelos se sirven desde Object Storage.
+
+---
+
 ## [0.4.2] — 2026-08-07
 
 Los dos modelos **entrenados, evaluados y en uso**. Con esto se cierra el

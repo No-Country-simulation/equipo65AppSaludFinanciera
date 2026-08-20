@@ -35,7 +35,6 @@ cache_arg=()
 
 echo "Construyendo imagen con $motor..."
 "$motor" build "${cache_arg[@]+"${cache_arg[@]}"}" \
-  --build-arg NEXT_PUBLIC_DATA_SOURCE=mock \
   --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1 \
   -t "$IMAGEN" "$WEB"
 

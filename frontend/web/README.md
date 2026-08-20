@@ -38,32 +38,33 @@ O en contenedor (Docker o Podman, igual que la demo):
 ../scripts/linux/web-docker.sh             # (macos/ para Mac) --down para detener
 ```
 
-**Usuario demo**: `demo@fintechvital.dev` + cualquier contraseña de 10+
-caracteres. Cualquier otro email crea una cuenta vacía (sirve para probar los
-estados vacíos y el onboarding).
+**Usuario demo**: `ana.torres@ejemplo.mx` / `Demo1234!`, de la semilla de
+`db/semillas/demo.sql`. Existe en local y en staging; en **producción no**, que
+arranca con la base vacía a propósito.
 
 > ¿Máquina sin nada instalado? Guía completa paso a paso:
-> [`docs/proceso/FRONTEND_DESDE_CERO.md`](../docs/FRONTEND_DESDE_CERO.md)
+> [`docs/FRONTEND_DESDE_CERO.md`](../docs/FRONTEND_DESDE_CERO.md)
 
 ## De dónde salen los datos (importante)
 
-Hoy la web corre contra una **capa mock desacoplada**
-([ADR-0011](../docs/adr/0011-mocks-desacoplados-frontend.md)): no hay backend
-todavía. Las pantallas consumen **solo** la interfaz `FinanceDataSource` vía
-`@/data` y la implementación se elige por variable de entorno:
+De la **API real, y de ninguna otra parte**. La capa mock que describía este
+apartado **ya no existe**: se retiró junto con el flag `NEXT_PUBLIC_DATA_SOURCE`
+cuando la API quedó completa, que es exactamente lo que
+[ADR-0011](../../docs/adr/0011-mocks-desacoplados-frontend.md) planeaba desde el
+principio.
+
+Las pantallas siguen consumiendo **solo** la interfaz `FinanceDataSource` vía
+`@/data` — esa parte de la ADR se queda —, pero hoy tiene una sola
+implementación, la de `src/data/api/`. Lo único que se configura es a dónde
+apunta:
 
 ```bash
-NEXT_PUBLIC_DATA_SOURCE=mock   # default hoy (sin backend)
-NEXT_PUBLIC_DATA_SOURCE=api    # al integrar (borra src/data/mock/)
 NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 ```
 
-El mock respalda su estado en `localStorage` (clave
-`fintechvital.mock.estado.v1`), así que recargar la página **no** borra lo que
-cargaste. Receta de eliminación del mock: [`src/data/mock/README.md`](src/data/mock/README.md).
-
-**Regla del proyecto: CERO datos mock en la demo/entrega.** Sin API en
-producción → error + "Reintentar", nunca datos inventados.
+**Regla del proyecto: CERO datos mock en la demo/entrega.** Sin API →
+error + "Reintentar", nunca datos inventados. Si ves una pantalla con datos,
+salieron de PostgreSQL.
 
 ## Estructura
 
@@ -74,7 +75,7 @@ src/
     (app)/             panel, movimientos, presupuestos, metas, analisis, perfil
     legales/ privacidad/ licencias/
   components/          UI compartida + graficos (Recharts)
-  data/                capa de datos (ADR-0011): types, datasource, api/, mock/
+  data/                capa de datos (ADR-0011): types, datasource, api/
   i18n/                next-intl: routing, request, navigation
   lib/                 sesion (localStorage), useDatos, formato, series
   messages/ (raiz)     es.json · pt.json · en.json
