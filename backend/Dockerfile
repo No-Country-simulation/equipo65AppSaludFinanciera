@@ -6,17 +6,23 @@
 # src/main/resources/application.properties y el pom.xml todavia no trae el
 # driver de PostgreSQL.
 #
-# El compose de ops/ ya le pasa las variables SPRING_DATASOURCE_* apuntando al
-# contenedor de la base de datos: el dia que el backend sume el driver
-# (org.postgresql:postgresql) y lea esas variables, se conecta sin tocar nada
-# de la infraestructura. Ver docs/REVISION_API.md §"Lo primero que hay que
-# arreglar".
+# El compose de ops/ le pasa las variables SPRING_DATASOURCE_* apuntando al
+# contenedor de la base de datos, y el driver (org.postgresql:postgresql) ya
+# esta en el pom: la API se conecta a PostgreSQL sin tocar nada de la imagen.
 #
 # Construir:  docker build -t fintechvital/api:local backend/
 # =============================================================================
 
 # --- Etapa 1: compilar -------------------------------------------------------
-FROM maven:3.9-eclipse-temurin-21 AS build
+# --platform=$BUILDPLATFORM: compila SIEMPRE en la arquitectura de quien
+# construye, no en la de destino. Un .jar es bytecode y no depende de la
+# arquitectura, asi que la etapa 2 (arm64) puede copiarlo tal cual.
+#
+# Sin esto, un `--platform linux/arm64` desde un portatil x86 pone a Maven y
+# a javac a correr bajo emulacion qemu: el mismo build pasa de ~3 minutos a
+# media hora larga. Las instancias de OCI son Ampere (arm64), asi que este
+# cross-build es el camino normal para desplegar, no un caso raro.
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /src
 
 # El pom se copia solo primero para que la descarga de dependencias quede en su

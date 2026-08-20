@@ -1,0 +1,269 @@
+# =============================================================================
+# Fintech Vital - despliegue en la instancia de OCI (Ampere / arm64)
+#
+# Es el HERMANO de compose.yml, con una sola diferencia de fondo:
+#
+#   compose.yml      ->  build:   construye las imagenes AQUI, en tu maquina
+#   compose.oci.yml  ->  image:   se BAJA las imagenes ya construidas de OCIR
+#
+# Por que separado y no un override: la instancia tiene 1 OCPU. Construir ahi la
+# web (npm install + next build) o la API (Maven) tarda mucho mas que en un
+# portatil y compite por CPU con lo que ya esta corriendo en esa VM. Se construye
+# fuera, se sube al registro y la instancia solo baja y arranca.
+#
+#   Fuera (tu maquina):   ops\oci\publicar-imagenes.ps1
+#   Dentro (la VM):       podman-compose --env-file .env -f compose.oci.yml up -d
+#
+# ⚠️ Las VMs del plan gratuito de OCI son arm64 (Ampere). Una imagen construida
+# en un portatil x86 SIN --platform linux/arm64 sube sin quejarse y luego revienta
+# al arrancar con "exec format error". El script de publicacion lo fuerza.
+#
+# ⚠️ `up -d` NO se baja una imagen :latest nueva si ya tiene una cacheada con ese
+# mismo nombre: hay que hacer `pull` explicito ANTES. Sin eso el "despliegue"
+# vuelve a arrancar exactamente la version anterior y todo parece correcto.
+# =============================================================================
+# FV_REGISTRO sale del .env y NO va escrito aqui: es
+# <region>.ocir.io/<namespace>/<repo>, e identifica la cuenta. Este archivo si
+# entra al repositorio, que es publico.
+#
+#   FV_REGISTRO=<region>.ocir.io/<namespace>/fintechvital
+#
+name: ${FV_PROYECTO:-fintechvital-prod}
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Base de datos. La imagen trae dentro el esquema y la semilla; las
+  # migraciones se aplican solas en el primer arranque sobre un volumen vacio.
+  # ---------------------------------------------------------------------------
+  db:
+    image: ${FV_REGISTRO:?falta FV_REGISTRO en el .env}/db:${FV_TAG:-latest}
+    container_name: ${FV_PROYECTO:-fintechvital-prod}-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fintechvital}
+      POSTGRES_USER: ${POSTGRES_USER:-fintechvital}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en el .env}
+      FV_CARGAR_DEMO: ${FV_CARGAR_DEMO:-no}
+      FV_PASSWORD_DEMO: ${FV_PASSWORD_DEMO:-}
+      FV_CARGAR_DATASET: ${FV_CARGAR_DATASET:-no}
+      LANG: C.UTF-8
+    ports:
+      # 127.0.0.1 a proposito: al publico se llega por el tunel, no por aqui.
+      # Publicar la BD en 0.0.0.0 la dejaria expuesta a toda la subred de OCI.
+      - "127.0.0.1:${PUERTO_DB:-5633}:5432"
+    volumes:
+      - datos_db:/var/lib/postgresql/data
+    healthcheck:
+      # -h 127.0.0.1 es DELIBERADO: sin el, pg_isready usa el socket local y
+      # responde "listo" mientras el arranque inicial todavia no escucha en TCP.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+    # Los techos NO son decorativos aqui: esta VM comparte 6 GB con otra
+    # aplicacion. Sin limite, PostgreSQL crece en cache hasta donde le dejen.
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Migrador: aplica migraciones NUEVAS sobre una BD que ya existe (el hook de
+  # primer arranque no vuelve a ejecutarse nunca sobre un volumen con datos).
+  #
+  # AQUI ARRANCA SOLO en cada `up -d`, y es DELIBERADO.
+  #
+  # En compose.yml lleva `profiles: ["migrar"]` para no estorbar en local, pero
+  # podman-compose 1.0.6 -la version que corre en la instancia- IGNORA
+  # `profiles` y levanta todos los servicios del archivo. En vez de pelearse con
+  # eso, aqui se aprovecha: cada despliegue aplica lo pendiente y sale.
+  # `aplicar.sh` es idempotente y lleva el registro en `esquema_historial`, asi
+  # que sobre una base al dia no hace nada.
+  #
+  # El bucle de espera tampoco es adorno: podman-compose 1.0.6 traduce
+  # `depends_on: condition: service_healthy` a un simple `--requires`, que ORDENA
+  # el arranque pero NO espera a que el otro este sano. Sin la espera, el
+  # migrador sale con codigo 2 y un "Connection refused" contra `db`. Paso en el
+  # primer despliegue (2026-08-20) y, por ser un contenedor de un solo uso, el
+  # fallo queda enterrado en un `podman ps -a` que nadie mira.
+  # ---------------------------------------------------------------------------
+  migrador:
+    image: ${FV_REGISTRO:?falta FV_REGISTRO en el .env}/db:${FV_TAG:-latest}
+    container_name: ${FV_PROYECTO:-fintechvital-prod}-migrador
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-fintechvital}
+      PGUSER: ${POSTGRES_USER:-fintechvital}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      # Tope de 120 s: la BD tarda mas en 1 OCPU compartido que en un portatil.
+      # Si se agota, sale con error en vez de colgarse para siempre.
+      - >-
+        i=0;
+        until pg_isready -h "$$PGHOST" -p "$$PGPORT" -U "$$PGUSER" -d "$$PGDATABASE" >/dev/null 2>&1; do
+        i=$$((i+1));
+        [ "$$i" -ge 60 ] && { echo "La base no acepto conexiones en 120 s; no se aplican migraciones."; exit 1; };
+        sleep 2;
+        done;
+        echo "Base lista tras $$((i*2)) s; aplicando migraciones pendientes...";
+        exec /opt/fintechvital/aplicar.sh
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # API (Spring Boot).
+  # ---------------------------------------------------------------------------
+  api:
+    image: ${FV_REGISTRO:?falta FV_REGISTRO en el .env}/api:${FV_TAG:-latest}
+    container_name: ${FV_PROYECTO:-fintechvital-prod}-api
+    depends_on:
+      db:
+        condition: service_healthy
+      ml:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?falta SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-fintechvital}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?falta SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER:-org.postgresql.Driver}
+      SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DIALECT:-org.hibernate.dialect.PostgreSQLDialect}
+      # "none": el esquema lo gobiernan las migraciones de db/, NO Hibernate.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_DDL:-none}
+      FV_CORS_ORIGINS: ${FV_CORS_ORIGINS:?falta FV_CORS_ORIGINS}
+      FV_JWT_SECRETO: ${FV_JWT_SECRETO:?falta FV_JWT_SECRETO}
+      FV_ML_URL: ${FV_ML_URL:-http://ml:8000}
+      FV_CLAVE_INTERNA: ${FV_CLAVE_INTERNA:-}
+      SERVER_PORT: 8080
+      TZ: UTC
+    ports:
+      - "127.0.0.1:${PUERTO_API:-8280}:8080"
+    restart: unless-stopped
+    # La JVM del Dockerfile usa MaxRAMPercentage=75, asi que respeta este techo
+    # en vez de mirar la RAM de la maquina entera (que aqui NO es suya).
+    deploy:
+      resources:
+        limits:
+          cpus: "0.8"
+          memory: 768M
+
+  # ---------------------------------------------------------------------------
+  # Servicio de modelo (FastAPI). Interno: NO publica puertos.
+  # ---------------------------------------------------------------------------
+  ml:
+    image: ${FV_REGISTRO:?falta FV_REGISTRO en el .env}/ml:${FV_TAG:-latest}
+    container_name: ${FV_PROYECTO:-fintechvital-prod}-ml
+    environment:
+      FV_CLAVE_INTERNA: ${FV_CLAVE_INTERNA:-}
+      FV_LOG_NIVEL: ${FV_LOG_NIVEL:-INFO}
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/interno/v1/salud').status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # Cargar los .pkl en 1 OCPU compartido tarda mas que en un portatil.
+      start_period: 90s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.6"
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Web (Next.js). NEXT_PUBLIC_API_URL va HORNEADA en la imagen: si cambia el
+  # dominio hay que volver a construir y subir, no basta con reiniciar.
+  # ---------------------------------------------------------------------------
+  web:
+    image: ${FV_REGISTRO:?falta FV_REGISTRO en el .env}/web:${FV_TAG:-latest}
+    container_name: ${FV_PROYECTO:-fintechvital-prod}-web
+    environment:
+      # Se lee en el servidor en tiempo de ejecucion (NO es NEXT_PUBLIC_*), asi
+      # que cambiarla solo pide reiniciar el contenedor.
+      FV_NOINDEX: ${FV_NOINDEX:-no}
+      TZ: UTC
+    ports:
+      - "127.0.0.1:${PUERTO_WEB:-3200}:3000"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # Tasas de cambio (opcional). Refresca tasa_cambio cada 6 h.
+  #   podman-compose --env-file .env -f compose.oci.yml --profile tasas up -d
+  # ---------------------------------------------------------------------------
+  tasas:
+    image: ${FV_REGISTRO:?falta FV_REGISTRO en el .env}/db:${FV_TAG:-latest}
+    container_name: ${FV_PROYECTO:-fintechvital-prod}-tasas
+    profiles: ["tasas"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-fintechvital}
+      PGUSER: ${POSTGRES_USER:-fintechvital}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD}
+      EXCHANGERATE_API_KEY: ${EXCHANGERATE_API_KEY:-}
+      FV_INTERVALO_TASAS: ${FV_INTERVALO_TASAS:-21600}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - 'while true; do /opt/fintechvital/tasas.sh || true; sleep "$${FV_INTERVALO_TASAS}"; done'
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # Cloudflare Tunnel - la UNICA puerta de entrada.
+  #
+  # Aqui NO lleva perfil, al reves que en compose.yml: en la instancia el tunel
+  # no es un extra, es lo unico que hace publica la aplicacion. La VM esta en una
+  # subred privada, sin IP publica y sin puertos abiertos al exterior; sin tunel
+  # el despliegue arranca y no lo alcanza nadie.
+  #
+  # `:?` a proposito: sin token, el render del compose falla ANTES de tocar
+  # ningun contenedor, en vez de dejar un stack corriendo e invisible.
+  #
+  # Public hostnames en el panel (Zero Trust > Networks > Tunnels). Apuntan a
+  # NOMBRES DE SERVICIO porque cloudflared comparte la red del compose:
+  #   fintechvital.com      ->  http://web:3000
+  #   www.fintechvital.com  ->  http://web:3000
+  #   api.fintechvital.com  ->  http://api:8080
+  # ---------------------------------------------------------------------------
+  tunel:
+    image: docker.io/cloudflare/cloudflared:latest
+    container_name: ${FV_PROYECTO:-fintechvital-prod}-tunel
+    command: tunnel --no-autoupdate run
+    environment:
+      # Entrecomillado y SIN dos puntos dentro del mensaje: el texto de un
+      # `:?` va crudo al YAML, y un ":" ahi se lee como separador de clave.
+      # El render aborta con "mapping values are not allowed here" y el dedo
+      # apunta a la linea del token, no al mensaje de error que lo rompio.
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN:?falta CLOUDFLARE_TUNNEL_TOKEN. Sin tunel la app no es alcanzable desde fuera}"
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 128M
+
+volumes:
+  datos_db:
+    name: ${FV_PROYECTO:-fintechvital-prod}_datos_db

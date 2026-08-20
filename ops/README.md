@@ -1,5 +1,11 @@
 # ops/ — encender el proyecto entero
 
+> **¿Buscas el despliegue en la nube (fintechvital.com)?**
+> Explicado para cualquiera: [`DESPLIEGUE_NUBE.md`](DESPLIEGUE_NUBE.md) ·
+> Referencia técnica y procedimiento manual:
+> [`DESPLIEGUE_NUBE_TECNICO.md`](DESPLIEGUE_NUBE_TECNICO.md)
+
+
 Un solo comando levanta **base de datos + modelo + API + web** en contenedores.
 No hace falta instalar Java, Node, Python ni PostgreSQL en tu equipo: va todo
 dentro.
