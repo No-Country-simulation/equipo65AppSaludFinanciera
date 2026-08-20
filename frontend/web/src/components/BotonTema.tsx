@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Icono } from '@/components/Icono';
 
-export const CLAVE_TEMA = 'financeai.tema';
+// Tiene que ser la MISMA clave que lee el script anti-parpadeo de
+// `app/[locale]/layout.tsx`. Se llamaba `financeai.tema` y quedo asi al
+// renombrar el proyecto: el script leia una clave y el boton escribia otra, de
+// forma que el tema oscuro no sobrevivia a un F5.
+export const CLAVE_TEMA = 'fintechvital.tema';
 type Tema = 'claro' | 'oscuro';
 
 /** Aplica el tema al <html>; el CSS reacciona a data-theme="dark". */
