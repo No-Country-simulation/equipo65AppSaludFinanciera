@@ -34,7 +34,20 @@ COPY initdb/      /docker-entrypoint-initdb.d/
 # Los .sh se escriben en Windows: se normalizan los finales de linea aqui para
 # que no fallen con "bad interpreter: /bin/sh^M". Es el error mas comun del
 # equipo trabajando en Windows y arreglarlo en la imagen lo elimina de raiz.
+#
+# Los .sql se normalizan por OTRO motivo, mas sutil: `aplicar.sh` guarda el
+# SHA-256 de cada migracion en `esquema_historial` y ABORTA si una que ya estaba
+# aplicada cambia de contenido. Ese SHA se calcula sobre el archivo tal como
+# entra en la imagen, asi que sin normalizar depende de con que finales de linea
+# lo tenga quien construye: el mismo commit da un SHA en una maquina con CRLF y
+# otro distinto en un clon recien hecho con LF. El sintoma es una migracion
+# INTACTA denunciada como editada, en la maquina de otra persona y con prisa.
+#
+# Normalizando aqui, el SHA depende solo del contenido. Ojo: activar esto
+# desplaza una unica vez los SHA de una base YA desplegada, y hay que re-basar
+# `esquema_historial` (se hizo el 2026-08-21).
 RUN sed -i 's/\r$//' /opt/fintechvital/*.sh /docker-entrypoint-initdb.d/*.sh \
+ && sed -i 's/\r$//' /opt/fintechvital/migraciones/*.sql /opt/fintechvital/semillas/*.sql \
  && chmod +x /opt/fintechvital/*.sh /docker-entrypoint-initdb.d/*.sh
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=6 \
