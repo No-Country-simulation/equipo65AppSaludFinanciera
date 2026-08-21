@@ -97,8 +97,21 @@ public class SecurityConfig {
                                  "/api/v1/ciudades").permitAll()
                 // Documentacion: Swagger UI y la especificacion OpenAPI. Es un
                 // requisito del enunciado, asi que tiene que verse sin token.
+                //
+                // ⚠️ `/api/v1/swagger-ui/**` es imprescindible y no es obvio:
+                // como `springdoc.swagger-ui.path=/api/v1/docs`, springdoc NO
+                // sirve la pagina en esa ruta, sino que responde 302 hacia
+                // `/api/v1/swagger-ui/index.html` -- es decir, cuelga sus
+                // recursos del MISMO prefijo, no del `/swagger-ui/` de la raiz.
+                // Sin esta linea, /api/v1/docs redirige a un 401 y la
+                // documentacion queda inaccesible sin token.
+                //
+                // Mientras la regla de abajo fue `anyRequest().permitAll()` esto
+                // no se notaba, porque el fail-open tapaba el hueco. Al pasar a
+                // `authenticated()` salio a la luz, ya en produccion (2026-08-21).
                 .requestMatchers("/api/v1/docs", "/api/v1/docs/**",
                                  "/api/v1/openapi.json", "/api/v1/openapi.json/**",
+                                 "/api/v1/swagger-ui/**",
                                  "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 // Alias heredados SIN /v1 que el equipo ya tenia en marcha:
                 // /api/auth/{login,registro,register,refresh,logout}. Se mantienen
