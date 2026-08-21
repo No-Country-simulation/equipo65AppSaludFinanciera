@@ -100,7 +100,17 @@ Cerrar el bloque mandando un cuerpo inválido, que demuestra el **requisito 2**:
 
 ### 3 · El caso real (1:15)
 
-*Dashboard, sesión iniciada con el usuario sobreendeudado del Ejemplo 2.*
+*Dashboard, sesión iniciada con la cuenta de demostración `ana.torres@ejemplo.mx`.*
+
+> ✅ **Comprobado (2026-08-21).** Importar el CSV en la cuenta de Ana **sí** da el
+> diagnóstico *En riesgo*: su tasa de ahorro de julio pasa de **+52.8 % a −17.4 %**.
+> Funciona porque el ingreso de referencia es el `ingreso_mensual` declarado del
+> perfil (45.000 MXN, fijo), y el CSV le suma 31.598 MXN de gasto encima de los
+> 21.240 que ya tenía. La `NOMINA JULIO` del CSV **no** cuenta como ingreso.
+>
+> Después de grabar, la cuenta queda sucia: julio en negativo y una categoría con
+> `categoria_origen = usuario`. Se restaura con
+> `.\ops\oci\desplegar.ps1 -Accion semilla-jurado`.
 
 1. **Importar CSV**: arrastrar [`demo-movimientos.csv`](demo-movimientos.csv),
    que está en esta misma carpeta. Entran **14 movimientos** de golpe: la nómina
@@ -151,6 +161,28 @@ El gráfico del perfil a lo largo de tres meses: `en_riesgo` → `en_observacion
 
 **Es el diferencial del producto.** Si hay que recortar, este bloque es de los
 últimos en caer.
+
+> 🔴 **ESE ARCO NO EXISTE HOY EN LOS DATOS. Leer antes de grabar** (2026-08-21).
+>
+> Ana tiene **13 análisis guardados y los 13 son `saludable`**, con indicadores
+> idénticos mes a mes (tasa de ahorro `0.528` clavada). El gráfico sale en
+> **línea plana**. Y no es solo Ana: los cuatro usuarios de la semilla tienen
+> importes fijos, así que **ninguno cambia de perfil nunca**. Bruno es siempre
+> `en_observacion` y Carla siempre `en_riesgo`.
+>
+> Lo único que se mueve es `probabilidad` (0.62–0.80), y se mueve por el número
+> del mes (`ROUND(0.62 + (mes % 5) * 0.045, 3)`), no por las finanzas de nadie:
+> **no lo señales en cámara como una mejora**, porque no lo es.
+>
+> Dos salidas, hay que elegir una:
+>
+> 1. **Cambiar el guion**: enseñar que el historial se persiste y se puede
+>    recorrer, sin prometer un arco de mejora. Cuesta cero y es honesto.
+> 2. **Arreglar los datos**: darle a Ana un gasto decreciente a lo largo de los 13
+>    meses para que el perfil suba de verdad. Es el diferencial del producto, así
+>    que probablemente vale la pena — pero toca `db/semillas/demo.sql`, que está
+>    calibrada «para cuadrar EXACTO con el dashboard», y hay que volver a pasar
+>    las dos suites de `frontend/e2e/`.
 
 ### 6 · Corrección y móvil (0:25)
 
@@ -265,6 +297,8 @@ con `HALF_UP` y `ops/ejemplos.mjs` lo corrigió el 2026-08-19.
 | | ✅ |
 |---|---|
 | `ops/ejemplos.mjs` en verde **contra producción** (54/54) | ⬜ |
+| **Cuenta del jurado sembrada de nuevo**: `.\ops\oci\desplegar.ps1 -Accion semilla-jurado` | ⬜ |
+| Login manual con `ana.torres@ejemplo.mx` en <https://fintechvital.com/es/login> — **no debe pedir 2FA** | ⬜ |
 | `demo-movimientos.csv` importado **de prueba** y las categorías salen bien | ⬜ |
 | El `curl` del bloque 2 probado, con el JSON en un archivo aparte | ⬜ |
 | 🇧🇷 `IFOOD *PEDIDO` → `Alimentação` **probado ese mismo día** | ⬜ |
