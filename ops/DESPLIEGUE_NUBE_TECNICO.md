@@ -6,8 +6,9 @@ lo que usa cada paso y **cómo hacerlo a mano** si los scripts fallan.
 Versión no técnica: [`DESPLIEGUE_NUBE.md`](DESPLIEGUE_NUBE.md).
 Entornos y Cloudflare en general: [`../docs/DESPLIEGUE.md`](../docs/DESPLIEGUE.md).
 
-> **Estado**: desplegado y verificado el **2026-08-20**. Los tres hostnames
-> responden 200 y `ops/ejemplos.mjs` pasa **54/54** contra producción.
+> **Estado**: última subida el **2026-08-21** (§12). Los tres hostnames
+> responden 200, `/api/v1/docs` se ve sin token, `ops/ejemplos.mjs` pasa
+> **54/54** contra producción y la cuenta del jurado entra sin 2FA.
 
 ---
 
@@ -458,7 +459,70 @@ Reutiliza la `:latest` que ya tenga cacheada. Sin un `pull` explícito antes, el
 despliegue arranca **la versión anterior** y todo parece correcto. Es la clase de
 fallo que se descubre preguntándose por qué el arreglo "no funcionó".
 
-### 8.9 PowerShell 5.1 convierte stderr en un falso error
+### 8.9 Una migración "editada" que nadie editó (finales de línea)
+
+`aplicar.sh` guarda el SHA-256 de cada migración en `esquema_historial` y
+**aborta** si una ya aplicada cambia de contenido. Es la regla correcta, pero el
+SHA se calculaba sobre el archivo *tal como entraba en la imagen*, y eso depende
+de con qué finales de línea lo tenga checkouteado quien construye.
+
+Consecuencia: el mismo commit da un SHA en una máquina con CRLF y otro distinto
+en un clon recién hecho con LF. El síntoma es una migración **intacta** denunciada
+como editada, normalmente en la máquina de otra persona y con prisa.
+
+Salió el 2026-08-21: `V1__catalogos.sql` cambió de SHA por dos motivos a la vez
+(una línea de comentario editada **y** la renormalización a LF del
+`.gitattributes`), y el migrador se negaba a arrancar.
+
+**Arreglado en `db/Dockerfile`**: ahora normaliza también los `.sql`, así que el
+SHA depende solo del contenido. Activarlo desplaza una única vez los SHA de una
+base ya desplegada, y hay que re-basar `esquema_historial`:
+
+```sql
+-- Solo tras comprobar que el contenido normalizado es equivalente.
+UPDATE esquema_historial SET sha256 = '<sha del archivo ya normalizado>'
+ WHERE version = 'V1';
+```
+
+> **Cómo se comprueba que re-basar es seguro**, en vez de dar por hecho que sí:
+> se compara el contenido **ya normalizado** de cada migración entre el commit
+> desplegado y el actual. Si coinciden byte a byte, el único cambio fue de
+> formato. Las que no coincidan se miran con `diff` una por una.
+>
+> ```bash
+> for f in $(ls db/migraciones/V*__*.sql | sort -V); do
+>   b=$(basename "$f")
+>   viejo=$(git show "<commit-desplegado>:db/migraciones/$b" | tr -d '' | sha256sum)
+>   nuevo=$(tr -d '' < "$f" | sha256sum)
+>   [ "$viejo" = "$nuevo" ] && echo "$b OK" || echo "$b >>> REVISAR"
+> done
+> ```
+>
+> Y el SHA que se escribe en la base se saca **de la imagen construida**, no del
+> cálculo local:
+> `podman run --rm <imagen-db> sha256sum /opt/fintechvital/migraciones/V1__catalogos.sql`
+
+### 8.10 Swagger UI cuelga de `/api/v1/swagger-ui/`, no de `/swagger-ui/`
+
+Con `springdoc.swagger-ui.path=/api/v1/docs`, springdoc **no** sirve la página en
+esa ruta: responde `302` hacia `/api/v1/swagger-ui/index.html`. Es decir, cuelga
+sus recursos del **mismo prefijo**, no del `/swagger-ui/` de la raíz.
+
+Si la lista de rutas públicas solo trae `/swagger-ui/**`, `/api/v1/docs` redirige
+a un **401** y la documentación queda inaccesible sin token, que es justo lo que
+el enunciado pide que se vea.
+
+Mientras la regla por defecto fue `anyRequest().permitAll()` esto no se notaba:
+el fail-open tapaba el hueco. Al pasar a `authenticated()` salió a la luz, **ya en
+producción** (2026-08-21). Se comprueba siguiendo la redirección, no pidiendo la
+ruta a secas:
+
+```bash
+curl -sL -o /dev/null -w '%{http_code} %{url_effective}
+'      https://api.fintechvital.com/api/v1/docs      # tiene que dar 200
+```
+
+### 8.11 PowerShell 5.1 convierte stderr en un falso error
 
 Un ejecutable nativo que escribe en stderr se envuelve en `NativeCommandError`;
 con `$ErrorActionPreference = 'Stop'` **aborta el script aunque el proceso haya
@@ -466,7 +530,7 @@ devuelto 0**. Como los scripts mandan el progreso a stderr, esto se caía siempr
 en la primera línea. Solución: `'Continue'`, control por `$LASTEXITCODE`, y
 `2>&1 | ForEach-Object { "$_" }` para que la salida se vea como texto normal.
 
-### 8.10 La URL de la API va horneada en la web
+### 8.12 La URL de la API va horneada en la web
 
 `NEXT_PUBLIC_*` se resuelve en tiempo de build. Cambiarla y reiniciar el
 contenedor **no hace nada**: hay que reconstruir la imagen y volver a subirla.
@@ -482,6 +546,8 @@ contenedor **no hace nada**: hay que reconstruir la imagen y volver a subirla.
 | `exec format error` al arrancar | Imagen x86 en VM arm64 | §3.2 y reconstruir |
 | `invalid username/password` en OCIR con token válido | CRLF de PowerShell | §3.3 |
 | El despliegue "funciona" pero con código viejo | Falta `--force-recreate` o el `pull` | §8.7 y §8.8 |
+| `ya estaba aplicada y su contenido cambio` | Finales de línea, no una edición real | §8.9 |
+| `/api/v1/docs` da 401 | Falta `/api/v1/swagger-ui/**` en las rutas públicas | §8.10 |
 | `mapping values are not allowed here` | `:` dentro de un `${VAR:?...}` | §8.4 |
 | La web carga pero no trae datos | `FV_CORS_ORIGINS` sin `www` | §7 |
 | El botón de descarga da 404 | El APK no estaba al construir | §5.1 |
@@ -543,3 +609,44 @@ Lo que se hizo, en orden:
 
 Estado final de la máquina: **1256 MB / 5903 MB** de memoria y **15 GB / 48 GB**
 de disco, con las dos aplicaciones corriendo.
+
+---
+
+## 12. Registro del despliegue del 2026-08-21 (cuenta del jurado)
+
+Subida de los cambios de la rama `feat/cuenta-jurado-produccion` más la carga de
+la cuenta de demostración. Orden y hallazgos:
+
+1. **Re-registrada la emulación arm64**: se había perdido al reiniciar la máquina
+   de podman desde la subida anterior (§3.2). Es lo primero que hay que mirar.
+2. **Reconstruidas `db`, `api` y `web`**. `ml` no se tocó: lo único que cambió
+   ahí fue su README, y eso no entra en la imagen.
+3. **Re-basado `esquema_historial`** (§8.9). `V1__catalogos.sql` había cambiado de
+   SHA por una línea de comentario **y** por la renormalización a LF, así que el
+   migrador abortaba. Antes de re-basar se comprobó que las 10 migraciones son
+   equivalentes una vez normalizadas, y los SHA nuevos se sacaron **de la imagen
+   construida**, no de un cálculo local. `db/Dockerfile` ahora normaliza los
+   `.sql`, de modo que esto no se repite en otra máquina.
+4. **Desplegado** con `--force-recreate`; migrador en `exit=0`,
+   `0 aplicadas, 10 ya estaban`.
+5. **Sembrada la cuenta del jurado** (`-Accion semilla-jurado`):
+   `ana.torres@ejemplo.mx`, **182 movimientos y 13 análisis**, `totp_activo = f`.
+   Antes de lanzarla se midió el alcance del `DELETE FROM recomendacion WHERE
+   orden > 5` que trae `demo.sql` **sin acotar por usuario**: en producción
+   afectaba a **0 filas**, así que era seguro. Queda como riesgo latente si algún
+   usuario real llega a tener más de 5 recomendaciones.
+6. **Corregida una regresión propia de esta subida** (§8.10): al pasar la API a
+   `anyRequest().authenticated()`, `/api/v1/docs` empezó a devolver 401 porque
+   springdoc redirige a `/api/v1/swagger-ui/index.html`, que no estaba entre las
+   rutas públicas. Se detectó comprobando el endpoint **siguiendo la
+   redirección**; pedir `/docs` a secas no lo habría revelado. Se añadió
+   `/api/v1/swagger-ui/**`, se reconstruyó `api` y se volvió a desplegar.
+7. **Verificado**: los 4 hostnames de la web (es/en/pt y `www`) en 200;
+   `/api/v1/docs` y `/api/v1/openapi.json` en 200 **sin token**;
+   `/api/v1/analisis` sin token en **401** (el fail-closed funciona);
+   `/h2-console/` en 401; login del jurado por el dominio público devolviendo
+   `access_token` y sirviendo sus 13 análisis; `ejemplos.mjs` **54/54**.
+
+Los 5 usuarios reales que ya se habían registrado en producción conservan sus
+datos: la limpieza de `demo.sql` está acotada por UUID fijos y se comprobó antes
+y después.
