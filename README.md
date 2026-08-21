@@ -83,72 +83,49 @@ El corazón verde de Fintech Vital nace de un imagotipo vectorizado en **Adobe I
 
 ### 📸 Capturas (interfaz real, sin datos falsos en producción)
 
-**Panel web**
-
 ![Panel web](frontend/capturas/inicio-web.PNG)
 
 | Movimientos | Presupuestos | Metas |
-| --- | --- | --- |
-| ![Movimientos](https://github.com/No-Country-simulation/fintech-vital-equipo65/raw/main/frontend/capturas/web-movimientos.png) | ![Presupuestos](https://github.com/No-Country-simulation/fintech-vital-equipo65/raw/main/frontend/capturas/web-presupuestos.png) | ![Metas](https://github.com/No-Country-simulation/fintech-vital-equipo65/raw/main/frontend/capturas/web-metas.png) |
+|---|---|---|
+| ![Movimientos](frontend/capturas/web-movimientos.png) | ![Presupuestos](frontend/capturas/web-presupuestos.png) | ![Metas](frontend/capturas/web-metas.png) |
 
 | Análisis | Perfil |
-| --- | --- |
-| ![Análisis](https://github.com/No-Country-simulation/fintech-vital-equipo65/raw/main/frontend/capturas/web-analisis.png) | ![Perfil](https://github.com/No-Country-simulation/fintech-vital-equipo65/raw/main/frontend/capturas/web-perfil.png) |
+|---|---|
+| ![Análisis](frontend/capturas/web-analisis.png) | ![Perfil](frontend/capturas/web-perfil.png) |
 
-> Todas las capturas están en [`frontend/capturas/`](https://github.com/No-Country-simulation/fintech-vital-equipo65/tree/main/frontend/capturas) — hay más (panel en portugués, web responsive).
+---
 
-### 🎥 Videos (grabados por flujo, en pares de pantallas del menú)
+### 🎥 Videos demostrativos
 
-El espacio principal de la demo son estos GIFs — el proceso completo de **registro** se muestra en video, no en una captura suelta. El resto sigue el mismo criterio: se graban en pares tal como aparecen en el menú lateral, porque es como fluye una sesión real (por ejemplo, **Tarjetas** y **Crédito** van juntos, igual que **Panel** y **Movimientos**).
-
-> 📌 **Cómo subirlos:**
-> 1. Crea la carpeta `/assets` en la raíz del repo (al lado de `backend/`, `frontend/`, `ml/`, `db/`, `ops/`, `docs/`).
-> 2. Guarda ahí cada gif con el nombre exacto indicado debajo de cada título.
-> 3. `git add assets/ && git commit -m "docs: agrega gifs de demo" && git push`.
-> 4. Descomenta la línea `![...]` correspondiente en este README.
-
-**Registro y Autenticación** (proceso completo de alta, incluye 2FA)
-
-<!-- ![Registro y Autenticación](frontend/capturas/resgistro-fase-1.gif) -->
-`assets/registro-autenticacion.gif`
+**Registro y Autenticación**
+![Registro y Autenticación](assets/registro-fase-1.gif)
 
 ---
 
 **Panel + Movimientos**
-
-<!-- ![Panel y Movimientos](frontend/capturas/inicio-movimientos.gif) -->
-`assets/panel-movimientos.gif`
+![Panel y Movimientos](assets/inicio-movimientos.gif)
 
 ---
 
 **Tarjetas + Crédito**
-
-<!-- ![Tarjetas y Crédito](frontend/capturas/credito-tarjetas.gif) -->
-`assets/tarjetas-credito.gif`
+![Tarjetas y Crédito](assets/credito-tarjetas.gif)
 
 ---
 
 **Presupuestos + Metas**
-
-<!-- ![Presupuestos y Metas](frontend/capturas/prosupuesto metas .gif) -->
-`assets/presupuestos-metas.gif`
+![Presupuestos y Metas](assets/presupuesto-metas.gif)
 
 ---
 
 **Análisis + Perfil financiero**
-
-<!-- ![Análisis y Perfil](frontend/capturas/analisis-perfil.gif) -->
-`assets/analisis-perfil.gif`
+![Análisis y Perfil](assets/analisis-perfil.gif)
 
 ---
 
 **Selector de idioma y modo oscuro**
-
-<!-- ![Idioma y Dark Mode](frontend/capturas/modo oscuro.gif) -->
-`assets/idioma-dark-mode.gif`
+![Idioma y Dark Mode](assets/modo-oscuro.gif)
 
 ---
-
 ## ✨ Funcionalidades
 
 Lo que ya está construido y corriendo contra la API real (no datos mock — la capa mock se retiró, [ADR-0011](https://github.com/No-Country-simulation/fintech-vital-equipo65/blob/main/docs/adr)):
