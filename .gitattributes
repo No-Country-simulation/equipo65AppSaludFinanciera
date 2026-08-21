@@ -17,3 +17,16 @@
 # Las semillas y los CSV del dataset son datos, no codigo fuente.
 db/semillas/dataset/*.csv linguist-generated
 ml/datos/*.csv linguist-generated
+
+# --- Finales de linea: LF obligatorio en lo que corre dentro de un contenedor ---
+#
+# Estos archivos los ejecuta Linux, aunque se editen en Windows. Con CRLF:
+#   - los .sh fallan con "bad interpreter: /bin/sh^M";
+#   - en los .sql, psql se lleva el \r pegado al argumento de un meta-comando e
+#     intenta abrir "demo.sql\r" (es lo que rompe `\i` en db/semillas/jurado.sql).
+#
+# La imagen de la BD ya limpia los .sh por dentro (db/Dockerfile), pero eso no
+# alcanza a los que se montan desde el disco de Windows, como ops/oci/*.sh.
+*.sh            text eol=lf
+db/semillas/*.sql text eol=lf
+db/migraciones/*.sql text eol=lf
