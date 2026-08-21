@@ -219,8 +219,17 @@ defecto es `false`; en local se enciende con `SPRING_H2_CONSOLE_ENABLED=true`.
 
 - ✅ **El dataset de entrenamiento es sintético**: no hay PII real en los
   modelos. Es una ventaja legal y conviene decirlo.
-- ✅ **La base de producción arranca vacía**, sin cuentas de ejemplo. Las del demo
-  (`ana.torres@ejemplo.mx` y compañía) solo existen en local y en staging.
+- ✅ **La base de producción arranca vacía.** Se le siembra después **una sola**
+  cuenta de demostración, `ana.torres@ejemplo.mx`, para que el jurado pueda ver el
+  producto sin registrarse. Es un usuario normal (`rol = 'usuario'`, sin permisos
+  de administración) con datos **inventados**: ni PII real ni movimientos reales.
+  Las otras tres del demo (Bruno, Carla, Emily) se quedan fuera de producción.
+  - ⚠️ **Esa cuenta lleva el 2FA apagado a propósito** — es la excepción que la
+    hace usable para el jurado, y solo se sostiene porque no hay nada real
+    detrás. Sus credenciales **no se publican en el repositorio**: van en la
+    entrega de No Country y en la descripción del video.
+  - Se restaura con `.\ops\oci\desplegar.ps1 -Accion semilla-jurado`, que es
+    re-ejecutable: si alguien le borra los datos, se vuelve a lanzar.
 - ✅ **Exportación y baja de cuenta** están implementadas
   (`GET /usuarios/me/exportacion`, `DELETE /usuarios/me`), que es lo que pediría
   el derecho de acceso y de supresión.

@@ -192,10 +192,16 @@ Para apagarlo todo (sin borrar datos):
 
 ## Cosas que conviene saber
 
-**En producción no hay datos de ejemplo.** La base arranca vacía a propósito:
-quien entra a fintechvital.com se registra y carga sus propios movimientos. Las
-cuentas de demostración (`ana.torres@ejemplo.mx` y compañía) solo existen en
-local y en el entorno de pruebas.
+**En producción casi no hay datos de ejemplo.** La base arranca vacía a
+propósito: quien entra a fintechvital.com se registra y carga sus propios
+movimientos. La única excepción es **una** cuenta de demostración,
+`ana.torres@ejemplo.mx`, que existe para que el jurado del hackathon pueda ver el
+producto sin registrarse, y para grabar el video. Las otras tres del demo (Bruno,
+Carla y Emily) solo existen en local y en el entorno de pruebas.
+
+Esa cuenta se carga o se restaura con
+`.\ops\oci\desplegar.ps1 -Accion semilla-jurado`, y se puede volver a lanzar las
+veces que haga falta.
 
 **Los secretos no están en el repositorio.** Contraseñas, claves y el token del
 túnel viven en archivos que nunca se suben a GitHub. El repositorio es público:

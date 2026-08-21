@@ -39,8 +39,8 @@ O en contenedor (Docker o Podman, igual que la demo):
 ```
 
 **Usuario demo**: `ana.torres@ejemplo.mx` / `Demo1234!`, de la semilla de
-`db/semillas/demo.sql`. Existe en local y en staging; en **producción no**, que
-arranca con la base vacía a propósito.
+`db/semillas/demo.sql`. Eso vale para **local y staging**. En producción existe
+la misma cuenta pero **con otra contraseña**, que no se publica aquí.
 
 > ¿Máquina sin nada instalado? Guía completa paso a paso:
 > [`docs/FRONTEND_DESDE_CERO.md`](../../docs/FRONTEND_DESDE_CERO.md)

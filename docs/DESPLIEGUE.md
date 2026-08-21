@@ -151,10 +151,48 @@ PUERTO_WEB=3200  PUERTO_API=8280  PUERTO_DB=5633
 
 `FV_CARGAR_DEMO=no` **no es opcional**: la regla del proyecto es *cero datos mock
 en la entrega*. Solo tiene efecto en el primer arranque sobre un volumen vacío,
-así que no basta con cambiarlo después. Consecuencia a tener presente: **la suite
-`frontend/e2e/contrato.mjs` no corre contra producción**, porque inicia sesión con
-la cuenta de ejemplo `ana.torres@ejemplo.mx`, que aquí no existe. Contra
-producción se comprueba el endpoint público del enunciado y un alta real.
+así que no basta con cambiarlo después.
+
+### La cuenta del jurado
+
+La única excepción a lo anterior. Producción lleva **una** cuenta de
+demostración, `ana.torres@ejemplo.mx`, para que el jurado entre y vea el producto
+sin registrarse — el alta obliga a activar 2FA con una app de autenticación, y
+eso es una barrera de más para quien solo viene a evaluar. Es también la cuenta
+con la que se graba el video.
+
+No se carga con `FV_CARGAR_DEMO` (que ya no puede actuar sobre un volumen con
+datos), sino contra la base ya en pie:
+
+```powershell
+.\ops\oci\desplegar.ps1 -Accion semilla-jurado
+```
+
+Corre [`db/semillas/jurado.sql`](../db/semillas/jurado.sql), que reutiliza la
+semilla demo entera y **borra a Bruno, Carla y Emily**: en producción sobra con
+un usuario. Es **re-ejecutable a propósito** — la contraseña la tiene gente de
+fuera del equipo, así que si alguien le borra los movimientos a Ana, se vuelve a
+lanzar y queda como estaba. Conviene hacerlo la víspera de grabar.
+
+La contraseña sale de `FV_PASSWORD_DEMO` en `ops/.env.prod` (gitignoreado) y
+**no se publica en el repositorio**: viaja en la entrega de No Country y en la
+descripción del video.
+
+> ⚠️ **Sigue sin correrse `frontend/e2e/contrato.mjs` contra producción**, pero
+> por otro motivo que antes. Antes fallaba porque Ana no existía allí; ahora
+> existe, y el riesgo es el contrario:
+>
+> - Su contraseña por defecto es `Demo1234!`, no la de producción. Cinco intentos
+>   fallidos sobre el mismo correo en 15 minutos **bloquean la cuenta 15 minutos**
+>   (`LimitadorLoginService`), y la suite hace bastantes más. Sería una forma
+>   tonta de quedarse sin cuenta justo antes de grabar.
+> - Da de alta un usuario desechable y lo borra al terminar: filas reales en la
+>   base de producción.
+> - Corrige la categoría de un movimiento y la deja como estaba, pero
+>   `categoria_origen` se queda en `usuario` y ya no vuelve a `modelo`.
+>
+> Contra producción se comprueban el endpoint público del enunciado y un alta
+> real (`ops/ejemplos.mjs`). El contrato se corre en local y en staging.
 
 ### Cloudflare: los tres hostnames
 
