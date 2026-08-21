@@ -535,23 +535,67 @@ python -m nbconvert --execute --inplace --to notebook modelos_fintech_vital.ipyn
 
 ## 👥 Integrantes
 
----
 
-## 👥 Integrantes
 
-- <img src="https://github.com/EzequielAngel0.png" width="40" height="40" style="border-radius: 50%; vertical-align: middle;" /> [**Angel Barbosa**](https://github.com/EzequielAngel0) — *Full Stack*  
-  [LinkedIn](https://www.linkedin.com/in/angelezequiel/) • [GitHub](https://github.com/EzequielAngel0)
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="200">
+        <a href="https://github.com/EzequielAngel0">
+          <img src="https://github.com/EzequielAngel0.png" width="150px" style="border-radius:50%;" alt="Angel Barbosa"/><br />
+          <sub><b>Angel Barbosa</b></sub>
+        </a><br />
+        <sub>Full Stack</sub><br /><br />
+        <a href="https://www.linkedin.com/in/angelezequiel/">
+          <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn" />
+        </a>
+        <a href="https://github.com/EzequielAngel0">
+          <img src="https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white" alt="GitHub" />
+        </a>
+      </td>
+      <td align="center" width="200">
+        <a href="https://github.com/neri211">
+          <img src="https://github.com/neri211.png" width="150px" style="border-radius:50%;" alt="Neri Rubio"/><br />
+          <sub><b>Neri Rubio</b></sub>
+        </a><br />
+        <sub>Frontend</sub><br /><br />
+        <a href="https://www.linkedin.com/in/neri-rubio/">
+          <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn" />
+        </a>
+        <a href="https://github.com/neri211">
+          <img src="https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white" alt="GitHub" />
+        </a>
+      </td>
+      <td align="center" width="200">
+        <a href="https://github.com/MontseCoria00">
+          <img src="https://github.com/MontseCoria00.png" width="150px" style="border-radius:50%;" alt="Montserrat Martinez"/><br />
+          <sub><b>Montserrat Martinez</b></sub>
+        </a><br />
+        <sub>Machine Learning</sub><br /><br />
+        <a href="https://www.linkedin.com/in/montserrat-coria-mart%C3%ADnez-954749242/">
+          <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn" />
+        </a>
+        <a href="https://github.com/MontseCoria00">
+          <img src="https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white" alt="GitHub" />
+        </a>
+      </td>
+      <td align="center" width="200">
+        <a href="https://github.com/Dsx-Dev">
+          <img src="https://github.com/Dsx-Dev.png" width="150px" style="border-radius:50%;" alt="Daniel Caro"/><br />
+          <sub><b>Daniel Caro</b></sub>
+        </a><br />
+        <sub>DevOps</sub><br /><br />
+        <a href="https://www.linkedin.com/in/daniel-caro-dsx/">
+          <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn" />
+        </a>
+        <a href="https://github.com/Dsx-Dev">
+          <img src="https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white" alt="GitHub" />
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
 
-- <img src="https://github.com/neri211.png" width="40" height="40" style="border-radius: 50%; vertical-align: middle;" /> [**Neri Rubio**](https://github.com/neri211) — *Frontend*  
-  [LinkedIn](https://www.linkedin.com/in/neri-rubio/) • [GitHub](https://github.com/neri211)
-
-- <img src="https://github.com/MontseCoria00.png" width="40" height="40" style="border-radius: 50%; vertical-align: middle;" /> [**Montserrat Martinez**](https://github.com/MontseCoria00) — *Machine Learning*  
-  [LinkedIn](https://www.linkedin.com/in/montserrat-coria-mart%C3%ADnez-954749242/) • [GitHub](https://github.com/MontseCoria00)
-
-- <img src="https://github.com/Dsx-Dev.png" width="40" height="40" style="border-radius: 50%; vertical-align: middle;" /> [**Daniel Caro**](https://github.com/Dsx-Dev) — *DevOps*  
-  [LinkedIn](https://www.linkedin.com/in/daniel-caro-dsx/) • [GitHub](https://github.com/Dsx-Dev)
-
----
 ---
 
 ## 📄 Licencia
