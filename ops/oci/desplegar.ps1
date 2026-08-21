@@ -6,6 +6,7 @@
 #   .\ops\oci\desplegar.ps1 -Accion estado       # que hay corriendo ahi
 #   .\ops\oci\desplegar.ps1 -Accion logs         # ultimas lineas de cada servicio
 #   .\ops\oci\desplegar.ps1 -Accion bajar        # apaga el stack (conserva datos)
+#   .\ops\oci\desplegar.ps1 -Accion semilla-jurado  # cuenta demo del video/jurado
 #
 # Todo el trabajo ocurre dentro de un contenedor con oci-cli + ssh (la imagen
 # `fv-deployer`, que se construye sola), asi que en Windows no hace falta
@@ -18,7 +19,7 @@
 # =============================================================================
 param(
     [string]$Entorno = '.env.prod',
-    [ValidateSet('desplegar', 'bajar', 'estado', 'logs')][string]$Accion = 'desplegar',
+    [ValidateSet('desplegar', 'bajar', 'estado', 'logs', 'semilla-jurado')][string]$Accion = 'desplegar',
     # Config alternativa (por defecto: ops\oci\oci.env)
     [string]$Config
 )
@@ -31,6 +32,10 @@ param(
 $ErrorActionPreference = 'Continue'
 $ops = Split-Path -Parent $PSScriptRoot     # ...\ops
 $oci = $PSScriptRoot                        # ...\ops\oci
+$raiz = Split-Path -Parent $ops             # raiz del repo
+# Las semillas viajan a la instancia en la accion semilla-jurado. Se monta
+# siempre: montar de mas no cuesta nada y evita un `if` alrededor de podman run.
+$semillas = Join-Path $raiz 'db\semillas'
 
 function Titulo($t) { Write-Host ''; Write-Host ("== $t ==") -ForegroundColor Cyan }
 function Morir($t)  { Write-Host $t -ForegroundColor Red; exit 1 }
@@ -94,14 +99,21 @@ podman run --rm `
     -v "${llaves}:/keys:ro" `
     -v "${oci}:/fv:ro" `
     -v "${ops}:/cfg:ro" `
+    -v "${semillas}:/semillas:ro" `
     fv-deployer bash $script 2>&1 | ForEach-Object { "$_" }
 
 if ($LASTEXITCODE -eq 0) {
     Titulo 'OK'
-    Write-Host 'Comprueba en publico:'
-    Write-Host '  https://fintechvital.com     https://api.fintechvital.com/api/v1/salud'
-    Write-Host 'Y el smoke test de los 3 ejemplos:'
-    Write-Host '  $env:FV_API_URL="https://api.fintechvital.com/api/v1"; node ops\ejemplos.mjs'
+    if ($Accion -eq 'semilla-jurado') {
+        Write-Host 'Entra a comprobarlo a mano antes de grabar:'
+        Write-Host '  https://fintechvital.com/es/login'
+        Write-Host '  ana.torres@ejemplo.mx  (la contrasena esta en ops\.env.prod)'
+    } else {
+        Write-Host 'Comprueba en publico:'
+        Write-Host '  https://fintechvital.com     https://api.fintechvital.com/api/v1/salud'
+        Write-Host 'Y el smoke test de los 3 ejemplos:'
+        Write-Host '  $env:FV_API_URL="https://api.fintechvital.com/api/v1"; node ops\ejemplos.mjs'
+    }
 } else {
     Titulo 'FALLO'
     Write-Host 'Si el error fue "Permission denied (publickey)" en el bastion, casi seguro'
