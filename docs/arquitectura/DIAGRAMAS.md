@@ -365,12 +365,43 @@ Si no funciona a la primera, es que alguien rompió el contrato.
 
 ## §6 Exportar para el video
 
-Mermaid se renderiza en GitHub, pero para las slides y el video hacen falta PNG:
+Mermaid se renderiza en GitHub, pero para las slides y el video hacen falta PNG.
+Ya están exportados en [`img/`](img/) — esto es solo para volver a generarlos si
+se cambia algún diagrama.
+
+⚠️ **`puppeteer` se instala aparte.** En mermaid-cli 11 es una *peer dependency*
+y `npm i -g` no la arrastra, así que `mmdc` revienta con
+`Cannot find package 'puppeteer'`. Son dos instalaciones, no una:
 
 ```bash
-npm i -g @mermaid-js/mermaid-cli
-mmdc -i docs/arquitectura/DIAGRAMAS.md -o docs/arquitectura/img/diagrama.png -t neutral -b transparent
+npm i -g @mermaid-js/mermaid-cli puppeteer
 ```
+
+Desde `docs/arquitectura/` (las rutas de salida son relativas al CWD, no al `-i`):
+
+```bash
+# PNG para las slides y el video: -s 4 es lo que los hace legibles.
+mmdc -i DIAGRAMAS.md -o img/diagrama.png -t neutral -b white -s 4 -w 2400
+
+# SVG (vectorial): se amplía sin límite, es lo mejor para el ER del §3.
+mmdc -i DIAGRAMAS.md -o img/diagrama.svg -t neutral -b transparent
+```
+
+Sin `-s`/`-w` salen a ~800 px de ancho y el §3 **no se lee**: es el error que ya
+se cometió una vez. Y el fondo va **blanco, no transparente**: el texto de
+Mermaid es oscuro, así que sobre transparente desaparece en cuanto el fondo del
+video o el modo oscuro de GitHub es oscuro.
+
+`mmdc` numera los archivos por orden de aparición, no por sección:
+
+| Archivo | Diagrama |
+|---|---|
+| `diagrama-1` | §1 Contexto |
+| `diagrama-2` | §2 Flujo del análisis |
+| `diagrama-3` | §3 Modelo de datos (ER) |
+| `diagrama-4` | §4.1 Lo que corre hoy |
+| `diagrama-5` | §4.2 Producción en OCI |
+| `diagrama-6` | §5 Trabajo en paralelo |
 
 **Para el video, usa el §1 (contexto) y el §2 (flujo del análisis).** El §4 (OCI) solo
 si sobra tiempo - es el bloque que se recorta primero.
